@@ -20,15 +20,15 @@ const vw = 10 * W + W / 2, vh = 9 * H * 0.75 + H;
   <figcaption><b data-n>10</b> colmeias</figcaption>
 </figure>
 <style>
-  .favo { margin: 0; max-width: 440px; }
+  .favo { margin: 0; max-width: 340px; }
   .favo svg { overflow: visible; }
-  polygon { fill: var(--mel-claro); stroke: var(--mel); stroke-width: 1.2; }
+  polygon { fill: transparent; stroke: var(--mel-escuro); stroke-width: 1.4; }
   polygon.hoje { fill: var(--propolis); }
-  polygon.futuro { fill: var(--mel-escuro); opacity: 0; animation: enche .35s ease-out forwards; animation-delay: calc(.6s + var(--i) * 22ms); }
-  @keyframes enche { to { opacity: 1; } }
+  polygon.futuro { fill: var(--branco); fill-opacity: 0; animation: enche .35s ease-out forwards; animation-delay: calc(.6s + var(--i) * 22ms); }
+  @keyframes enche { to { fill-opacity: 1; } }
   figcaption { font-family: var(--titulo); font-weight: 700; font-size: 1.1rem; color: var(--madeira); margin-top: 10px; }
   figcaption b { font-size: 2.4rem; font-weight: 800; color: var(--propolis); font-variant-numeric: tabular-nums; }
-  @media (prefers-reduced-motion: reduce) { polygon.futuro { opacity: 1; animation: none; } }
+  @media (prefers-reduced-motion: reduce) { polygon.futuro { fill-opacity: 1; animation: none; } }
 </style>
 <script>
   // contador acompanha o preenchimento do favo (10 → 100 em ~2,6s)
