@@ -1,45 +1,41 @@
 ---
-import { CAMPANHA } from '~/config/black';
 interface Props { variante?: string; pagina?: string; cta?: string; titulo?: string; subtitulo?: string; id?: string }
-const { variante = '', pagina = Astro.url.pathname, cta = 'Quero entrar no grupo da live', titulo = 'Garanta sua vaga na live', subtitulo = 'É grátis. Você recebe o link do grupo de WhatsApp na hora.', id = 'form' } = Astro.props;
+const { variante = '', pagina = Astro.url.pathname, cta = 'Receber o link no WhatsApp', titulo = 'Garanta sua vaga na live', subtitulo = 'Grátis. O link do grupo chega no seu WhatsApp agora.', id = 'form' } = Astro.props;
 const erro = Astro.url.searchParams.get('erro');
 const campoErro = Astro.url.searchParams.get('campo');
 ---
-<div class="card hot" id={id}>
-  <h3 style="font-size:1.4rem;margin-bottom:4px">{titulo}</h3>
-  <p class="muted" style="font-size:.95rem">{subtitulo}</p>
-  <form class="form lead-form" method="post" action="/api/lead" novalidate>
+<div class="formulario" id={id}>
+  <h3>{titulo}</h3>
+  {subtitulo && <p class="apoio" style="margin:0">{subtitulo}</p>}
+  <form class="lead-form" method="post" action="/api/lead" novalidate>
     <input type="hidden" name="variante" value={variante} />
     <input type="hidden" name="pagina" value={pagina} />
     <input type="text" name="site" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
-    <div class={`field ${campoErro === 'nome' ? 'err' : ''}`}>
-      <label for={`${id}-nome`}>Seu nome</label>
-      <input id={`${id}-nome`} type="text" name="nome" autocomplete="name" required placeholder="Como quer ser chamado" />
+    <label class={`campo ${campoErro === 'nome' ? 'erro' : ''}`}>
+      <span>Seu nome</span>
+      <input type="text" name="nome" autocomplete="name" required placeholder="Como quer ser chamado" />
       <div class="msg">{campoErro === 'nome' ? erro : ''}</div>
-    </div>
-    <div class={`field ${campoErro === 'whatsapp' ? 'err' : ''}`}>
-      <label for={`${id}-zap`}>Seu WhatsApp (com DDD)</label>
-      <input id={`${id}-zap`} type="tel" name="whatsapp" inputmode="numeric" autocomplete="tel-national" required placeholder="(67) 99999-9999" />
+    </label>
+    <label class={`campo ${campoErro === 'whatsapp' ? 'erro' : ''}`}>
+      <span>Seu WhatsApp com DDD</span>
+      <input type="tel" name="whatsapp" inputmode="numeric" autocomplete="tel-national" required placeholder="(67) 99999-9999" />
       <div class="msg">{campoErro === 'whatsapp' ? erro : ''}</div>
-    </div>
-    <div class={`field ${campoErro === 'email' ? 'err' : ''}`}>
-      <label for={`${id}-email`}>Seu melhor e-mail <span class="muted" style="font-weight:400">(opcional)</span></label>
-      <input id={`${id}-email`} type="email" name="email" autocomplete="email" placeholder="voce@email.com" />
+    </label>
+    <label class={`campo ${campoErro === 'email' ? 'erro' : ''}`}>
+      <span>Seu e-mail <span style="display:inline;font-weight:400;color:var(--fumaca)">(se quiser)</span></span>
+      <input type="email" name="email" autocomplete="email" placeholder="voce@email.com" />
       <div class="msg">{campoErro === 'email' ? erro : ''}</div>
-    </div>
-    <label class="consent">
+    </label>
+    <label class="consentimento">
       <input type="checkbox" name="consentimento" value="1" checked required />
       <span>Aceito receber mensagens sobre a live e a Black Tecnoapis no WhatsApp e no e-mail. Posso sair quando quiser.</span>
     </label>
-    <button class="btn btn-primary btn-lg btn-block" type="submit" data-track-click="Contact" data-track-params='{"content_name":"form_submit"}'>
-      <span data-label>{cta}</span>
-    </button>
-    <p class="muted center" style="font-size:.78rem;margin:4px 0 0">🔒 Seus dados estão seguros. Sem spam.</p>
+    <button class="botao botao-mel" type="submit" data-track-click="Contact" data-track-params='{"content_name":"form_submit"}'><span data-label>{cta}</span></button>
+    <p class="nota">Sem spam. Seus dados ficam só com a equipe do Gustavo.</p>
   </form>
 </div>
 
 <script>
-  // Máscara de telefone BR + envio via fetch com erros inline (fallback: POST normal)
   function mask(v: string) {
     const d = v.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '').slice(0, 11);
     if (d.length <= 2) return d ? `(${d}` : '';
@@ -55,17 +51,17 @@ const campoErro = Astro.url.searchParams.get('campo');
       const btn = form.querySelector<HTMLButtonElement>('button[type=submit]')!;
       const label = btn.querySelector('[data-label]')!;
       const orig = label.textContent;
-      form.querySelectorAll('.field').forEach((f) => { f.classList.remove('err'); f.querySelector('.msg')!.textContent = ''; });
+      form.querySelectorAll('.campo').forEach((f) => { f.classList.remove('erro'); f.querySelector('.msg')!.textContent = ''; });
       btn.disabled = true; label.textContent = 'Enviando…';
       try {
         const fd = new FormData(form);
         const body: Record<string, string> = {}; fd.forEach((v, k) => (body[k] = String(v)));
         const res = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(body) });
         const j = await res.json();
-        if (j.ok) { label.textContent = 'Pronto! Redirecionando…'; location.href = j.redirect; return; }
-        const f = form.querySelector(`input[name=${j.campo}]`)?.closest('.field');
-        if (f) { f.classList.add('err'); f.querySelector('.msg')!.textContent = j.erro; (f.querySelector('input') as HTMLInputElement).focus(); }
-        else alert(j.erro || 'Erro ao enviar');
+        if (j.ok) { label.textContent = 'Pronto, abrindo o WhatsApp…'; location.href = j.redirect; return; }
+        const f = form.querySelector(`input[name=${j.campo}]`)?.closest('.campo');
+        if (f) { f.classList.add('erro'); f.querySelector('.msg')!.textContent = j.erro; (f.querySelector('input') as HTMLInputElement).focus(); }
+        else alert(j.erro || 'Não foi possível enviar. Tente de novo.');
       } catch { form.submit(); return; }
       btn.disabled = false; label.textContent = orig;
     });

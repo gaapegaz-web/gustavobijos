@@ -1,6 +1,5 @@
 ---
-import Base from '~/layouts/Base.astro';
-import Footer from '~/components/Footer.astro';
+import Honey from '~/layouts/Honey.astro';
 import { ENV } from '~/lib/env';
 import { CAMPANHA } from '~/config/black';
 import { fmtDataHora, fmtDiaSemana } from '~/lib/phases';
@@ -9,16 +8,15 @@ const leadEventId = Astro.url.searchParams.get('e') || undefined;
 const grupo = ENV.WHATSAPP_GRUPO_URL;
 const live = new Date(CAMPANHA.live.data);
 ---
-<Base title="Você está dentro! Entre no grupo" noindex leadEventId={leadEventId}>
+<Honey title="Falta um passo: entre no grupo" noindex leadEventId={leadEventId}>
   {!grupo.startsWith('#') && <meta http-equiv="refresh" content={`4;url=${grupo}`} />}
-  <main class="section">
-    <div class="wrap center" style="max-width:600px">
-      <div style="font-size:4rem;line-height:1">🐝</div>
-      <h1 style="margin-top:16px">Falta só um passo</h1>
-      <p class="lead">Entre no grupo do WhatsApp para receber o link da live de {fmtDiaSemana(live)}, {fmtDataHora(live)}, e a condição de abertura antes de todo mundo.</p>
-      <a class="btn btn-primary btn-lg btn-block" href={grupo} id="btn-grupo" data-track-click="Schedule" data-track-params='{"content_name":"entrar_grupo"}' style="margin:24px 0 12px">Entrar no grupo do WhatsApp →</a>
-      <p class="muted" style="font-size:.85rem">Você será redirecionado automaticamente em alguns segundos. Se não abrir, toque no botão.</p>
+  <main class="faixa faixa-mel" style="min-height:100vh;display:flex;align-items:center">
+    <div class="wrap" style="max-width:620px">
+      <p class="apoio" style="font-family:var(--titulo);font-weight:700;font-size:1.2rem">Cadastro feito</p>
+      <h1>Agora entre no grupo</h1>
+      <p class="grande" style="color:var(--madeira)">É lá que chega o link da live de {fmtDiaSemana(live)}, {fmtDataHora(live)}, e a condição de abertura da Black antes de todo mundo.</p>
+      <a class="botao botao-propolis" href={grupo} id="btn-grupo" data-track-click="Schedule" data-track-params='{"content_name":"entrar_grupo"}' style="width:100%;max-width:420px;font-size:1.15rem;min-height:64px;margin-top:8px">Entrar no grupo do WhatsApp</a>
+      <p class="nota" style="color:var(--madeira)">O WhatsApp abre sozinho em alguns segundos. Se não abrir, toque no botão.</p>
     </div>
   </main>
-  <Footer />
-</Base>
+</Honey>
