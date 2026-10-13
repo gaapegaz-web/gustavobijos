@@ -1,17 +1,25 @@
 ---
 import { CAMPANHA } from '~/config/black';
+import Icons from './Icons.astro';
+const bio = CAMPANHA.professorBio;
 ---
-<section class="ta-section ta-section--surface" id="quem-ensina">
-  <div class="ta-container ta-split" style="align-items:center">
-    <img src="/img/gustavo.svg" alt={CAMPANHA.professor} width="480" height="480" loading="lazy" style="border-radius:var(--radius-md);aspect-ratio:1;object-fit:cover;max-width:420px;width:100%" />
+<section class="ta-section ta-section--light" data-theme="light" id="quem-ensina">
+  <div class="ta-container ta-split" style="align-items:start">
+    <div>
+      <img src="/img/gustavo.svg" alt={CAMPANHA.professor} width="480" height="480" loading="lazy" style="border-radius:var(--radius-md);aspect-ratio:1;object-fit:cover;max-width:440px;width:100%" />
+    </div>
     <div>
       <div class="ta-stack">
-        <span class="ta-eyebrow">Quem ensina</span>
-        <span class="ta-line ta-line--l">Professor</span>
-        <span class="ta-impact ta-impact--l">Gustavo Bijos</span>
+        <span class="ta-eyebrow">Quem é Gustavo Bijos?</span>
+        <span class="ta-line ta-line--l">{bio.anos} anos de</span>
+        <h2 class="ta-impact ta-impact--l">Apicultura</h2>
       </div>
-      <p class="ta-lead" style="margin-top:var(--space-6)">Apicultor e criador do Clube Tecnoapis. Multiplica o próprio apiário com os métodos que ensina e grava as aulas no campo, não em estúdio.</p>
-      <p class="ta-body" style="margin-top:var(--space-4)">No clube são 25 cursos, mais de 130 horas de conteúdo e 115 lives semanais gravadas desde 2023: núcleos, rainhas, própolis, geleia real, alimentação e gestão do apiário como negócio.</p>
+      <p class="ta-lead" style="margin-top:var(--space-6)">{bio.resumo}</p>
+      <ul class="ta-list" style="margin-top:var(--space-6)">
+        {bio.cargos.map((c) => <li><Icons name="check" /><span>{c}</span></li>)}
+      </ul>
+      <p class="ta-body" style="margin-top:var(--space-6)">{bio.palestras}</p>
+      <p class="ta-body" style="margin-top:var(--space-3)">Hoje, no Clube Tecnoapis, são 25 cursos, mais de 130 horas de conteúdo e 115 lives gravadas desde 2023, com live nova toda segunda-feira para os membros.</p>
     </div>
   </div>
 </section>

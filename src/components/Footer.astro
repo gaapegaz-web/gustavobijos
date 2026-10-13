@@ -1,8 +1,16 @@
 ---
 import { CAMPANHA } from '~/config/black';
+import { ENV } from '~/lib/env';
+const suporte = ENV.WHATSAPP_SUPORTE_URL;
 ---
 <footer class="ta-footer">
   <div class="ta-container">
+    {suporte && (
+      <div class="ta-help" style="margin-bottom:var(--space-8)">
+        <div><p class="ta-heading">Precisa de ajuda?</p><p class="ta-small" style="margin-top:var(--space-1)">Se ficou alguma dúvida ou precisa de ajuda com a inscrição, a equipe do Gustavo responde no WhatsApp.</p></div>
+        <a class="ta-btn ta-btn--outline" href={suporte} data-track-click="Contact" data-track-params='{"content_name":"suporte"}'>Atendimento por WhatsApp</a>
+      </div>
+    )}
     <p class="ta-small"><span class="ta-ink" style="font-weight:500">{CAMPANHA.clube}</span> · {CAMPANHA.professor}</p>
     <p class="ta-small">Este site não é afiliado ao Facebook, Instagram ou Meta. Resultados variam com dedicação, região e manejo. © {new Date().getFullYear()}</p>
   </div>

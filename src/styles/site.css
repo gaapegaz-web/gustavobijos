@@ -92,3 +92,25 @@ p + p { margin-top: var(--space-3); }
 .ta-footer { padding: var(--space-8) 0 120px; }
 .ta-focus:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; } }
+
+/* ===== Fusão com o site tecnoapis.com.br: faixas claras alternadas (tema claro do design system) ===== */
+.ta-section--light { background: var(--bg); color: var(--ink); color-scheme: light; }
+.ta-section + .ta-section--light, .ta-section--light + .ta-section { border-top: 0; }
+.ta-section--light .ta-form { background: var(--surface); }
+.ta-section--light .ta-field input { background: var(--surface); }
+
+/* Cards de nível (Iniciante / Intermediário / Avançado), herdados do site antigo */
+.ta-level { position: relative; background: var(--accent-soft); border: 1px solid var(--border); border-top: 3px solid var(--honey); border-radius: var(--radius-md); padding: var(--space-6); }
+.ta-level .ta-badge { position: absolute; top: var(--space-3); right: var(--space-3); }
+.ta-level h3 { font: 600 17px/1.3 var(--font-sans); color: var(--ink); margin: var(--space-4) 0 var(--space-2); padding-right: 96px; }
+.ta-level p { font: 300 15px/1.55 var(--font-sans); color: var(--ink-muted); }
+
+/* Lista de resultados com linha honey, herdada do site antigo */
+.ta-results { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6) var(--space-12); }
+.ta-results li { border-top: 2px solid var(--honey); padding-top: var(--space-4); }
+.ta-results h3 { font: 600 16px/1.3 var(--font-sans); color: var(--ink); margin-bottom: var(--space-2); }
+.ta-results p { font: 300 15px/1.55 var(--font-sans); color: var(--ink-muted); }
+@media (max-width: 720px) { .ta-results { grid-template-columns: 1fr; } }
+
+/* Bloco de ajuda (WhatsApp) */
+.ta-help { display: flex; flex-wrap: wrap; gap: var(--space-6); align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-6); background: var(--surface); }

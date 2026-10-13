@@ -9,6 +9,7 @@ export const ENV = {
   get HUBLA_WEBHOOK_TOKEN() { return e('HUBLA_WEBHOOK_TOKEN'); },
   get HUBLA_CHECKOUT_URL() { return e('HUBLA_CHECKOUT_URL', '#checkout-nao-configurado'); },
   get WHATSAPP_GRUPO_URL() { return e('WHATSAPP_GRUPO_URL', '#grupo-nao-configurado'); },
+  get WHATSAPP_SUPORTE_URL() { return e('WHATSAPP_SUPORTE_URL', ''); },
   get ADMIN_USER() { return e('ADMIN_USER', 'admin'); },
   get ADMIN_PASS() { return e('ADMIN_PASS'); },
   get ALLOW_TIME_TRAVEL() { return e('ALLOW_TIME_TRAVEL', '0') === '1' || import.meta.env.DEV; },

@@ -1,0 +1,15 @@
+---
+/** "O Clube Tecnoapis é para apicultores que querem…", herdado do site antigo */
+interface Props { titulo?: string }
+const { titulo = 'O Clube Tecnoapis é para apicultores que querem' } = Astro.props;
+---
+<section class="ta-section ta-section--light" data-theme="light">
+  <div class="ta-container">
+    <p class="ta-heading" style="text-align:center;max-width:none">{titulo}</p>
+    <div class="ta-grid ta-grid--3" style="margin-top:var(--space-8)">
+      <div class="ta-level"><span class="ta-badge ta-badge--soft">Iniciante</span><h3>Aumentar a produção</h3><p>Os manejos avançados e as técnicas de produção de núcleos, rainhas e mel, com acompanhamento e tira-dúvidas.</p></div>
+      <div class="ta-level"><span class="ta-badge ta-badge--soft">Intermediário</span><h3>Resultado financeiro</h3><p>Extrair o máximo das colmeias que já tem, com estratégias para reduzir custos e aumentar os ganhos.</p></div>
+      <div class="ta-level"><span class="ta-badge ta-badge--soft">Avançado</span><h3>Produção em escala</h3><p>Aumentar o número de colmeias da maneira correta, com os pulos do gato para produzir em larga escala.</p></div>
+    </div>
+  </div>
+</section>

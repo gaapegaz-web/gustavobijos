@@ -5,6 +5,8 @@ import Favo from './Favo.astro';
 import Autoridade from './Autoridade.astro';
 import Footer from './Footer.astro';
 import Icons from './Icons.astro';
+import Niveis from './Niveis.astro';
+import Resultados from './Resultados.astro';
 import { CAMPANHA } from '~/config/black';
 import { fmtDataHora, fmtDiaSemana } from '~/lib/phases';
 
@@ -39,7 +41,7 @@ const quando = `${fmtDiaSemana(live)}, ${fmtDataHora(live)}`;
     </div>
   </section>
 
-  <section class="ta-section">
+  <section class="ta-section ta-section--light" data-theme="light">
     <div class="ta-container ta-split">
       <div>
         <div class="ta-stack">
@@ -57,9 +59,21 @@ const quando = `${fmtDiaSemana(live)}, ${fmtDataHora(live)}`;
     </div>
   </section>
 
+  <Resultados />
+
   <Autoridade />
 
   <section class="ta-section">
+    <div class="ta-container ta-split" style="align-items:center">
+      <div>
+        <div class="ta-stack"><span class="ta-eyebrow">Toda segunda-feira</span><span class="ta-line ta-line--l">Live exclusiva para</span><h2 class="ta-impact ta-impact--l">Membros</h2></div>
+        <p class="ta-lead" style="margin-top:var(--space-6)">O tema é escolhido pelo grupo de WhatsApp dos membros. A live serve para distribuir conhecimento e sanar as dúvidas de quem está no apiário. São 115 gravadas no acervo.</p>
+      </div>
+      <div class="ta-block"><span class="ta-eyebrow">Apiscard</span><h3>Carteirinha de membro</h3><p>Todo membro do Tecnoapis tem um Apiscard para usar nas lojas parceiras e obter descontos em equipamentos e insumos.</p></div>
+    </div>
+  </section>
+
+  <section class="ta-section ta-section--light" data-theme="light">
     <div class="ta-container ta-split" style="align-items:center">
       <div>
         <div class="ta-stack">

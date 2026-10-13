@@ -5,6 +5,8 @@ import LeadForm from '~/components/LeadForm.astro';
 import Autoridade from '~/components/Autoridade.astro';
 import Footer from '~/components/Footer.astro';
 import Icons from '~/components/Icons.astro';
+import Niveis from '~/components/Niveis.astro';
+import Resultados from '~/components/Resultados.astro';
 import { CAMPANHA, BONUS, ENTREGAVEIS, DEPOIMENTOS, FAQ } from '~/config/black';
 import { estado, resolverAgora, brl, fmtDia } from '~/lib/phases';
 import { lerUtmsDoCookie, lerUtmsDaUrl, urlCheckout } from '~/lib/tracking';
@@ -99,6 +101,7 @@ const CURSOS = [
     <div class="ta-banner">{st.faixa}{st.bonusAtivos.length > 0 && ` · ${st.bonusAtivos.length} bônus ativo${st.bonusAtivos.length > 1 ? 's' : ''} (${brl(valorBonusAtivos)})`}</div>
 
     <!-- 3. Oportunidade -->
+    <Niveis titulo="A Black Tecnoapis é para apicultores que querem" />
     <section class="ta-section">
       <div class="ta-container ta-split">
         <div>
@@ -114,7 +117,7 @@ const CURSOS = [
     </section>
 
     <!-- 4. Pra quem é -->
-    <section class="ta-section">
+    <section class="ta-section ta-section--light" data-theme="light">
       <div class="ta-container ta-grid ta-grid--2" style="gap:var(--space-12)">
         <div>
           <p class="ta-heading" style="margin-bottom:var(--space-4)">É para você se</p>
@@ -176,7 +179,7 @@ const CURSOS = [
     </section>
 
     <!-- 7. Fast pass -->
-    <section class="ta-section">
+    <section class="ta-section ta-section--light" data-theme="light">
       <div class="ta-container ta-split" style="align-items:center">
         <div>
           <div class="ta-stack"><span class="ta-eyebrow">O atalho</span><span class="ta-line ta-line--l">Sozinho leva anos. Com o método,</span><h2 class="ta-impact ta-impact--l">1 a 2 temporadas</h2></div>
@@ -190,8 +193,10 @@ const CURSOS = [
       </div>
     </section>
 
+    <Resultados />
+
     <!-- 8. Tudo que você leva -->
-    <section class="ta-section">
+    <section class="ta-section ta-section--light" data-theme="light">
       <div class="ta-container" style="max-width:860px">
         <div class="ta-stack"><span class="ta-eyebrow">Tudo que você leva</span><span class="ta-line ta-line--l">O clube inteiro,</span><h2 class="ta-impact ta-impact--l">Não só a trilha</h2></div>
         <div class="ta-table" style="margin-top:var(--space-8)">
@@ -231,7 +236,7 @@ const CURSOS = [
     </section>
 
     <!-- 10. Prova -->
-    <section class="ta-section">
+    <section class="ta-section ta-section--light" data-theme="light">
       <div class="ta-container">
         <div class="ta-stack"><span class="ta-eyebrow">Quem já fez</span><span class="ta-line ta-line--l">Resultados de</span><h2 class="ta-impact ta-impact--l">Alunos</h2></div>
         <div class="ta-grid ta-grid--3" style="margin-top:var(--space-8)">
@@ -269,7 +274,7 @@ const CURSOS = [
     </section>
 
     <!-- 12. Objeções -->
-    <section class="ta-section">
+    <section class="ta-section ta-section--light" data-theme="light">
       <div class="ta-container">
         <p class="ta-heading" style="margin-bottom:var(--space-6)">Antes de decidir</p>
         <div class="ta-grid ta-grid--3">
@@ -284,12 +289,12 @@ const CURSOS = [
     <section class="ta-section">
       <div class="ta-container ta-split" style="align-items:center;max-width:900px">
         <div><span class="ta-badge ta-badge--success">Garantia de {CAMPANHA.garantiaDias} dias</span><div class="ta-price__value" style="font-size:72px;margin-top:var(--space-3)">{CAMPANHA.garantiaDias} dias</div></div>
-        <div><p class="ta-heading">Risco zero</p><p class="ta-body" style="margin-top:var(--space-3)">Entre, assista, aplique. Se em {CAMPANHA.garantiaDias} dias achar que não é para você, pede o reembolso pela Hubla e devolvemos 100%, sem pergunta.</p></div>
+        <div><p class="ta-heading">Garantia incondicional</p><p class="ta-body" style="margin-top:var(--space-3)">Se por qualquer motivo você não ficar satisfeito com a compra, devolvemos o seu dinheiro sem complicação. Basta pedir dentro de {CAMPANHA.garantiaDias} dias após a compra e fazemos o reembolso completo.</p></div>
       </div>
     </section>
 
     <!-- 14. FAQ -->
-    <section class="ta-section">
+    <section class="ta-section ta-section--light" data-theme="light">
       <div class="ta-container" style="max-width:760px">
         <p class="ta-heading" style="margin-bottom:var(--space-6)">Perguntas frequentes</p>
         <div class="ta-faq">{FAQ.map((f) => <details><summary>{f.p}</summary><p>{f.r}</p></details>)}</div>
