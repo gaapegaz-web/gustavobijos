@@ -1,94 +1,86 @@
 ---
-import Honey from '~/layouts/Honey.astro';
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import LeadForm from './LeadForm.astro';
 import Favo from './Favo.astro';
+import Autoridade from './Autoridade.astro';
+import Footer from './Footer.astro';
+import Icons from './Icons.astro';
 import { CAMPANHA } from '~/config/black';
 import { fmtDataHora, fmtDiaSemana } from '~/lib/phases';
 
-interface Props { variante?: string; headline?: string; sub?: string }
-const { variante = '', headline = 'De 10 para 100 colmeias sem comprar um enxame', sub = 'Live gratuita com o Gustavo Bijos: o método de multiplicação, as rainhas próprias e o calendário que leva um apiário pequeno a cem colmeias.' } = Astro.props;
+interface Props { variante?: string; linha?: string; impacto?: string; spaced?: string; sub?: string }
+const {
+  variante = '',
+  linha = 'De 10 para 100',
+  impacto = 'Colmeias',
+  spaced = 'sem comprar enxame',
+  sub = 'Live gratuita com o Gustavo Bijos: o método de multiplicação, as rainhas próprias e o calendário que leva um apiário pequeno a cem colmeias.',
+} = Astro.props;
 
 const live = new Date(CAMPANHA.live.data);
 const liveJaPassou = new Date() > live;
 const quando = `${fmtDiaSemana(live)}, ${fmtDataHora(live)}`;
 ---
-<Honey title={`Live: ${CAMPANHA.live.titulo} | ${CAMPANHA.professor}`} description={sub}>
+<Tecnoapis title={`Live: ${CAMPANHA.live.titulo} | ${CAMPANHA.professor}`} description={sub}>
 <main>
-  <section class="faixa faixa-mel topo">
-    <div class="wrap topo-grid">
+  <section class="ta-section" style="padding-top:var(--space-12)">
+    <div class="ta-container ta-split topo">
       <div class="topo-texto">
-        <p class="quando">{liveJaPassou ? 'Live gravada, assista quando quiser' : `Live gratuita · ${quando}`}</p>
-        <h1>{headline}</h1>
-        <p class="grande" style="color:var(--madeira)">{sub}</p>
+        <div class="ta-stack">
+          <span class="ta-eyebrow">{liveJaPassou ? 'Live gravada' : `Live gratuita · ${quando}`}</span>
+          <span class="ta-line ta-line--l">{linha}</span>
+          <h1 class="ta-impact ta-impact--xl">{impacto}</h1>
+          <span class="ta-spaced">{spaced}</span>
+        </div>
+        <p class="ta-lead" style="margin-top:var(--space-6)">{sub}</p>
       </div>
-      <div class="topo-form">
-        <LeadForm variante={variante} />
-      </div>
+      <div class="topo-form"><LeadForm variante={variante} /></div>
       <div class="topo-favo"><Favo /></div>
     </div>
   </section>
 
-  <section class="faixa">
-    <div class="wrap duas">
+  <section class="ta-section">
+    <div class="ta-container ta-split">
       <div>
-        <h2>O que trava o apiário em 10, 15, 20 colmeias</h2>
-        <p class="grande apoio">Não é falta de abelha. São três decisões que quase todo apicultor toma errado nos primeiros anos. Na live, o Gustavo mostra cada uma e o que fazer no lugar.</p>
+        <div class="ta-stack">
+          <span class="ta-eyebrow">Na live</span>
+          <span class="ta-line ta-line--l">O que trava o apiário em</span>
+          <h2 class="ta-impact ta-impact--l">10, 15, 20</h2>
+        </div>
+        <p class="ta-lead" style="margin-top:var(--space-6)">Não é falta de abelha. São três decisões que quase todo apicultor toma errado nos primeiros anos. O Gustavo mostra cada uma e o que fazer no lugar.</p>
       </div>
-      <ul class="lista grande">
-        <li><b>Dividir a colmeia errada.</b> Qualquer divisão sem matriz preparada vira dois enxames fracos. Como escolher, preparar e saber quando a matriz está pronta.</li>
-        <li><b>Comprar rainha.</b> A 60, 100 reais cada, multiplicar sai caro e lento. O método mais simples para produzir as suas, mesmo começando agora.</li>
-        <li><b>Dividir fora do tempo.</b> Núcleo feito longe da florada morre. O calendário de divisão, alimentação e revisão de uma temporada inteira.</li>
+      <ul class="ta-list ta-list--x">
+        <li><Icons name="x" /><span><b>Dividir a colmeia errada.</b> Qualquer divisão sem matriz preparada vira dois enxames fracos. Como escolher, preparar e saber quando a matriz está pronta.</span></li>
+        <li><Icons name="x" /><span><b>Comprar rainha.</b> A 60, 100 reais cada, multiplicar sai caro e lento. O método mais simples para produzir as suas, mesmo começando agora.</span></li>
+        <li><Icons name="x" /><span><b>Dividir fora do tempo.</b> Núcleo feito longe da florada morre. O calendário de divisão, alimentação e revisão de uma temporada inteira.</span></li>
       </ul>
     </div>
   </section>
 
-  <section class="faixa faixa-propolis">
-    <div class="wrap quem">
-      <img src="/img/gustavo.svg" alt={CAMPANHA.professor} width="420" height="420" loading="lazy" />
-      <div>
-        <h2>Quem ensina</h2>
-        <p class="grande"><b style="color:var(--mel)">{CAMPANHA.professor}</b> é professor e apicultor, criador do Clube Tecnoapis. Multiplica o próprio apiário com os métodos que ensina e grava as aulas no campo, não em estúdio.</p>
-        <p>No clube são 25 cursos, mais de 130 horas de conteúdo e 115 lives semanais gravadas desde 2023, sobre núcleos, rainhas, própolis, geleia real, alimentação e gestão do apiário como negócio.</p>
-      </div>
-    </div>
-  </section>
+  <Autoridade />
 
-  <section class="faixa faixa-mel">
-    <div class="wrap fecho">
+  <section class="ta-section">
+    <div class="ta-container ta-split" style="align-items:center">
       <div>
-        <h2>Entre no grupo e receba o link da live</h2>
-        <p class="grande" style="color:var(--madeira)">Quem está no grupo recebe o lembrete na hora, a gravação depois e, no fim da live, a condição de abertura da Black Tecnoapis antes de todo mundo.</p>
+        <div class="ta-stack">
+          <span class="ta-eyebrow">Vaga gratuita</span>
+          <span class="ta-line ta-line--l">Entre no grupo e receba</span>
+          <h2 class="ta-impact ta-impact--l">O link da live</h2>
+        </div>
+        <p class="ta-lead" style="margin-top:var(--space-6)">Quem está no grupo recebe o lembrete na hora, a gravação depois e, no fim da live, a condição de abertura da Black Tecnoapis antes de todo mundo.</p>
       </div>
       <LeadForm variante={variante} id="form2" titulo="Garanta sua vaga" subtitulo="" />
     </div>
   </section>
-
-  <footer class="rodape">
-    <div class="wrap">
-      <p><b>{CAMPANHA.clube}</b> · {CAMPANHA.professor}</p>
-      <p>Este site não é afiliado ao Facebook, Instagram ou Meta. Resultados variam com dedicação, região e manejo.</p>
-    </div>
-  </footer>
 </main>
-</Honey>
+<Footer />
+</Tecnoapis>
 
 <style>
-  .topo { padding-top: clamp(28px, 5vw, 64px); }
-  .topo-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); grid-template-areas: 'texto form' 'favo form'; gap: 24px clamp(28px, 5vw, 64px); align-items: start; }
+  .topo { grid-template-areas: 'texto form' 'favo form'; row-gap: var(--space-8); }
   .topo-texto { grid-area: texto; } .topo-form { grid-area: form; } .topo-favo { grid-area: favo; }
-  .quando { font-family: var(--titulo); font-weight: 700; font-size: 1.2rem; color: var(--propolis); margin-bottom: 14px; }
-  .topo-texto h1 { max-width: 11ch; }
-  .duas { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 72px); align-items: start; }
-  .quem { display: grid; grid-template-columns: minmax(220px, 360px) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
-  .quem img { border-radius: 12px; aspect-ratio: 1; object-fit: cover; width: 100%; }
-  .fecho { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 460px); gap: clamp(28px, 5vw, 64px); align-items: center; }
-  .rodape { padding: 28px 0 40px; font-size: .85rem; color: var(--fumaca); }
-  .rodape p { max-width: none; margin: 0 0 4px; }
   @media (max-width: 820px) {
-    .topo-grid, .duas, .quem, .fecho { grid-template-columns: 1fr; }
-    .topo-grid { grid-template-areas: 'texto' 'form' 'favo'; }
-    .topo-favo { margin-top: 12px; }
-    .topo-favo .favo { max-width: 280px; }
-    .quem img { max-width: 260px; }
+    .topo { grid-template-areas: 'texto' 'form' 'favo'; row-gap: var(--space-6); }
+    .topo-favo .favo { max-width: 260px; }
   }
 </style>

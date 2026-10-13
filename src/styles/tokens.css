@@ -1,0 +1,60 @@
+/* Tecnoapis, gerado a partir de tokens.json */
+:root, [data-theme="dark"] {
+  --bg: #0d0d0e;
+  --surface: #161618;
+  --surface-2: #1c1c1e;
+  --border: #2c2c30;
+  --ink: #f2f2f4;
+  --ink-muted: #a3a3aa;
+  --accent: #f07a1a;
+  --on-accent: #1a0e02;
+  --accent-soft: #3a2210;
+  --honey: #f2a900;
+  --success: #4cc06a;
+  --danger: #ff6b6e;
+}
+[data-theme="light"] {
+  --bg: #f6f4f0;
+  --surface: #ffffff;
+  --surface-2: #efece6;
+  --border: #dcd7ce;
+  --ink: #17140f;
+  --ink-muted: #5f5a52;
+  --accent: #b04e00;
+  --on-accent: #ffffff;
+  --accent-soft: #fde6d1;
+  --honey: #8a5a00;
+  --success: #1f7a37;
+  --danger: #c62828;
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-24: 96px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+  --container: 1280px;
+  --card-course: 220px;
+  --font-display: "Archivo Black", "Arial Black", sans-serif;
+  --font-sans: "Lexend", system-ui, sans-serif;
+  --font-accent: "Archivo", "Arial", sans-serif;
+}
+.display-xl { font-family: var(--font-display); font-size: 72px; line-height: 1.0; font-weight: 400; letter-spacing: -1px }
+.display-l { font-family: var(--font-display); font-size: 48px; line-height: 1.02; font-weight: 400; letter-spacing: -0.5px }
+.display-m { font-family: var(--font-display); font-size: 32px; line-height: 1.05; font-weight: 400; letter-spacing: -0.5px }
+.lead { font-family: var(--font-sans); font-size: 20px; line-height: 1.5; font-weight: 300 }
+.heading { font-family: var(--font-sans); font-size: 24px; line-height: 1.25; font-weight: 600 }
+.line { font-family: var(--font-sans); font-size: 18px; line-height: 1.15; font-weight: 400 }
+.title { font-family: var(--font-sans); font-size: 15px; line-height: 1.35; font-weight: 600 }
+.body { font-family: var(--font-sans); font-size: 16px; line-height: 1.6; font-weight: 300 }
+.small { font-family: var(--font-sans); font-size: 13px; line-height: 1.55; font-weight: 300 }
+.button { font-family: var(--font-sans); font-size: 15px; line-height: 1.2; font-weight: 500 }
+.eyebrow { font-family: var(--font-accent); font-size: 13px; line-height: 1.2; font-weight: 500; font-style: italic }
+.spaced { font-family: var(--font-accent); font-size: 14px; line-height: 1.2; font-weight: 500; letter-spacing: 0.5em }

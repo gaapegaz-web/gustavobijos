@@ -1,27 +1,15 @@
 ---
-/**
- * Variantes de captação por canal/criativo: /c/<variante>
- * Mesma página, headline e subtítulo diferentes. Adicione variantes aqui.
- */
+/** Variantes de captação por canal/criativo: /c/<variante>. Mesma página, título diferente. */
 import Captacao from '~/components/Captacao.astro';
 
-const VARIANTES: Record<string, { headline: string; sub: string }> = {
-  iniciante: {
-    headline: 'Tem menos de 10 colmeias e quer crescer sem comprar enxame?',
-    sub: 'A live mostra o caminho de quem começou pequeno e chegou a 100 colmeias com multiplicação própria.',
-  },
-  rainhas: {
-    headline: 'Pare de comprar rainha. Produza as suas e multiplique o apiário',
-    sub: 'Live gratuita: o método de rainhas mais simples para quem quer ir de 10 para 100 colmeias.',
-  },
-  renda: {
-    headline: 'Quantas colmeias você precisa para viver de apicultura?',
-    sub: 'Na live: o plano de 10 para 100 colmeias e a conta de quanto isso rende.',
-  },
+const VARIANTES: Record<string, { linha: string; impacto: string; spaced: string; sub: string }> = {
+  iniciante: { linha: 'Tem menos de 10', impacto: 'Colmeias', spaced: 'e quer crescer', sub: 'A live mostra o caminho de quem começou pequeno e chegou a 100 colmeias com multiplicação própria, sem comprar enxame.' },
+  rainhas: { linha: 'Pare de comprar', impacto: 'Rainha', spaced: 'produza as suas', sub: 'Live gratuita: o método de rainhas mais simples para quem quer ir de 10 para 100 colmeias.' },
+  renda: { linha: 'Quantas colmeias para', impacto: 'Viver', spaced: 'de apicultura', sub: 'Na live: o plano de 10 para 100 colmeias e a conta de quanto isso rende por temporada.' },
 };
 
 const v = String(Astro.params.variante || '').toLowerCase();
 const cfg = VARIANTES[v];
 if (!cfg) return Astro.redirect('/', 302);
 ---
-<Captacao variante={v} headline={cfg.headline} sub={cfg.sub} />
+<Captacao variante={v} {...cfg} />

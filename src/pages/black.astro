@@ -1,11 +1,12 @@
 ---
-import Base from '~/layouts/Base.astro';
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import Countdown from '~/components/Countdown.astro';
 import LeadForm from '~/components/LeadForm.astro';
 import Autoridade from '~/components/Autoridade.astro';
 import Footer from '~/components/Footer.astro';
+import Icons from '~/components/Icons.astro';
 import { CAMPANHA, BONUS, ENTREGAVEIS, DEPOIMENTOS, FAQ } from '~/config/black';
-import { estado, resolverAgora, brl, fmtDia, fmtData } from '~/lib/phases';
+import { estado, resolverAgora, brl, fmtDia } from '~/lib/phases';
 import { lerUtmsDoCookie, lerUtmsDaUrl, urlCheckout } from '~/lib/tracking';
 import { ENV } from '~/lib/env';
 
@@ -19,267 +20,307 @@ const desconto = Math.round((1 - preco.black / preco.cheio) * 100);
 const valorEntregaveis = ENTREGAVEIS.reduce((s, e) => s + e.valor, 0);
 const valorBonusAtivos = st.bonusAtivos.reduce((s, b) => s + b.valor, 0);
 const valorTotal = valorEntregaveis + valorBonusAtivos;
-const bonusVisiveis = BONUS.filter((b) => agora >= new Date(b.inicio)); // ativos + encerrados; futuros ficam escondidos
-const ctaTexto = st.fase === 'black' ? 'Quero entrar hoje, última chance' : 'Quero multiplicar meu apiário';
+const bonusVisiveis = BONUS.filter((b) => agora >= new Date(b.inicio));
+const ctaTexto = st.fase === 'black' ? 'Entrar hoje, última chance' : 'Quero entrar no Tecnoapis';
 const abre = new Date(CAMPANHA.aberturaVendas);
+const trackCta = (onde: string) => JSON.stringify({ value: preco.black, currency: 'BRL', content_name: onde });
+
+const CURSOS = [
+  { eyebrow: 'Curso', linha: 'Produção de', impacto: 'Núcleos', sub: '31 aulas, 6 métodos' },
+  { eyebrow: 'Curso', linha: 'Método', impacto: 'Palmer', sub: 'Adaptado', spaced: true },
+  { eyebrow: 'Curso', linha: 'Método', impacto: 'Doolittle', sub: 'Produção de Rainhas' },
+  { eyebrow: 'Curso', linha: 'Método', impacto: 'Miller', sub: 'Produção de Rainhas' },
+  { eyebrow: 'Curso', linha: 'Leitura de', impacto: 'Enxame', sub: 'Alvado, cria e clima' },
+  { eyebrow: 'Curso', linha: 'Gestão', impacto: 'Apismoney', sub: 'Planilha de custos' },
+  { eyebrow: 'Curso', linha: 'Produção de', impacto: 'Própolis', sub: '26 conteúdos' },
+  { eyebrow: 'Minicurso', linha: 'Alternativas de', impacto: 'Renda', sub: '' },
+];
 ---
-<Base title={`${CAMPANHA.nome}: de 10 para 100 colmeias | ${CAMPANHA.professor}`} description={`${desconto}% off no Clube Tecnoapis + bônus por tempo limitado. A maior oferta que a Black Tecnoapis já viu.`}>
+<Tecnoapis title={`${CAMPANHA.nome}: de 10 para 100 colmeias | ${CAMPANHA.professor}`} description={`${desconto}% off no Clube Tecnoapis com bônus por tempo limitado. A maior oferta que a Black Tecnoapis já viu.`}>
 <main data-track-view="ViewContent" data-track-params={JSON.stringify({ content_name: CAMPANHA.nome, content_category: st.fase, value: preco.black, currency: 'BRL' })}>
 
   {st.fase === 'captacao' ? (
-    <!-- ===== ANTES DA ABERTURA: pré-lançamento com captação ===== -->
-    <section class="section">
-      <div class="wrap grid grid-2" style="align-items:center;gap:40px">
+    <section class="ta-section" style="padding-top:var(--space-12)">
+      <div class="ta-container ta-split" style="align-items:center">
         <div>
-          <span class="pill brand">{CAMPANHA.nome}</span>
-          <h1 style="margin-top:16px"><span class="display brand" style="font-size:1.25em">De 10 para 100 colmeias.</span><br/>A maior oferta que a Black Tecnoapis já viu abre dia {fmtDia(abre)}.</h1>
-          <p class="lead">Quem está no grupo do WhatsApp recebe a condição de abertura primeiro, com bônus que só valem no primeiro dia.</p>
+          <div class="ta-stack">
+            <span class="ta-eyebrow">{CAMPANHA.nome}</span>
+            <span class="ta-line ta-line--l">De 10 para 100</span>
+            <h1 class="ta-impact ta-impact--xl">Colmeias</h1>
+            <span class="ta-spaced">abre dia {fmtDia(abre)}</span>
+          </div>
+          <p class="ta-lead" style="margin:var(--space-6) 0">A maior oferta que a Black Tecnoapis já viu. Quem está no grupo do WhatsApp recebe a condição de abertura primeiro, com bônus que só valem no primeiro dia.</p>
           <Countdown ate={st.proximoPrazo} label="Abertura em" />
         </div>
-        <LeadForm cta="Quero ser avisado primeiro" titulo="Entre na lista da Black" subtitulo="Grátis. Você recebe o link do grupo na hora." />
+        <LeadForm cta="Quero ser avisado primeiro" titulo="Entre na lista da Black" subtitulo="Grátis. O link do grupo chega no seu WhatsApp agora." />
       </div>
     </section>
   ) : st.fase === 'encerrado' ? (
-    <section class="section"><div class="wrap center" style="max-width:640px">
-      <h1>A {CAMPANHA.nome} encerrou</h1>
-      <p class="lead">Deixe seu contato para saber da próxima abertura do Clube Tecnoapis.</p>
+    <section class="ta-section"><div class="ta-container" style="max-width:640px">
+      <div class="ta-stack"><span class="ta-eyebrow">{CAMPANHA.nome}</span><span class="ta-line ta-line--l">A Black</span><h1 class="ta-impact ta-impact--xl">Encerrou</h1></div>
+      <p class="ta-lead" style="margin:var(--space-6) 0">Deixe seu contato para saber da próxima abertura do Clube Tecnoapis.</p>
       <LeadForm cta="Quero ser avisado" titulo="Lista de espera" subtitulo="" />
     </div></section>
   ) : (
   <>
-    <!-- ===== 1. TOPO ===== -->
-    <section class="section" style="padding-top:clamp(28px,5vw,64px);background:radial-gradient(900px 400px at 70% -10%, rgba(242,107,29,.18), transparent)">
-      <div class="wrap center" style="max-width:860px">
-        <span class="pill brand">{CAMPANHA.nome} · {st.fase === 'black' ? 'HOJE, 27/11' : `até ${fmtDia(new Date(CAMPANHA.fimVendas))}`}</span>
-        <h1 style="margin-top:18px"><span class="display brand" style="font-size:1.3em;display:block">De 10 para 100 colmeias</span>em uma temporada, sem comprar um enxame sequer</h1>
-        <p class="lead">Todo o Clube Tecnoapis (25 cursos, 130h+ e as lives semanais) por <b style="color:var(--fg)">{desconto}% menos</b>, com uma condição que o Gustavo nunca fez antes e não vai repetir depois da Black.</p>
-        <div style="margin:28px 0 20px">
-          <div class="muted" style="font-size:.95rem">De <span class="strike">{brl(preco.cheio)}</span> por</div>
-          <div class="display" style="font-size:clamp(3rem,9vw,5rem);line-height:1;color:var(--fg)">{preco.parcelas}x {brl(preco.parcelaValor)}</div>
-          <div class="muted">ou {brl(preco.black)} à vista</div>
-        </div>
-        <a class="btn btn-primary btn-lg" href={checkout} data-track-click="InitiateCheckout" data-track-params={JSON.stringify({ value: preco.black, currency: 'BRL', content_name: 'topo' })}>{ctaTexto} →</a>
-        <div style="margin-top:28px"><Countdown ate={st.proximoPrazo} label={`Tempo ${st.proximoPrazoLabel}`} /></div>
-      </div>
-    </section>
-
-    <!-- ===== 2. FAIXA DE BÔNUS ATIVO ===== -->
-    <div style="background:var(--brand);color:#111;font-weight:800;text-align:center;padding:12px 16px;font-size:1rem">
-      ⚡ {st.faixa} {st.bonusAtivos.length > 0 && <span style="font-weight:500">· {st.bonusAtivos.length} bônus ativo{st.bonusAtivos.length > 1 ? 's' : ''} ({brl(valorBonusAtivos)})</span>}
-    </div>
-
-    <!-- ===== 3. A OPORTUNIDADE ===== -->
-    <section class="section">
-      <div class="wrap grid grid-2" style="gap:40px;align-items:start">
+    <!-- 1. Topo -->
+    <section class="ta-section" style="padding-top:var(--space-12)">
+      <div class="ta-container ta-split" style="align-items:center">
         <div>
-          <span class="eyebrow">Por que agora</span>
-          <h2>Cada temporada que passa com 10 colmeias é uma temporada de 100 que você não teve</h2>
-          <p class="lead">Um apiário com 10 colmeias produz para o consumo e pouco mais. Com 100, você tem um negócio: mel em escala, rainhas para vender, núcleos para vender, própolis.</p>
+          <div class="ta-stack">
+            <span class="ta-eyebrow">{CAMPANHA.nome} · {st.fase === 'black' ? 'só hoje, 27/11' : `até ${fmtDia(new Date(CAMPANHA.fimVendas))}`}</span>
+            <span class="ta-line ta-line--l">De 10 para 100</span>
+            <h1 class="ta-impact ta-impact--xl">Colmeias</h1>
+            <span class="ta-spaced">sem comprar enxame</span>
+          </div>
+          <p class="ta-lead" style="margin-top:var(--space-6)">Todo o Clube Tecnoapis (25 cursos, mais de 130 horas e as lives semanais) por {desconto}% menos, com uma condição que o Gustavo nunca fez antes e não vai repetir depois da Black.</p>
+          <div style="margin-top:var(--space-8)"><Countdown ate={st.proximoPrazo} label={`Tempo ${st.proximoPrazoLabel}`} /></div>
         </div>
-        <div class="grid" style="gap:14px">
-          <div class="card"><h3>O resultado possível</h3><p class="muted">Com matriz preparada, rainhas próprias e o calendário certo, um apiário de 10 colmeias chega a 60–100 em uma a duas temporadas de florada. [CONFIRMAR números com o Gustavo]</p></div>
-          <div class="card"><h3>O custo de ficar parado</h3><p class="muted">Comprar 90 enxames a R$ 250 cada custa R$ 22.500. Comprar 90 rainhas, mais de R$ 7.000. Multiplicar com método custa caixas, cera e alimentação. [CONFIRMAR valores]</p></div>
-          <div class="card"><h3>Por que na Black</h3><p class="muted">A próxima florada forte começa em poucos meses. Quem monta as matrizes agora divide na hora certa.</p></div>
+        <div class="ta-price" style="max-width:none">
+          <span class="ta-badge ta-badge--soft" style="align-self:flex-start">{CAMPANHA.nome}</span>
+          <div>
+            <div class="ta-price__from">de <s>{brl(preco.cheio)}</s> por</div>
+            <div class="ta-price__value"><small>{preco.parcelas}x </small>{brl(preco.parcelaValor)}</div>
+            <div class="ta-price__from">ou {brl(preco.black)} à vista</div>
+          </div>
+          <ul>
+            <li><Icons name="check" size={16} />Todos os 25 cursos e 130h+ de conteúdo</li>
+            <li><Icons name="check" size={16} />115 lives gravadas + live nova toda semana</li>
+            <li><Icons name="check" size={16} />Carteirinha, descontos com parceiros e grupo de membros</li>
+            {st.bonusAtivos.length > 0 && <li><Icons name="check" size={16} />{st.bonusAtivos.length} bônus ativo{st.bonusAtivos.length > 1 ? 's' : ''} até {fmtDia(st.proximoPrazo!)}</li>}
+          </ul>
+          <a href={checkout} class="ta-btn ta-btn--primary ta-btn--lg" data-track-click="InitiateCheckout" data-track-params={trackCta('topo')}>{ctaTexto}</a>
+          <div class="ta-price__note">Garantia de {CAMPANHA.garantiaDias} dias. Pagamento seguro pela Hubla.</div>
         </div>
       </div>
     </section>
 
-    <!-- ===== 4. PRA QUEM É ===== -->
-    <section class="section">
-      <div class="wrap grid grid-2" style="gap:40px">
+    <!-- 2. Faixa de bônus ativo -->
+    <div class="ta-banner">{st.faixa}{st.bonusAtivos.length > 0 && ` · ${st.bonusAtivos.length} bônus ativo${st.bonusAtivos.length > 1 ? 's' : ''} (${brl(valorBonusAtivos)})`}</div>
+
+    <!-- 3. Oportunidade -->
+    <section class="ta-section">
+      <div class="ta-container ta-split">
         <div>
-          <span class="eyebrow">É para você se</span>
-          <ul class="check">
-            <li>Tem de 2 a 30 colmeias e quer crescer sem comprar enxame</li>
-            <li>Já perdeu núcleo por dividir na época errada</li>
-            <li>Depende de comprar rainha e quer produzir as suas</li>
-            <li>Quer que o apiário vire renda, não só hobby</li>
-            <li>Topa seguir um calendário e fazer as revisões</li>
+          <div class="ta-stack"><span class="ta-eyebrow">Por que agora</span><span class="ta-line ta-line--l">Cada temporada parado em 10 é</span><h2 class="ta-impact ta-impact--l">Uma de 100 perdida</h2></div>
+          <p class="ta-lead" style="margin-top:var(--space-6)">Um apiário com 10 colmeias produz para o consumo e pouco mais. Com 100, você tem um negócio: mel em escala, rainhas para vender, núcleos para vender, própolis.</p>
+        </div>
+        <div class="ta-grid">
+          <div class="ta-block"><h3>O resultado possível</h3><p>Com matriz preparada, rainhas próprias e o calendário certo, um apiário de 10 colmeias chega a 60–100 em uma a duas temporadas de florada. [CONFIRMAR números com o Gustavo]</p></div>
+          <div class="ta-block"><h3>O custo de ficar parado</h3><p>Comprar 90 enxames a R$ 250 custa R$ 22.500. Comprar 90 rainhas, mais de R$ 7.000. Multiplicar com método custa caixa, cera e alimentação. [CONFIRMAR valores]</p></div>
+          <div class="ta-block"><h3>Por que na Black</h3><p>A próxima florada forte começa em poucos meses. Quem monta as matrizes agora divide na hora certa.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Pra quem é -->
+    <section class="ta-section">
+      <div class="ta-container ta-grid ta-grid--2" style="gap:var(--space-12)">
+        <div>
+          <p class="ta-heading" style="margin-bottom:var(--space-4)">É para você se</p>
+          <ul class="ta-list">
+            <li><Icons name="check" /><span>Tem de 2 a 30 colmeias e quer crescer sem comprar enxame</span></li>
+            <li><Icons name="check" /><span>Já perdeu núcleo por dividir na época errada</span></li>
+            <li><Icons name="check" /><span>Depende de comprar rainha e quer produzir as suas</span></li>
+            <li><Icons name="check" /><span>Quer que o apiário vire renda, não só hobby</span></li>
+            <li><Icons name="check" /><span>Topa seguir um calendário e fazer as revisões</span></li>
           </ul>
         </div>
         <div>
-          <span class="eyebrow" style="color:var(--danger)">Não é para você se</span>
-          <ul class="check x">
-            <li>Quer resultado sem ir ao apiário</li>
-            <li>Procura "truque" para dobrar o apiário em 30 dias</li>
-            <li>Não tem nenhuma colmeia e não pretende ter nos próximos meses</li>
+          <p class="ta-heading" style="margin-bottom:var(--space-4)">Não é para você se</p>
+          <ul class="ta-list ta-list--x">
+            <li><Icons name="x" /><span>Quer resultado sem ir ao apiário</span></li>
+            <li><Icons name="x" /><span>Procura truque para dobrar o apiário em 30 dias</span></li>
+            <li><Icons name="x" /><span>Não tem nenhuma colmeia e não pretende ter nos próximos meses</span></li>
           </ul>
         </div>
       </div>
     </section>
 
-    <!-- ===== 5. QUEM ENSINA ===== -->
+    <!-- 5. Quem ensina -->
     <Autoridade />
 
-    <!-- ===== 6. O PRODUTO ===== -->
-    <section class="section">
-      <div class="wrap">
-        <div class="center"><span class="eyebrow">O que você recebe</span><h2>A trilha "De 10 para 100" dentro do Clube Tecnoapis</h2><p class="lead">Os cursos organizados na ordem em que você vai usar. Tudo gravado no apiário, teoria separada da prática.</p></div>
-        <div class="grid grid-3" style="margin-top:32px">
-          <div class="card"><span class="pill">Etapa 1</span><h3 style="margin-top:12px">Preparar a matriz</h3><p class="muted"><b>Produção de Núcleos</b>, módulo 1: o que é uma matriz, como identificar, transformar e saber quando está pronta.</p></div>
-          <div class="card"><span class="pill">Etapa 2</span><h3 style="margin-top:12px">Multiplicar</h3><p class="muted"><b>Núcleos</b> (1 quadro, 2 quadros, sem cria, empilhamento) + <b>Método Palmer Adaptado</b> + <b>Demaree</b>. 6 métodos práticos.</p></div>
-          <div class="card"><span class="pill">Etapa 3</span><h3 style="margin-top:12px">Produzir rainhas</h3><p class="muted"><b>Miller</b> para começar em 4 aulas e <b>Doolittle</b> para escala, com iniciadora, continuadora e banco de rainhas.</p></div>
-          <div class="card"><span class="pill">Etapa 4</span><h3 style="margin-top:12px">Ler e alimentar</h3><p class="muted"><b>Leitura de Enxame</b> (alvado, cria, alimento, clima) + aulas de <b>alimentação</b> para núcleo crescer rápido.</p></div>
-          <div class="card"><span class="pill">Etapa 5</span><h3 style="margin-top:12px">Não perder</h3><p class="muted"><b>Perda Zero</b> (diário de recuperação de apiário) + sanidade: varroa, pequeno besouro, intoxicação.</p></div>
-          <div class="card"><span class="pill">Etapa 6</span><h3 style="margin-top:12px">Transformar em renda</h3><p class="muted"><b>APISMONEY</b> com planilha de custos, <b>Própolis</b>, <b>Geleia Real</b>, <b>Favos em Acrílico</b>, <b>Alternativas de Renda</b>.</p></div>
+    <!-- 6. O produto: trilha -->
+    <section class="ta-section">
+      <div class="ta-container">
+        <div class="ta-stack"><span class="ta-eyebrow">O que você recebe</span><span class="ta-line ta-line--l">A trilha de 10 para 100 dentro do</span><h2 class="ta-impact ta-impact--l">Clube Tecnoapis</h2></div>
+        <p class="ta-lead" style="margin-top:var(--space-6)">Os cursos organizados na ordem em que você vai usar. Tudo gravado no apiário, teoria separada da prática.</p>
+        <div class="ta-grid ta-grid--3" style="margin-top:var(--space-8)">
+          <div class="ta-block"><span class="ta-eyebrow">Etapa 1</span><h3>Preparar a matriz</h3><p>Produção de Núcleos, módulo 1: o que é uma matriz, como identificar, transformar e saber quando está pronta.</p></div>
+          <div class="ta-block"><span class="ta-eyebrow">Etapa 2</span><h3>Multiplicar</h3><p>Núcleos com 1 quadro, 2 quadros, sem cria e empilhamento, mais Palmer Adaptado e Demaree. Seis métodos práticos.</p></div>
+          <div class="ta-block"><span class="ta-eyebrow">Etapa 3</span><h3>Produzir rainhas</h3><p>Miller para começar em 4 aulas e Doolittle para escala, com iniciadora, continuadora e banco de rainhas.</p></div>
+          <div class="ta-block"><span class="ta-eyebrow">Etapa 4</span><h3>Ler e alimentar</h3><p>Leitura de Enxame (alvado, cria, alimento, clima) e as aulas de alimentação para núcleo crescer rápido.</p></div>
+          <div class="ta-block"><span class="ta-eyebrow">Etapa 5</span><h3>Não perder</h3><p>Perda Zero, o diário de recuperação de apiário, e sanidade: varroa, pequeno besouro, intoxicação.</p></div>
+          <div class="ta-block"><span class="ta-eyebrow">Etapa 6</span><h3>Transformar em renda</h3><p>APISMONEY com planilha de custos, Própolis, Geleia Real, Favos em Acrílico e Alternativas de Renda.</p></div>
         </div>
       </div>
     </section>
 
-    <!-- ===== 7. FAST PASS ===== -->
-    <section class="section">
-      <div class="wrap">
-        <div class="card hot" style="padding:clamp(28px,5vw,48px);background:linear-gradient(135deg,var(--bg2),rgba(242,107,29,.08))">
-          <div class="grid grid-2" style="align-items:center;gap:32px">
-            <div>
-              <span class="eyebrow">O atalho</span>
-              <h2>Sozinho, chegar a 100 colmeias leva anos de erro e acerto. Com o método, uma a duas temporadas.</h2>
-              <p class="muted">Não é mágica: é saber qual colmeia dividir, quando, como fazer a rainha e o que dar de comer. O Gustavo errou isso por você e gravou o que funciona.</p>
+    <!-- Cursos inclusos (pôsteres) -->
+    <section class="ta-section ta-section--surface">
+      <div class="ta-container">
+        <div class="ta-section-head"><h2>Cursos inclusos</h2><span class="ta-small">25 cursos no total</span></div>
+        <div class="carrossel" style="margin-top:var(--space-6)">
+          {CURSOS.map((c) => (
+            <div class="ta-course">
+              <span class="ta-eyebrow">{c.eyebrow}</span>
+              <span class="ta-line">{c.linha}</span>
+              <span class="ta-impact" style={c.impacto.length > 9 ? 'font-size:24px' : ''}>{c.impacto}</span>
+              {c.sub && (c.spaced ? <span class="ta-spaced" style="font-size:11px">{c.sub}</span> : <span class="ta-eyebrow" style="color:var(--ink)">{c.sub}</span>)}
+              <hr />
+              <div class="ta-course__photo"><span>[FOTO DO CURSO]</span></div>
             </div>
-            <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
-              <div class="card center"><div class="muted" style="font-size:.85rem">Sem método</div><div class="display" style="font-size:2.6rem;color:var(--dim)">3–5 anos</div><div class="muted" style="font-size:.85rem">comprando enxame e rainha</div></div>
-              <div class="card center" style="border-color:var(--brand)"><div class="muted" style="font-size:.85rem">Com a trilha</div><div class="display" style="font-size:2.6rem;color:var(--brand)">1–2 temporadas</div><div class="muted" style="font-size:.85rem">multiplicando o que você já tem</div></div>
-            </div>
-          </div>
-          <p class="muted" style="font-size:.8rem;margin:16px 0 0">[CONFIRMAR] prazos com casos reais de alunos.</p>
+          ))}
         </div>
       </div>
     </section>
 
-    <!-- ===== 8. TUDO QUE VOCÊ LEVA ===== -->
-    <section class="section">
-      <div class="wrap" style="max-width:820px">
-        <div class="center"><span class="eyebrow">Tudo que você leva</span><h2>O clube inteiro, não só a trilha</h2></div>
-        <div class="card" style="margin-top:28px;padding:0;overflow:hidden">
+    <!-- 7. Fast pass -->
+    <section class="ta-section">
+      <div class="ta-container ta-split" style="align-items:center">
+        <div>
+          <div class="ta-stack"><span class="ta-eyebrow">O atalho</span><span class="ta-line ta-line--l">Sozinho leva anos. Com o método,</span><h2 class="ta-impact ta-impact--l">1 a 2 temporadas</h2></div>
+          <p class="ta-lead" style="margin-top:var(--space-6)">Não é mágica: é saber qual colmeia dividir, quando, como fazer a rainha e o que dar de comer. O Gustavo errou isso por você e gravou o que funciona.</p>
+          <p class="ta-small" style="margin-top:var(--space-4)">[CONFIRMAR] prazos com casos reais de alunos.</p>
+        </div>
+        <div class="ta-grid ta-grid--2">
+          <div class="ta-block"><p class="ta-small">Sem método</p><div class="ta-price__value" style="color:var(--ink-muted);font-size:36px;margin:var(--space-2) 0">3–5 anos</div><p>comprando enxame e rainha</p></div>
+          <div class="ta-block" style="border-color:var(--accent)"><p class="ta-small">Com a trilha</p><div class="ta-price__value" style="font-size:36px;margin:var(--space-2) 0">1–2 temporadas</div><p>multiplicando o que você já tem</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Tudo que você leva -->
+    <section class="ta-section">
+      <div class="ta-container" style="max-width:860px">
+        <div class="ta-stack"><span class="ta-eyebrow">Tudo que você leva</span><span class="ta-line ta-line--l">O clube inteiro,</span><h2 class="ta-impact ta-impact--l">Não só a trilha</h2></div>
+        <div class="ta-table" style="margin-top:var(--space-8)">
           {ENTREGAVEIS.map((e) => (
-            <div style="display:flex;justify-content:space-between;gap:16px;padding:16px 22px;border-bottom:1px solid var(--line)">
-              <div><b>{e.titulo}</b><div class="muted" style="font-size:.9rem">{e.detalhe}</div></div>
-              <div style="white-space:nowrap;color:var(--muted)">{brl(e.valor)}</div>
-            </div>
+            <div><div><div class="ta-title">{e.titulo}</div><div class="ta-small">{e.detalhe}</div></div><div class="val">{brl(e.valor)}</div></div>
           ))}
           {st.bonusAtivos.map((b) => (
-            <div style="display:flex;justify-content:space-between;gap:16px;padding:16px 22px;border-bottom:1px solid var(--line);background:rgba(242,107,29,.06)">
-              <div><span class="pill brand" style="font-size:.7rem;padding:3px 8px">BÔNUS</span> <b>{b.titulo}</b><div class="muted" style="font-size:.9rem">até {fmtDia(new Date(b.fim))}</div></div>
-              <div style="white-space:nowrap;color:var(--brand2)">{brl(b.valor)}</div>
-            </div>
+            <div><div><span class="ta-badge ta-badge--honey"><Icons name="star" size={12} />Bônus</span><div class="ta-title" style="margin-top:var(--space-1)">{b.titulo}</div><div class="ta-small">até {fmtDia(new Date(b.fim))}</div></div><div class="val">{brl(b.valor)}</div></div>
           ))}
-          <div style="display:flex;justify-content:space-between;gap:16px;padding:20px 22px;background:var(--bg3)">
-            <div><b>Valor total</b></div><div><b class="strike" style="font-size:1.1rem">{brl(valorTotal)}</b></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;gap:16px;padding:20px 22px;align-items:center">
-            <div><b style="color:var(--brand)">Na Black</b></div><div class="display" style="font-size:2rem;color:var(--brand)">{brl(preco.black)}</div>
-          </div>
+          <div class="total"><div class="ta-title">Valor total</div><div class="val"><s style="color:var(--danger)">{brl(valorTotal)}</s></div></div>
+          <div class="total" style="align-items:center"><div class="ta-title">Na Black</div><div class="ta-price__value" style="font-size:32px">{brl(preco.black)}</div></div>
         </div>
       </div>
     </section>
 
-    <!-- ===== 9. BÔNUS ===== -->
-    <section class="section" id="bonus">
-      <div class="wrap">
-        <div class="center"><span class="eyebrow">Bônus por tempo limitado</span><h2>{st.fase === 'black' ? 'Última condição da Black' : 'Cada prazo é real. Quando passa, o bônus some.'}</h2></div>
-        <div class="grid grid-2" style="margin-top:32px">
+    <!-- 9. Bônus -->
+    <section class="ta-section ta-section--surface" id="bonus">
+      <div class="ta-container">
+        <div class="ta-stack"><span class="ta-eyebrow">Bônus por tempo limitado</span><span class="ta-line ta-line--l">{st.fase === 'black' ? 'Última condição da' : 'Cada prazo é real. Quando passa,'}</span><h2 class="ta-impact ta-impact--l">{st.fase === 'black' ? 'Black' : 'O bônus some'}</h2></div>
+        <div class="ta-grid ta-grid--2" style="margin-top:var(--space-8)">
           {bonusVisiveis.map((b) => {
             const ativo = st.bonusAtivos.some((x) => x.id === b.id);
             return (
-              <div class={`card ${ativo && b.destaque ? 'hot' : ''}`} style={ativo ? '' : 'opacity:.55'}>
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px">
-                  <span class={`pill ${ativo ? 'brand' : ''}`}>{ativo ? `ATIVO · até ${fmtDia(new Date(b.fim))} 23:59` : `ENCERROU ${fmtDia(new Date(b.fim))}`}</span>
-                  <span class="muted" style="font-size:.9rem">{brl(b.valor)}</span>
+              <div class="ta-block" style={ativo ? (b.destaque ? 'border-color:var(--honey)' : '') : 'opacity:.5'}>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)">
+                  {ativo ? <span class="ta-badge ta-badge--honey"><Icons name="star" size={12} />até {fmtDia(new Date(b.fim))}</span> : <span class="ta-badge ta-badge--soft">encerrou {fmtDia(new Date(b.fim))}</span>}
+                  <span class="ta-small">{brl(b.valor)}</span>
                 </div>
-                <h3 class={ativo ? '' : 'strike'}>{b.titulo}</h3>
-                <p class="muted" style="margin:0">{b.descricao}</p>
+                <h3 style={ativo ? '' : 'text-decoration:line-through'}>{b.titulo}</h3>
+                <p>{b.descricao}</p>
               </div>
             );
           })}
         </div>
-        <p class="muted center" style="margin-top:20px;font-size:.9rem">Novos bônus entram ao longo da Black. Os que já passaram ficam riscados para você ver que o prazo é de verdade.</p>
+        <p class="ta-small" style="margin-top:var(--space-6)">Novos bônus entram ao longo da Black. Os que já passaram ficam riscados para você ver que o prazo é de verdade.</p>
       </div>
     </section>
 
-    <!-- ===== 10. PROVA ===== -->
-    <section class="section">
-      <div class="wrap">
-        <div class="center"><span class="eyebrow">Quem já fez</span><h2>Resultados de alunos do clube</h2></div>
-        <div class="grid grid-3" style="margin-top:32px">
+    <!-- 10. Prova -->
+    <section class="ta-section">
+      <div class="ta-container">
+        <div class="ta-stack"><span class="ta-eyebrow">Quem já fez</span><span class="ta-line ta-line--l">Resultados de</span><h2 class="ta-impact ta-impact--l">Alunos</h2></div>
+        <div class="ta-grid ta-grid--3" style="margin-top:var(--space-8)">
           {DEPOIMENTOS.map((d) => (
-            <div class="card">
-              <div class="display brand" style="font-size:1.8rem">{d.resultado}</div>
-              <p style="margin:10px 0">{d.texto}</p>
-              <div class="muted" style="font-size:.85rem"><b style="color:var(--fg)">{d.nome}</b> · {d.cidade}</div>
+            <div class="ta-block">
+              <div class="ta-price__value" style="font-size:28px">{d.resultado}</div>
+              <p style="margin:var(--space-3) 0;color:var(--ink)">{d.texto}</p>
+              <p class="ta-small"><span class="ta-ink" style="font-weight:500">{d.nome}</span> · {d.cidade}</p>
             </div>
           ))}
         </div>
-        <p class="muted center" style="font-size:.85rem;margin-top:16px">[CONFIRMAR] substituir por depoimentos reais, de preferência em vídeo.</p>
+        <p class="ta-small" style="margin-top:var(--space-4)">[CONFIRMAR] substituir por depoimentos reais, de preferência em vídeo.</p>
       </div>
     </section>
 
-    <!-- ===== 11. PREÇO ===== -->
-    <section class="section" id="preco">
-      <div class="wrap" style="max-width:560px">
-        <div class="card hot center" style="padding:clamp(28px,5vw,44px)">
-          <span class="pill brand">{CAMPANHA.nome}</span>
-          <h2 style="margin-top:14px">{preco.produtoNome}</h2>
-          <div class="muted">De <span class="strike">{brl(preco.cheio)}</span></div>
-          <div class="display" style="font-size:clamp(3.2rem,10vw,5.2rem);line-height:1;color:var(--brand);margin:8px 0">{preco.parcelas}x {brl(preco.parcelaValor)}</div>
-          <div style="font-size:1.1rem">ou <b>{brl(preco.black)}</b> à vista no Pix</div>
-          <div class="muted" style="font-size:.9rem;margin:6px 0 22px">{desconto}% de desconto · Depois da Black volta para {brl(preco.cheio)}</div>
-          <a class="btn btn-primary btn-lg btn-block" href={checkout} data-track-click="InitiateCheckout" data-track-params={JSON.stringify({ value: preco.black, currency: 'BRL', content_name: 'preco' })}>{ctaTexto} →</a>
-          <div style="margin-top:20px"><Countdown ate={st.proximoPrazo} label={`Tempo ${st.proximoPrazoLabel}`} compact /></div>
-          <p class="muted" style="font-size:.8rem;margin:16px 0 0">🔒 Pagamento seguro pela Hubla · Cartão ou Pix · Acesso imediato</p>
+    <!-- 11. Preço -->
+    <section class="ta-section ta-section--surface" id="preco">
+      <div class="ta-container" style="display:flex;justify-content:center">
+        <div class="ta-price" style="max-width:480px;width:100%">
+          <span class="ta-badge ta-badge--soft" style="align-self:flex-start">Acesso completo</span>
+          <div>
+            <div class="ta-price__from">de <s>{brl(preco.cheio)}</s> por</div>
+            <div class="ta-price__value"><small>{preco.parcelas}x </small>{brl(preco.parcelaValor)}</div>
+            <div class="ta-price__from">ou {brl(preco.black)} à vista no Pix · {desconto}% de desconto</div>
+          </div>
+          <ul>
+            {ENTREGAVEIS.slice(0, 6).map((e) => <li><Icons name="check" size={16} />{e.titulo}</li>)}
+            <li><Icons name="check" size={16} />Carteirinha de membro, descontos com parceiros e grupo</li>
+          </ul>
+          <a href={checkout} class="ta-btn ta-btn--primary ta-btn--lg" data-track-click="InitiateCheckout" data-track-params={trackCta('preco')}>{ctaTexto}</a>
+          <div style="align-self:center"><Countdown ate={st.proximoPrazo} label={`Tempo ${st.proximoPrazoLabel}`} /></div>
+          <div class="ta-price__note">Depois da Black volta para {brl(preco.cheio)}. Garantia de {CAMPANHA.garantiaDias} dias. Cartão ou Pix.</div>
         </div>
       </div>
     </section>
 
-    <!-- ===== 12. OBJEÇÕES ===== -->
-    <section class="section">
-      <div class="wrap">
-        <div class="center"><span class="eyebrow">Antes de decidir</span><h2>"Mas e se…"</h2></div>
-        <div class="grid grid-3" style="margin-top:32px">
-          <div class="card"><h3>…eu não tiver tempo?</h3><p class="muted">As aulas práticas têm de 2 a 10 minutos. A trilha inteira de multiplicação dá menos de 6 horas, e você assiste no celular, no apiário.</p></div>
-          <div class="card"><h3>…for caro?</h3><p class="muted">{preco.parcelas}x de {brl(preco.parcelaValor)} é menos que o preço de duas rainhas por mês. Um núcleo vendido paga o clube.</p></div>
-          <div class="card"><h3>…não funcionar para mim?</h3><p class="muted">Você tem {CAMPANHA.garantiaDias} dias para entrar, assistir e decidir. Se não for para você, devolvemos tudo.</p></div>
+    <!-- 12. Objeções -->
+    <section class="ta-section">
+      <div class="ta-container">
+        <p class="ta-heading" style="margin-bottom:var(--space-6)">Antes de decidir</p>
+        <div class="ta-grid ta-grid--3">
+          <div class="ta-block"><h3>E se eu não tiver tempo?</h3><p>As aulas práticas têm de 2 a 10 minutos. A trilha inteira de multiplicação dá menos de 6 horas, e você assiste no celular, no apiário.</p></div>
+          <div class="ta-block"><h3>E se for caro?</h3><p>{preco.parcelas}x de {brl(preco.parcelaValor)} é menos que o preço de duas rainhas por mês. Um núcleo vendido paga o clube.</p></div>
+          <div class="ta-block"><h3>E se não funcionar para mim?</h3><p>Você tem {CAMPANHA.garantiaDias} dias para entrar, assistir e decidir. Se não for para você, devolvemos tudo.</p></div>
         </div>
       </div>
     </section>
 
-    <!-- ===== 13. GARANTIA ===== -->
-    <section class="section">
-      <div class="wrap grid grid-2" style="align-items:center;gap:32px;max-width:860px">
-        <div class="center"><div class="display brand" style="font-size:5rem;line-height:1">{CAMPANHA.garantiaDias}</div><div class="muted">dias de garantia</div></div>
-        <div><h2>Risco zero</h2><p class="muted">Entre, assista, aplique. Se em {CAMPANHA.garantiaDias} dias achar que não é para você, pede o reembolso pela Hubla e devolvemos 100%, sem pergunta.</p></div>
+    <!-- 13. Garantia -->
+    <section class="ta-section">
+      <div class="ta-container ta-split" style="align-items:center;max-width:900px">
+        <div><span class="ta-badge ta-badge--success">Garantia de {CAMPANHA.garantiaDias} dias</span><div class="ta-price__value" style="font-size:72px;margin-top:var(--space-3)">{CAMPANHA.garantiaDias} dias</div></div>
+        <div><p class="ta-heading">Risco zero</p><p class="ta-body" style="margin-top:var(--space-3)">Entre, assista, aplique. Se em {CAMPANHA.garantiaDias} dias achar que não é para você, pede o reembolso pela Hubla e devolvemos 100%, sem pergunta.</p></div>
       </div>
     </section>
 
-    <!-- ===== 14. FAQ ===== -->
-    <section class="section">
-      <div class="wrap" style="max-width:760px">
-        <div class="center"><span class="eyebrow">Perguntas frequentes</span><h2>Dúvidas comuns</h2></div>
-        <div style="margin-top:28px">
-          {FAQ.map((f) => <details><summary>{f.p}</summary><p>{f.r}</p></details>)}
-        </div>
+    <!-- 14. FAQ -->
+    <section class="ta-section">
+      <div class="ta-container" style="max-width:760px">
+        <p class="ta-heading" style="margin-bottom:var(--space-6)">Perguntas frequentes</p>
+        <div class="ta-faq">{FAQ.map((f) => <details><summary>{f.p}</summary><p>{f.r}</p></details>)}</div>
       </div>
     </section>
 
-    <!-- ===== 15. CTA FINAL ===== -->
-    <section class="section">
-      <div class="wrap center" style="max-width:720px">
-        <h2>Resumindo</h2>
-        <ul class="check" style="text-align:left;max-width:520px;margin:0 auto 28px">
-          <li>Clube Tecnoapis completo: 25 cursos, 130h+, lives semanais</li>
-          <li>{desconto}% de desconto que não volta depois da Black</li>
-          <li>{st.bonusAtivos.length > 0 ? `${st.bonusAtivos.length} bônus ativo(s) até ${fmtDia(st.proximoPrazo!)}` : 'Garantia de ' + CAMPANHA.garantiaDias + ' dias'}</li>
+    <!-- 15. CTA final -->
+    <section class="ta-section ta-section--surface">
+      <div class="ta-container" style="max-width:720px">
+        <div class="ta-stack"><span class="ta-eyebrow">Resumindo</span><span class="ta-line ta-line--l">De 10 para 100</span><h2 class="ta-impact ta-impact--l">Colmeias</h2></div>
+        <ul class="ta-list" style="margin:var(--space-6) 0">
+          <li><Icons name="check" /><span>Clube Tecnoapis completo: 25 cursos, 130h+, lives semanais</span></li>
+          <li><Icons name="check" /><span>{desconto}% de desconto que não volta depois da Black</span></li>
+          <li><Icons name="check" /><span>{st.bonusAtivos.length > 0 ? `${st.bonusAtivos.length} bônus ativo(s) até ${fmtDia(st.proximoPrazo!)}` : `Garantia de ${CAMPANHA.garantiaDias} dias`}</span></li>
         </ul>
         <Countdown ate={st.proximoPrazo} label={`Tempo ${st.proximoPrazoLabel}`} />
-        <div style="margin-top:24px"><a class="btn btn-primary btn-lg" href={checkout} data-track-click="InitiateCheckout" data-track-params={JSON.stringify({ value: preco.black, currency: 'BRL', content_name: 'final' })}>{ctaTexto} →</a></div>
+        <div style="margin-top:var(--space-6)"><a href={checkout} class="ta-btn ta-btn--primary ta-btn--lg" data-track-click="InitiateCheckout" data-track-params={trackCta('final')}>{ctaTexto}</a></div>
       </div>
     </section>
 
-    <div class="sticky-cta">
-      <div style="font-size:.9rem"><b>{preco.parcelas}x {brl(preco.parcelaValor)}</b> <span class="muted">· {st.faixa}</span></div>
-      <a class="btn btn-primary" href={checkout} data-track-click="InitiateCheckout" data-track-params={JSON.stringify({ value: preco.black, currency: 'BRL', content_name: 'sticky' })}>Garantir minha vaga →</a>
+    <div class="ta-sticky">
+      <div class="ta-small"><span class="ta-ink" style="font-weight:500">{preco.parcelas}x {brl(preco.parcelaValor)}</span> · {st.faixa}</div>
+      <a href={checkout} class="ta-btn ta-btn--primary" data-track-click="InitiateCheckout" data-track-params={trackCta('sticky')}>{ctaTexto}</a>
     </div>
   </>
   )}
 </main>
 <Footer />
-</Base>
+</Tecnoapis>
+
+<style>
+  .carrossel { display: flex; gap: var(--space-4); overflow-x: auto; padding-bottom: var(--space-2); scroll-snap-type: x mandatory; }
+  .carrossel > * { flex: 0 0 var(--card-course); scroll-snap-align: start; }
+</style>

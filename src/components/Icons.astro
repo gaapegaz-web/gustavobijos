@@ -1,0 +1,8 @@
+---
+/** Ícones traço 2px, estilo Lucide, currentColor */
+interface Props { name: 'check' | 'x' | 'star'; size?: number }
+const { name, size = 18 } = Astro.props;
+---
+{name === 'check' && <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>}
+{name === 'x' && <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>}
+{name === 'star' && <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="var(--honey)"><path d="M12 2l3 7 7 .6-5.3 4.7 1.6 7.2L12 17.8 5.7 21.5l1.6-7.2L2 9.6 9 9z"/></svg>}

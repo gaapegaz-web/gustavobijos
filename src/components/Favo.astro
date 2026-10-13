@@ -1,41 +1,38 @@
 ---
-/**
- * Favo 10×10: 10 células começam preenchidas (hoje), as outras 90 enchem uma vez, no carregamento.
- * É o "de 10 para 100" desenhado.
- */
-const R = 11; // raio do hexágono
+/** Favo 10×10: 10 células de hoje em ink, as outras 90 enchem de honey uma vez, ao carregar. */
+const R = 11;
 const W = Math.sqrt(3) * R, H = 2 * R;
 const cells: { x: number; y: number; i: number }[] = [];
 for (let row = 0; row < 10; row++) for (let col = 0; col < 10; col++) {
   cells.push({ x: col * W + (row % 2 ? W / 2 : 0) + W / 2, y: row * H * 0.75 + R, i: row * 10 + col });
 }
 const hex = (cx: number, cy: number) =>
-  Array.from({ length: 6 }, (_, k) => { const a = (Math.PI / 180) * (60 * k - 30); return `${(cx + (R - 1.2) * Math.cos(a)).toFixed(1)},${(cy + (R - 1.2) * Math.sin(a)).toFixed(1)}`; }).join(' ');
+  Array.from({ length: 6 }, (_, k) => { const a = (Math.PI / 180) * (60 * k - 30); return `${(cx + (R - 1.4) * Math.cos(a)).toFixed(1)},${(cy + (R - 1.4) * Math.sin(a)).toFixed(1)}`; }).join(' ');
 const vw = 10 * W + W / 2, vh = 9 * H * 0.75 + H;
 ---
 <figure class="favo" aria-label="Dez colmeias hoje, cem na próxima temporada">
   <svg viewBox={`0 0 ${vw.toFixed(1)} ${vh.toFixed(1)}`} width="100%" role="img">
     {cells.map((c) => <polygon points={hex(c.x, c.y)} class={c.i < 10 ? 'hoje' : 'futuro'} style={`--i:${c.i - 10}`} />)}
   </svg>
-  <figcaption><b data-n>10</b> colmeias</figcaption>
+  <figcaption><b data-n>10</b> <span>colmeias</span></figcaption>
 </figure>
 <style>
-  .favo { margin: 0; max-width: 340px; }
+  .favo { margin: 0; max-width: 320px; }
   .favo svg { overflow: visible; }
-  polygon { fill: transparent; stroke: var(--mel-escuro); stroke-width: 1.4; }
-  polygon.hoje { fill: var(--propolis); }
-  polygon.futuro { fill: var(--branco); fill-opacity: 0; animation: enche .35s ease-out forwards; animation-delay: calc(.6s + var(--i) * 22ms); }
-  @keyframes enche { to { fill-opacity: 1; } }
-  figcaption { font-family: var(--titulo); font-weight: 700; font-size: 1.1rem; color: var(--madeira); margin-top: 10px; }
-  figcaption b { font-size: 2.4rem; font-weight: 800; color: var(--propolis); font-variant-numeric: tabular-nums; }
-  @media (prefers-reduced-motion: reduce) { polygon.futuro { fill-opacity: 1; animation: none; } }
+  polygon { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; }
+  polygon.hoje { fill: var(--ink); stroke: var(--ink); }
+  polygon.futuro { animation: enche .3s ease-out forwards; animation-delay: calc(.6s + var(--i) * 22ms); }
+  @keyframes enche { to { fill: var(--honey); stroke: var(--honey); } }
+  figcaption { margin-top: var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); }
+  figcaption b { font: 400 32px/1 var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+  figcaption span { font: 300 14px var(--font-sans); color: var(--ink-muted); }
+  @media (prefers-reduced-motion: reduce) { polygon.futuro { fill: var(--honey); stroke: var(--honey); animation: none; } }
 </style>
 <script>
-  // contador acompanha o preenchimento do favo (10 → 100 em ~2,6s)
   const n = document.querySelector<HTMLElement>('.favo [data-n]');
   const reduz = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (n && !reduz) {
-    const t0 = performance.now() + 600, dur = 90 * 22 + 350;
+    const t0 = performance.now() + 600, dur = 90 * 22 + 300;
     const tick = () => { const p = Math.min(1, Math.max(0, (performance.now() - t0) / dur)); n.textContent = String(10 + Math.round(90 * p)); if (p < 1) requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
   } else if (n) n.textContent = '100';

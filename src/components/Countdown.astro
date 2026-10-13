@@ -1,12 +1,11 @@
 ---
-/** Contador regressivo. Recebe o prazo em ISO; o cliente só desenha, o prazo vem do servidor. */
-interface Props { ate: Date | null; label?: string; compact?: boolean }
-const { ate, label, compact = false } = Astro.props;
+interface Props { ate: Date | null; label?: string }
+const { ate, label } = Astro.props;
 ---
 {ate && (
-  <div class="cd" data-ate={ate.toISOString()} data-compact={compact ? '1' : '0'}>
-    {label && <div class="muted" style="font-size:.85rem;font-weight:600;margin-bottom:8px">{label}</div>}
-    <div class="countdown" aria-live="polite">
+  <div class="cd" data-ate={ate.toISOString()}>
+    {label && <div class="ta-small" style="margin-bottom:var(--space-2)">{label}</div>}
+    <div class="ta-countdown" aria-live="polite">
       <div><b data-d>--</b><small>dias</small></div>
       <div><b data-h>--</b><small>horas</small></div>
       <div><b data-m>--</b><small>min</small></div>
