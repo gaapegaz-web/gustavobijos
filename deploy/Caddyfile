@@ -1,0 +1,29 @@
+# /etc/caddy/Caddyfile
+gustavobijos.com.br, www.gustavobijos.com.br {
+    # www -> raiz
+    @www host www.gustavobijos.com.br
+    redir @www https://gustavobijos.com.br{uri} permanent
+
+    encode zstd gzip
+
+    # estáticos com cache longo
+    @static path /js/* /img/* /_astro/* /favicon.svg /robots.txt
+    header @static Cache-Control "public, max-age=604800"
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Frame-Options "SAMEORIGIN"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:4321 {
+        header_up X-Real-IP {remote_host}
+    }
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+    }
+}

@@ -1,0 +1,79 @@
+---
+import { db } from '~/lib/db';
+import { CAMPANHA } from '~/config/black';
+import { estado, resolverAgora, fmtDataHora, brl } from '~/lib/phases';
+const d = db();
+const st = estado(resolverAgora(Astro.url));
+
+const total = (d.prepare('SELECT count(*) n FROM leads').get() as any).n;
+const hoje = (d.prepare("SELECT count(*) n FROM leads WHERE date(created_at, '-3 hours') = date('now', '-3 hours')").get() as any).n;
+const compradores = (d.prepare('SELECT count(*) n FROM leads WHERE comprou = 1').get() as any).n;
+const vendas = d.prepare("SELECT count(*) n, coalesce(sum(valor),0) v FROM eventos WHERE tipo='Purchase'").get() as any;
+const reembolsos = (d.prepare("SELECT count(*) n FROM eventos WHERE tipo='Reembolso'").get() as any).n;
+const porDia = d.prepare("SELECT date(created_at, '-3 hours') dia, count(*) n FROM leads GROUP BY dia ORDER BY dia DESC LIMIT 31").all() as any[];
+const porFonte = d.prepare(`SELECT coalesce(l.utm_source,'(direto)') fonte, coalesce(l.utm_medium,'') medio, coalesce(l.utm_content,'') conteudo, count(*) leads,
+  sum(l.comprou) compras, (SELECT coalesce(sum(valor),0) FROM eventos e WHERE e.tipo='Purchase' AND e.lead_id IN (SELECT id FROM leads x WHERE coalesce(x.utm_source,'(direto)')=coalesce(l.utm_source,'(direto)') AND coalesce(x.utm_medium,'')=coalesce(l.utm_medium,'') AND coalesce(x.utm_content,'')=coalesce(l.utm_content,''))) receita
+  FROM leads l GROUP BY fonte, medio, conteudo ORDER BY leads DESC`).all() as any[];
+const porVariante = d.prepare("SELECT coalesce(variante,'(padrão)') v, count(*) n, sum(comprou) c FROM leads GROUP BY v ORDER BY n DESC").all() as any[];
+const links = d.prepare('SELECT * FROM links ORDER BY cliques DESC').all() as any[];
+const recentes = d.prepare('SELECT id, nome, whatsapp, email, utm_source, utm_medium, utm_content, variante, comprou, created_at FROM leads ORDER BY id DESC LIMIT 50').all() as any[];
+const ultimosEventos = d.prepare('SELECT e.*, l.nome FROM eventos e LEFT JOIN leads l ON l.id = e.lead_id ORDER BY e.id DESC LIMIT 40').all() as any[];
+const capiErros = (d.prepare("SELECT count(*) n FROM eventos WHERE capi_status LIKE 'erro%'").get() as any).n;
+const webhooksErro = d.prepare('SELECT * FROM webhooks WHERE processado = 0 ORDER BY id DESC LIMIT 10').all() as any[];
+const semCapi = (d.prepare("SELECT count(*) n FROM eventos WHERE capi_status = 'pulado'").get() as any).n;
+const dt = (s: string) => fmtDataHora(new Date(s));
+---
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Admin · {CAMPANHA.nome}</title>
+<style>
+  body{font:14px/1.5 system-ui,sans-serif;background:#0b0b0d;color:#eee;margin:0;padding:24px}
+  h1{font-size:20px;margin:0 0 4px} h2{font-size:15px;margin:32px 0 8px;color:#f26b1d;text-transform:uppercase;letter-spacing:.08em}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+  .kpi div{background:#141418;border:1px solid #2a2a33;border-radius:10px;padding:14px} .kpi b{display:block;font-size:26px;color:#f26b1d}
+  table{border-collapse:collapse;width:100%;font-size:13px;background:#141418;border-radius:10px;overflow:hidden} th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #2a2a33;vertical-align:top} th{color:#a7a3a0;font-weight:600;font-size:12px;text-transform:uppercase}
+  .wrap{overflow-x:auto} .ok{color:#3ccb7f}.err{color:#ff5a5a}.muted{color:#777} a{color:#ff8a3d}
+  .alert{background:#3a1b10;border:1px solid #b94e12;padding:10px 14px;border-radius:8px;margin:12px 0}
+</style></head><body>
+<h1>{CAMPANHA.nome} · painel</h1>
+<div class="muted">Fase atual: <b style="color:#eee">{st.fase}</b> · {st.faixa} · <a href="/admin/leads.csv">Exportar leads (CSV)</a> · <a href="/admin/eventos.csv">eventos (CSV)</a></div>
+
+{semCapi > 0 && <div class="alert">⚠️ {semCapi} eventos não foram enviados para a Meta (META_PIXEL_ID / META_CAPI_TOKEN não configurados).</div>}
+{capiErros > 0 && <div class="alert">⚠️ {capiErros} eventos com erro na CAPI. Veja a coluna CAPI abaixo.</div>}
+{webhooksErro.length > 0 && <div class="alert">⚠️ {webhooksErro.length} webhooks da Hubla com erro de processamento (último: {webhooksErro[0].erro}).</div>}
+
+<div class="kpi">
+  <div><b>{total}</b>leads</div>
+  <div><b>{hoje}</b>leads hoje</div>
+  <div><b>{vendas.n}</b>vendas (Hubla)</div>
+  <div><b>{brl(vendas.v)}</b>receita</div>
+  <div><b>{compradores}</b>leads que compraram</div>
+  <div><b>{total ? ((compradores / total) * 100).toFixed(1) : 0}%</b>conversão lead→venda</div>
+  <div><b>{reembolsos}</b>reembolsos</div>
+</div>
+
+<h2>Por origem (UTM)</h2>
+<div class="wrap"><table><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th>Leads</th><th>Compras</th><th>Receita</th><th>Conv.</th></tr>
+{porFonte.map((r) => <tr><td>{r.fonte}</td><td>{r.medio}</td><td>{r.conteudo}</td><td>{r.leads}</td><td>{r.compras}</td><td>{brl(r.receita)}</td><td>{r.leads ? ((r.compras / r.leads) * 100).toFixed(1) : 0}%</td></tr>)}
+</table></div>
+
+<h2>Por variante de página</h2>
+<div class="wrap"><table><tr><th>Variante</th><th>Leads</th><th>Compras</th></tr>{porVariante.map((r) => <tr><td>{r.v}</td><td>{r.n}</td><td>{r.c}</td></tr>)}</table></div>
+
+<h2>Leads por dia</h2>
+<div class="wrap"><table><tr><th>Dia</th><th>Leads</th></tr>{porDia.map((r) => <tr><td>{r.dia}</td><td>{r.n}</td></tr>)}</table></div>
+
+<h2>Links curtos (/r/slug)</h2>
+<div class="wrap"><table><tr><th>Link</th><th>Descrição</th><th>Destino</th><th>UTMs</th><th>Cliques</th></tr>
+{links.map((l) => <tr><td><code>{CAMPANHA.dominio}/r/{l.slug}</code></td><td>{l.descricao}</td><td>{l.destino}</td><td class="muted">{[l.utm_source, l.utm_medium, l.utm_content].filter(Boolean).join(' / ')}</td><td>{l.cliques}</td></tr>)}
+</table></div>
+
+<h2>Últimos leads</h2>
+<div class="wrap"><table><tr><th>#</th><th>Quando</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Origem</th><th>Var.</th><th>Comprou</th></tr>
+{recentes.map((l) => <tr><td>{l.id}</td><td>{dt(l.created_at)}</td><td>{l.nome}</td><td>{l.whatsapp}</td><td>{l.email}</td><td class="muted">{[l.utm_source, l.utm_medium, l.utm_content].filter(Boolean).join('/')}</td><td>{l.variante}</td><td>{l.comprou ? <span class="ok">sim</span> : ''}</td></tr>)}
+</table></div>
+
+<h2>Últimos eventos</h2>
+<div class="wrap"><table><tr><th>Quando</th><th>Tipo</th><th>Origem</th><th>Lead</th><th>Valor</th><th>CAPI</th><th>event_id</th></tr>
+{ultimosEventos.map((e) => <tr><td>{dt(e.created_at)}</td><td>{e.tipo}</td><td>{e.origem}</td><td>{e.nome}</td><td>{e.valor != null ? brl(e.valor) : ''}</td><td class={e.capi_status === 'ok' ? 'ok' : e.capi_status?.startsWith('erro') ? 'err' : 'muted'}>{e.capi_status}</td><td class="muted" style="font-size:11px">{e.event_id}</td></tr>)}
+</table></div>
+</body></html>

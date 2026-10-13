@@ -1,0 +1,32 @@
+---
+/** Contador regressivo. Recebe o prazo em ISO; o cliente só desenha, o prazo vem do servidor. */
+interface Props { ate: Date | null; label?: string; compact?: boolean }
+const { ate, label, compact = false } = Astro.props;
+---
+{ate && (
+  <div class="cd" data-ate={ate.toISOString()} data-compact={compact ? '1' : '0'}>
+    {label && <div class="muted" style="font-size:.85rem;font-weight:600;margin-bottom:8px">{label}</div>}
+    <div class="countdown" aria-live="polite">
+      <div><b data-d>--</b><small>dias</small></div>
+      <div><b data-h>--</b><small>horas</small></div>
+      <div><b data-m>--</b><small>min</small></div>
+      <div><b data-s>--</b><small>seg</small></div>
+    </div>
+  </div>
+)}
+<script>
+  function tick() {
+    document.querySelectorAll<HTMLElement>('.cd').forEach((el) => {
+      const ate = new Date(el.dataset.ate!).getTime();
+      let diff = Math.max(0, ate - Date.now());
+      const d = Math.floor(diff / 86400000); diff -= d * 86400000;
+      const h = Math.floor(diff / 3600000); diff -= h * 3600000;
+      const m = Math.floor(diff / 60000); diff -= m * 60000;
+      const s = Math.floor(diff / 1000);
+      const set = (k: string, v: number) => { const n = el.querySelector(`[data-${k}]`); if (n) n.textContent = String(v).padStart(2, '0'); };
+      set('d', d); set('h', h); set('m', m); set('s', s);
+      const dias = el.querySelector('[data-d]')?.parentElement; if (dias && d === 0) dias.style.display = 'none';
+    });
+  }
+  tick(); setInterval(tick, 1000);
+</script>

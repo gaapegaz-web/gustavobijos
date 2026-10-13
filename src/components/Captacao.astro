@@ -1,0 +1,63 @@
+---
+/** Página de captação (compartilhada entre / e /c/[variante]) */
+import Base from '~/layouts/Base.astro';
+import LeadForm from './LeadForm.astro';
+import Countdown from './Countdown.astro';
+import Autoridade from './Autoridade.astro';
+import Footer from './Footer.astro';
+import { CAMPANHA } from '~/config/black';
+import { estado, resolverAgora, fmtDataHora, fmtDiaSemana } from '~/lib/phases';
+
+interface Props { variante?: string; headline?: string; sub?: string }
+const { variante = '', headline = `Como sair de <span class="brand">10 para 100 colmeias</span> sem comprar enxame`, sub = CAMPANHA.live.subtitulo } = Astro.props;
+
+const agora = resolverAgora(Astro.url);
+const st = estado(agora);
+const live = new Date(CAMPANHA.live.data);
+const liveJaPassou = agora > live;
+---
+<Base title={`Live: ${CAMPANHA.live.titulo} | ${CAMPANHA.professor}`} description={sub}>
+  <main>
+    <section class="section" style="padding-top:clamp(32px,6vw,72px)">
+      <div class="wrap grid grid-2" style="align-items:center;gap:40px">
+        <div class="fade">
+          <span class="pill brand">● Live gratuita · {liveJaPassou ? 'Reprise disponível' : `${fmtDiaSemana(live)}, ${fmtDataHora(live)}`}</span>
+          <h1 style="margin-top:16px" set:html={headline}></h1>
+          <p class="lead">{sub}</p>
+          <ul class="check" style="margin:20px 0 28px">
+            <li>O método de multiplicação que o Gustavo usa para fazer <b>núcleos sem enfraquecer a matriz</b></li>
+            <li>Como <b>produzir as próprias rainhas</b> (Miller e Doolittle) e parar de depender de comprar</li>
+            <li>O calendário real: <b>quanto tempo leva</b> de 10 para 30, 60 e 100 colmeias</li>
+            <li>Na live: o anúncio da <b>maior oferta que a Black Tecnoapis já viu</b></li>
+          </ul>
+          {!liveJaPassou && <Countdown ate={live} label="A live começa em" />}
+          <p class="muted" style="font-size:.85rem;margin-top:16px">Com <b style="color:var(--fg)">{CAMPANHA.professor}</b>, criador do {CAMPANHA.clube}</p>
+        </div>
+        <div class="fade" style="animation-delay:.1s">
+          <LeadForm variante={variante} />
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="center"><span class="eyebrow">O que você vai ver na live</span><h2>Os 3 gargalos que travam o apiário em 10, 15, 20 colmeias</h2></div>
+        <div class="grid grid-3" style="margin-top:32px">
+          <div class="card"><h3>1. Matriz errada</h3><p class="muted">Dividir qualquer colmeia é o jeito mais rápido de ficar com 20 enxames fracos. Como escolher e preparar a matriz.</p></div>
+          <div class="card"><h3>2. Rainha comprada</h3><p class="muted">Com rainha a R$ 60–100 cada, multiplicar fica caro. Como produzir as suas em escala, com método simples.</p></div>
+          <div class="card"><h3>3. Sem calendário</h3><p class="muted">Dividir fora do tempo da florada mata o núcleo. O cronograma de divisão, alimentação e revisão.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <Autoridade />
+
+    <section class="section">
+      <div class="wrap" style="max-width:640px">
+        <div class="center" style="margin-bottom:24px"><h2>Entre no grupo e receba o link da live</h2><p class="lead">Quem está no grupo recebe o lembrete, a reprise e a condição de abertura primeiro.</p></div>
+        <LeadForm variante={variante} id="form2" titulo="Garanta sua vaga" />
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
