@@ -37,6 +37,46 @@ API: `POST /api/admin/links` (criar) e `DELETE /api/admin/links?slug=...` (exclu
 
 Configuração em `/srv/tecnoapis/.env`: `META_PIXEL_ID`, `META_CAPI_TOKEN` e, só para testar no Gerenciador de Eventos, `META_TEST_EVENT_CODE` (apagar depois).
 
+## Páginas novas: tracking e checkout "de fábrica"
+
+O site vai ganhar mais páginas (algumas não são de vendas, outras vão mandar para o checkout da
+Hubla). Tudo abaixo já funciona em QUALQUER página nova, sem configuração extra:
+
+- **UTM e fbclid:** o middleware (`src/middleware.ts`) captura `utm_*` e `fbclid` da querystring
+  em toda página HTML e grava em cookie first-party por 90 dias (`ta_utm`). Não importa a rota —
+  funciona em `/`, `/black` ou qualquer página futura.
+- **Pixel + CAPI:** basta a página usar o layout `~/layouts/Tecnoapis.astro`, que já carrega
+  `ta-v4.js` (Pixel) e expõe `data-track-view`/`data-track-click` para eventos declarativos.
+- **Checkout da Hubla com UTM:** use o componente `~/components/BotaoCheckout.astro` em vez de um
+  `<a>` cru. Ele:
+  1. Lê as UTMs do cookie + da querystring da própria página (cookie tem prioridade por último:
+     se a página atual trouxer UTM nova na URL, ela prevalece)
+  2. Monta a URL final do checkout com `utm_source/medium/campaign/content/term` + `src` (a Hubla
+     aceita os dois formatos)
+  3. Dispara `InitiateCheckout` (Pixel + CAPI) no clique, antes do redirecionamento
+
+  ```astro
+  import BotaoCheckout from '~/components/BotaoCheckout.astro';
+
+  <!-- produto único (usa HUBLA_CHECKOUT_URL do .env) -->
+  <BotaoCheckout valor={297}>Quero entrar</BotaoCheckout>
+
+  <!-- página de vendas com oferta/checkout próprio -->
+  <BotaoCheckout checkoutUrl="https://pay.hubla.com.br/outra-oferta" valor={497} contentName="oferta-x">
+    Comprar agora
+  </BotaoCheckout>
+  ```
+
+- **Casar a venda com a origem, no webhook:** `POST /api/hubla-webhook` já tenta ler `utm_source`/
+  `utm_campaign` do próprio payload da Hubla (variam conforme a versão), mas o caminho confiável é
+  casar o comprador pelo telefone/e-mail com o `lead` que já tem as UTMs completas da visita — é
+  o que o código faz por padrão (`lead?.utm_source ?? n.utm_source`). Por isso o `BotaoCheckout`
+  manda o telefone/e-mail junto não é necessário: quem compra digita isso no checkout da Hubla, e o
+  webhook casa na volta.
+
+Testado (14/10/2026): UTM na URL → grava cookie → aparece no link do checkout na mesma carga;
+removendo a UTM da URL (navegação interna) → o link do checkout continua correto via cookie.
+
 ## Tabelas de comportamento
 
 **sessoes**: uma linha por visita. A visita acaba após 30 min sem atividade (cookie `ta_sid`). A mesma pessoa em outro dia tem o mesmo `visitante_id` (cookie `ta_vid`, 400 dias).

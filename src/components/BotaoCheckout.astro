@@ -1,0 +1,45 @@
+---
+/**
+ * Botão/link de checkout, pronto para qualquer página de vendas nova.
+ * Resolve a URL final do checkout da Hubla já com as UTMs da visita (cookie + querystring
+ * da página atual) e dispara InitiateCheckout (Pixel + CAPI) no clique, antes de navegar.
+ *
+ * Uso básico (produto único, HUBLA_CHECKOUT_URL no .env):
+ *   <BotaoCheckout>Comprar agora</BotaoCheckout>
+ *
+ * Produto/oferta específico desta página (várias páginas de vendas, cada uma com seu link):
+ *   <BotaoCheckout checkoutUrl="https://pay.hubla.com.br/outra-oferta" valor={497} nome="Oferta X">Comprar</BotaoCheckout>
+ */
+import { ENV } from '~/lib/env';
+import { lerUtmsDoCookie, lerUtmsDaUrl, urlCheckout } from '~/lib/tracking';
+
+interface Props {
+  checkoutUrl?: string;
+  class?: string;
+  contentName?: string;
+  valor?: number;
+  moeda?: string;
+  id?: string;
+}
+const {
+  checkoutUrl = ENV.HUBLA_CHECKOUT_URL,
+  class: className = 'ta-btn ta-btn--primary ta-btn--lg',
+  contentName = 'checkout',
+  valor,
+  moeda = 'BRL',
+  id,
+} = Astro.props;
+
+const utms = { ...lerUtmsDoCookie(Astro.cookies), ...lerUtmsDaUrl(Astro.url) };
+const href = urlCheckout(checkoutUrl, utms);
+const semCheckout = !checkoutUrl || checkoutUrl.startsWith('#');
+const params = JSON.stringify({ content_name: contentName, ...(valor != null ? { value: valor, currency: moeda } : {}) });
+---
+<a
+  href={href}
+  id={id}
+  class={className}
+  data-track-click="InitiateCheckout"
+  data-track-params={params}
+  {...(semCheckout ? { 'aria-disabled': 'true', title: 'Checkout ainda não configurado (HUBLA_CHECKOUT_URL ou checkoutUrl)' } : {})}
+><slot /></a>
