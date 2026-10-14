@@ -39,6 +39,8 @@ Configuração em `/srv/tecnoapis/.env`: `META_PIXEL_ID`, `META_CAPI_TOKEN` e, s
 
 ## Páginas novas: tracking e checkout "de fábrica"
 
+> **Regra para páginas de vendas (ver CLAUDE.md):** todo botão de compra usa `BotaoCheckout`, com botão no topo e no fim da página. O anúncio sempre leva para a página de vendas, nunca direto para o checkout da Hubla.
+
 O site vai ganhar mais páginas (algumas não são de vendas, outras vão mandar para o checkout da
 Hubla). Tudo abaixo já funciona em QUALQUER página nova, sem configuração extra:
 
