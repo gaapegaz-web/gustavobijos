@@ -11,31 +11,21 @@ import { fmtDataHora, fmtDiaSemana } from '~/lib/phases';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-interface Props { variante?: string; sub?: string }
+interface Props { variante?: string; titulo?: string; sub?: string }
 const {
   variante = '',
-  sub = 'Todos os cursos, as lives semanais e a comunidade do Clube Tecnoapis, na maior oferta de Black Friday da história do clube.',
+  titulo = 'A maior Black Friday da história do Clube Tecnoapis.',
+  sub: subProp,
 } = Astro.props;
 
 const live = new Date(CAMPANHA.live.data);
 const liveJaPassou = new Date() > live;
 const quando = `${fmtDiaSemana(live)}, ${fmtDataHora(live)}`;
-// Foto do Gustavo ao lado do formulário (desktop) / abaixo do texto (celular): public/img/gustavo-hero.(webp|jpg|png), vertical 4:5.
+const sub = subProp ?? 'Todos os cursos, as lives semanais e a comunidade do clube numa oferta especial. DICA: quem chega primeiro leva mais.';
+// Foto do herói: public/img/gustavo-hero.(webp|jpg|png), vertical 4:5. Sem ela, o herói fica só texto.
 // Em produção os arquivos são servidos de dist/client, então a foto só aparece depois do build (deploy.sh).
 const pastaEstatica = import.meta.env.PROD ? 'dist/client' : 'public';
 const fotoHero = ['webp', 'jpg', 'png'].map((ext) => `/img/gustavo-hero.${ext}`).find((f) => existsSync(join(process.cwd(), pastaEstatica, f)));
-
-/** "Tudo o que entra na Black" (fonte: mapa de conteúdos do clube; detalhes na seção ClubeConteudo) */
-const DENTRO: { icone: 'hex' | 'calendar' | 'split' | 'crown' | 'bulb' | 'chart' | 'whatsapp' | 'shield'; titulo: string; texto?: string }[] = [
-  { icone: 'hex', titulo: 'Todos os cursos do Clube Tecnoapis', texto: '25 cursos e 130 horas de conteúdo, gravados no apiário.' },
-  { icone: 'split', titulo: 'Multiplicação de colmeias', texto: 'Produção de Núcleos (6 métodos), Palmer Adaptado e Demaree.' },
-  { icone: 'crown', titulo: 'Produção de rainhas', texto: 'Miller, Doolittle e Geleia Real, com apostila.' },
-  { icone: 'bulb', titulo: 'Manejo e Leitura de Enxame', texto: 'Alvado, cria, alimento, clima e floradas.' },
-  { icone: 'chart', titulo: 'APISMONEY e novas fontes de renda', texto: 'Custos, faturamento, própolis, favos e polinização.' },
-  { icone: 'calendar', titulo: 'Live nova toda segunda + 115 gravadas', texto: 'Ao vivo com o Gustavo, com tira-dúvidas.' },
-  { icone: 'whatsapp', titulo: 'Grupo de membros, carteirinha e descontos', texto: 'Comunidade e benefícios nas lojas parceiras.' },
-  { icone: 'shield', titulo: 'Bônus para quem chega primeiro', texto: 'Os primeiros compradores levam bônus que não voltam depois.' },
-];
 ---
 <Tecnoapis title={`Black Friday Tecnoapis 2026 | ${CAMPANHA.professor}`} description={sub}>
 <main data-track-view="ViewContent" data-track-params='{"content_name":"Black Tecnoapis 2026"}'>
@@ -43,43 +33,34 @@ const DENTRO: { icone: 'hex' | 'calendar' | 'split' | 'crown' | 'bulb' | 'chart'
     <button slot="cta" type="button" class="ta-btn topo__cta cta-verde" data-abrir-form data-alvo="form:topo" data-track-click="AbriuFormulario" data-track-params='{"content_name":"topo_cta"}'>Entrar no grupo</button>
   </TopoBlack>
 
-  <section data-secao="1-hero" class:list={['hero', { 'hero--com-foto': fotoHero }]}>
-    <div class="ta-container hero__in">
-      <div class="hero__body">
-        <h1 class="hero__titulo">
-          <span class="hero__eyebrow">Black Friday 2026</span>
-          <span class="hero__impacto">Clube <em>Tecnoapis</em></span>
-          <span class="hero__spaced">com Gustavo Bijos</span>
-        </h1>
-        <p class="hero__sub">{sub}</p>
-        <p class="hero__dica"><strong>DICA:</strong> quem chega primeiro leva&nbsp;mais.</p>
-        <p class="hero__data">{liveJaPassou ? 'A Black já começou' : `Aula ao vivo: ${quando}`}</p>
-        <p class="hero__convite">Na aula, o Gustavo abre a Black. Entre no grupo de interessados e receba a oferta&nbsp;especial.</p>
-        <div class="hero__form" data-theme="light">
-          <LeadForm variante={variante} id="form-hero" titulo="" subtitulo="" cta="Entrar no grupo de interessados" comEmail={false} comConsentimento={false} />
-        </div>
-      </div>
-      {fotoHero && <div class="hero__foto"><img src={fotoHero} alt={CAMPANHA.professor} width="480" height="600" fetchpriority="high" /></div>}
+  <section data-secao="1-hero" class:list={['hero', { 'hero--sem-foto': !fotoHero }]}>
+    <div class="hero__fundo" aria-hidden="true">
+      {fotoHero ? <img src={fotoHero} alt="" width="1080" height="1920" fetchpriority="high" /> : <span class="hero__fundo-aviso">Fundo: foto do Gustavo</span>}
+    </div>
+    <div class="ta-container hero__body">
+      <h1 class="hero__titulo">{titulo}</h1>
+      <p class="hero__sub">{sub} <strong>{liveJaPassou ? 'A Black já começou.' : `Aula ao vivo ${quando}: é nela que a Black abre.`}</strong></p>
+      <button type="button" class="ta-btn ta-btn--lg cta-pulse cta-verde" data-abrir-form data-alvo="form:hero" data-track-click="AbriuFormulario" data-track-params='{"content_name":"hero_cta"}'>Entrar no grupo</button>
+      <p class="ta-small">Entre no grupo de interessados e receba a oferta especial.</p>
     </div>
   </section>
 
-  <section class="ta-section dentro" data-secao="2-dentro">
+  <section class="ta-section trava" data-secao="2-o-que-trava">
     <div class="ta-container">
-      <div class="ta-intro ta-intro--center dentro__topo">
-        <span class="ta-pill">Black Tecnoapis</span>
+      <div class="ta-intro ta-intro--center trava__topo">
+        <span class="ta-pill">Na Black</span>
         <h2 class="display-l">Tudo o que entra <em>na Black</em></h2>
+        <p class="ta-lead">O Clube Tecnoapis completo, do primeiro núcleo à venda do mel.</p>
       </div>
-      <ul class="dentro__lista">
-        {DENTRO.map((d) => (
-          <li>
-            <span class="dentro__icone"><Icons name={d.icone} size={22} /></span>
-            <span><b>{d.titulo}</b>{d.texto && <span>{d.texto}</span>}</span>
-          </li>
-        ))}
-      </ul>
-      <div class="dentro__fim">
-        <button type="button" class="ta-btn ta-btn--lg cta-pulse cta-verde" data-abrir-form data-alvo="form:meio" data-track-click="AbriuFormulario" data-track-params='{"content_name":"dentro_cta"}'>Entrar no grupo agora</button>
-        <p class="ta-small">{liveJaPassou ? 'Gravação da aula disponível no grupo.' : `Grátis. A oferta é revelada na aula, ${quando}.`}</p>
+      <div class="ta-features">
+        <div class="ta-feature"><span class="ta-feature__icon"><Icons name="hex" size={22} /></span><h3>Todos os cursos.</h3><p>25 cursos e 130 horas: multiplicação, rainhas, manejo, APISMONEY e mais.</p></div>
+        <div class="ta-feature"><span class="ta-feature__icon"><Icons name="calendar" size={22} /></span><h3>Lives toda segunda.</h3><p>Ao vivo com o Gustavo, mais 115 lives gravadas no acervo.</p></div>
+        <div class="ta-feature"><span class="ta-feature__icon"><Icons name="shield" size={22} /></span><h3>Bônus para quem chega primeiro.</h3><p>Os primeiros compradores levam bônus que não voltam depois.</p></div>
+      </div>
+      <div class="trava__fim">
+        <p class="display-m">A oferta é revelada na aula. <span>Esteja no grupo para não perder.</span></p>
+        <button type="button" class="ta-btn ta-btn--lg cta-pulse cta-verde" data-abrir-form data-alvo="form:meio" data-track-click="AbriuFormulario" data-track-params='{"content_name":"trava_cta"}'>Entrar no grupo</button>
+        <p class="ta-small">{liveJaPassou ? 'Gravação da aula disponível no grupo.' : `Grátis. Aula ao vivo, ${quando}.`}</p>
       </div>
     </div>
   </section>
@@ -114,29 +95,21 @@ const DENTRO: { icone: 'hex' | 'calendar' | 'split' | 'crown' | 'bulb' | 'chart'
 </Tecnoapis>
 
 <style>
-  /* Herói no formato "Black": título em camadas, dica, data, convite e formulário na primeira tela */
-  .hero { background: radial-gradient(90% 60% at 50% 0%, #2a1e06 0%, #0a0a0a 70%); padding: var(--space-10, 40px) 0 var(--space-12); }
-  .hero__in { display: flex; flex-direction: column; align-items: center; gap: var(--space-8); }
-  .hero__body { width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); }
-  .hero__titulo { display: flex; flex-direction: column; align-items: center; gap: 2px; text-transform: uppercase; }
-  .hero__eyebrow { font: 700 clamp(16px, 4.2vw, 24px)/1.1 var(--font-sans); letter-spacing: .14em; color: var(--ink); }
-  .hero__impacto { font: 600 clamp(40px, 11vw, 72px)/1 var(--font-display); letter-spacing: -.01em; color: var(--ink); }
-  .hero__impacto em { font-style: normal; color: var(--accent); }
-  .hero__spaced { font: 700 clamp(13px, 3.4vw, 18px)/1.2 var(--font-sans); letter-spacing: .22em; color: var(--ink); }
-  .hero__sub { max-width: 46ch; font: 500 16px/1.5 var(--font-sans); color: rgba(255,255,255,.88); text-wrap: pretty; }
-  .hero__dica { margin-top: calc(var(--space-2) * -1); font: 500 16px/1.4 var(--font-sans); color: rgba(255,255,255,.88); }
-  .hero__dica strong { font-weight: 800; color: var(--ink); }
-  .hero__data { display: inline-block; padding: 6px 18px; border-radius: 6px; background: var(--accent); color: var(--on-accent, #111); font: 700 clamp(17px, 4.5vw, 21px)/1.3 var(--font-sans); }
-  .hero__convite { max-width: 44ch; font: italic 600 16px/1.45 var(--font-sans); color: var(--ink); text-wrap: balance; }
-  .hero__form { width: 100%; max-width: 440px; margin-top: var(--space-2); padding: var(--space-6) var(--space-5, 20px); border-radius: var(--radius-lg); background: #fff; color: #111; text-align: left; }
-  .hero__form :global(.ta-btn[type=submit]) { background: #25d366; color: #06210f; text-transform: uppercase; letter-spacing: .04em; font-weight: 800; }
-  .hero__foto { width: 100%; max-width: 380px; }
-  .hero__foto img { display: block; width: 100%; height: auto; border-radius: var(--radius-lg); }
-  @media (min-width: 900px) {
-    .hero { padding: var(--space-16) 0; }
-    .hero--com-foto .hero__in { flex-direction: row; justify-content: center; align-items: center; gap: var(--space-12); }
-    .hero__sub, .hero__dica { font-size: 17px; }
-  }
+  /* Herói: foto do Gustavo como fundo, texto e botão centralizados embaixo, tudo na primeira tela */
+  .hero { position: relative; display: flex; align-items: flex-end; min-height: calc(100svh - 66px); overflow: hidden; background: #0a0a0a; }
+  .hero__fundo { position: absolute; inset: 0; z-index: 0; }
+  .hero__fundo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+  .hero__fundo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,.15) 0%, rgba(10,10,10,.1) 35%, rgba(10,10,10,.82) 62%, #0a0a0a 88%); }
+  .hero--sem-foto .hero__fundo { background: radial-gradient(90% 55% at 50% 20%, #2a1e06 0%, #0a0a0a 75%); }
+  .hero__fundo-aviso { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); padding: 8px 14px; border: 1px dashed rgba(242,169,0,.5); border-radius: var(--radius-full); font: 500 13px/1 var(--font-sans); color: var(--ink-muted); white-space: nowrap; }
+  .hero__body { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding-bottom: var(--space-10, 40px); }
+  .hero__titulo { max-width: 18ch; font-family: var(--font-display); font-size: clamp(28px, 7vw, 46px); line-height: 1.08; font-weight: 500; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
+  .hero__sub { max-width: 46ch; font: 400 15.5px/1.55 var(--font-sans); color: rgba(255,255,255,.78); text-wrap: pretty; }
+  .hero__sub strong { color: var(--accent); font-weight: 600; }
+  .hero__body .ta-btn { margin-top: var(--space-2); width: 100%; max-width: 420px; }
+  .hero__body .ta-small { text-align: center; }
+  @media (min-width: 640px) { .hero { min-height: calc(100svh - 70px); } }
+  @media (min-width: 900px) { .hero { min-height: min(calc(100svh - 70px), 860px); } .hero__body { padding-bottom: var(--space-16); } .hero__sub { font-size: 17px; } .hero__fundo::after { background: linear-gradient(180deg, rgba(10,10,10,.1) 0%, rgba(10,10,10,.25) 40%, rgba(10,10,10,.85) 70%, #0a0a0a 95%); } }
 
   /* Botões verdes da captação */
   .cta-verde { background: #25d366; color: #06210f; border-color: transparent; }
@@ -150,17 +123,15 @@ const DENTRO: { icone: 'hex' | 'calendar' | 'split' | 'crown' | 'bulb' | 'chart'
   }
   .modal :global(.ta-btn[type=submit]) { background: #25d366; color: #06210f; }
 
-  /* Tudo o que entra na Black */
-  .dentro__topo { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
-  .dentro__topo em { font-style: normal; color: var(--accent-ink); }
-  .dentro__lista { list-style: none; margin: var(--space-8) auto 0; padding: 0; max-width: 760px; display: grid; gap: var(--space-3); }
-  .dentro__lista li { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); border: 1px solid rgba(242,169,0,.45); border-radius: var(--radius-lg); background: linear-gradient(180deg, transparent, rgba(242,169,0,.08)); }
-  .dentro__lista li > span:last-child { display: flex; flex-direction: column; gap: 2px; }
-  .dentro__lista b { font: 700 15.5px/1.3 var(--font-sans); color: var(--ink); text-transform: uppercase; letter-spacing: .02em; }
-  .dentro__lista li span span { font: 400 14.5px/1.4 var(--font-sans); color: var(--ink-muted); }
-  .dentro__icone { flex: 0 0 44px; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; background: var(--accent); color: var(--on-accent); }
-  .dentro__fim { margin-top: var(--space-10, 40px); display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); }
-  @media (min-width: 900px) { .dentro__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 960px; } .dentro__fim .ta-btn { min-width: 320px; } }
+  /* O que trava: topo centralizado, cards e fechamento */
+  .trava__topo { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+  .trava__topo .ta-lead { margin-inline: auto; }
+  .trava__topo em { font-style: normal; color: var(--accent-ink); }
+  .ta-features { margin-top: var(--space-8); }
+  .trava__fim { margin-top: var(--space-12); display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-6); }
+  .trava__fim .ta-small { margin-top: calc(var(--space-3) * -1); }
+  @media (min-width: 720px) { .trava__fim .display-m span { display: block; } }
+  @media (min-width: 900px) { .trava__fim .ta-btn { min-width: 320px; } }
 
   /* Pop-up do formulário */
   .modal { width: min(440px, calc(100vw - 32px)); max-height: calc(100svh - 32px); padding: 0; border: 0; border-radius: var(--radius-lg); background: #fff; color: #111; overflow: auto; }
