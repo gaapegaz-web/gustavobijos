@@ -30,6 +30,7 @@ function migrar(d: Database.Database) {
   if (!cols('leads').has('meta_lead')) d.exec('ALTER TABLE leads ADD COLUMN meta_lead INTEGER NOT NULL DEFAULT 1'); // 0 = não contou como Lead na Meta (mesmo aparelho)
   if (!cols('leads').has('lead_enviado_em')) d.exec('ALTER TABLE leads ADD COLUMN lead_enviado_em TEXT'); // marca quando o evento Lead já foi disparado (evita duplicar em reload de /obrigado)
   if (!cols('links').has('utm_term')) d.exec('ALTER TABLE links ADD COLUMN utm_term TEXT'); // granularidade de anúncio/criativo do Meta Ads
+  if (!cols('leads').has('ultima_pagina_checkout')) d.exec('ALTER TABLE leads ADD COLUMN ultima_pagina_checkout TEXT'); // última página de onde a pessoa clicou em BotaoCheckout (para o sourceUrl do Purchase/InitiateCheckout no webhook da Hubla)
   // Um lead por WhatsApp (o cadastro repetido só soma em "envios")
   try { d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp_unico ON leads(whatsapp)'); } catch (e) { console.error('[db] há WhatsApp duplicado; índice único não criado:', (e as Error).message); }
 }
@@ -48,7 +49,7 @@ export type Lead = {
   utm_source: string | null; utm_medium: string | null; utm_campaign: string | null; utm_content: string | null; utm_term: string | null;
   fbclid: string | null; fbp: string | null; fbc: string | null;
   ip: string | null; user_agent: string | null; pagina: string | null; variante: string | null; referrer: string | null;
-  consentimento: number; comprou: number; created_at: string;
+  consentimento: number; comprou: number; created_at: string; ultima_pagina_checkout: string | null;
 };
 
 export function insertLead(l: Omit<Lead, 'id' | 'created_at' | 'comprou'>): number {

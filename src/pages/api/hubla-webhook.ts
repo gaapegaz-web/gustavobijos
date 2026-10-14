@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       // páginas de vendas com produtos/preços diferentes, e mandar um número chutado pra Meta
       // quando a Hubla não informar o valor real é pior do que simplesmente não mandar.
       const r = await enviarCapi({
-        name: 'Purchase', eventId, actionSource: 'website', sourceUrl: `${CAMPANHA.dominio}/black`,
+        name: 'Purchase', eventId, actionSource: 'website', sourceUrl: lead?.ultima_pagina_checkout || CAMPANHA.dominio,
         user: { email: n.email || lead?.email, phone: e164 || lead?.whatsapp, firstName, lastName, fbp: lead?.fbp, fbc: lead?.fbc, ip: lead?.ip, userAgent: lead?.user_agent, externalId: lead?.id },
         custom: { ...(n.valor != null ? { currency: 'BRL', value: n.valor } : {}), content_name: n.produto || CAMPANHA.preco.produtoNome, order_id: n.transacaoId || undefined },
       });
@@ -51,7 +51,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       if (lead) db().prepare('UPDATE leads SET comprou = 1 WHERE id = ?').run(lead.id);
     } else if (n.tipo === 'InitiateCheckout') {
       const r = await enviarCapi({
-        name: 'InitiateCheckout', eventId, actionSource: 'website', sourceUrl: `${CAMPANHA.dominio}/black`,
+        name: 'InitiateCheckout', eventId, actionSource: 'website', sourceUrl: lead?.ultima_pagina_checkout || CAMPANHA.dominio,
         user: { email: n.email || lead?.email, phone: e164 || lead?.whatsapp, firstName, lastName, fbp: lead?.fbp, fbc: lead?.fbc, ip: lead?.ip, userAgent: lead?.user_agent, externalId: lead?.id },
         custom: n.valor != null ? { currency: 'BRL', value: n.valor } : undefined,
       });

@@ -33,5 +33,13 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   if (!['PageView', 'Rolou75', 'Engajou60s'].includes(name)) {
     insertEvento({ lead_id: leadId, tipo: name, event_id: eventId, origem: 'browser', utm_source: utms.utm_source, utm_campaign: utms.utm_campaign, utm_content: utms.utm_content, capi_status: capi.status, valor: typeof body.params?.value === 'number' ? body.params.value : null });
   }
+
+  // Guarda de qual página veio o clique no checkout: o webhook da Hubla usa isso como
+  // event_source_url do Purchase/InitiateCheckout (não dá para saber a página de dentro do
+  // webhook, que só recebe o payload da própria Hubla).
+  if (name === 'InitiateCheckout' && leadId && body.url) {
+    db().prepare('UPDATE leads SET ultima_pagina_checkout = ? WHERE id = ?').run(body.url.slice(0, 500), leadId);
+  }
+
   return new Response(null, { status: 204 });
 };
