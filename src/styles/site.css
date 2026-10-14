@@ -173,5 +173,5 @@ p + p { margin-top: var(--space-3); }
 
 /* Sem palavras solitárias: títulos equilibrados, parágrafos sem viúva na última linha */
 h1, h2, h3, h4, .display-xl, .display-l, .display-m, .ta-heading, summary { text-wrap: balance; }
-p, li, .ta-lead, .ta-small, .ta-body { text-wrap: pretty; }
+p, li, .ta-lead, .ta-small, .ta-body, .ta-list span, figcaption { text-wrap: balance; }
 body { text-wrap: pretty; }
