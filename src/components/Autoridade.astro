@@ -1,25 +1,33 @@
 ---
 import { CAMPANHA } from '~/config/black';
 import Icons from './Icons.astro';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 const bio = CAMPANHA.professorBio;
+// Foto: public/img/gustavo.jpg (vertical 4:5). Sem ela, a seção fica só texto.
+const temFoto = existsSync(join(process.cwd(), import.meta.env.PROD ? 'dist/client' : 'public', 'img/gustavo.jpg'));
 ---
-<section class="ta-section ta-section--light" data-theme="light" id="quem-ensina">
-  <div class="ta-container ta-split" style="align-items:start">
-    <div>
-      <img src="/img/gustavo.svg" alt={CAMPANHA.professor} width="480" height="480" loading="lazy" style="border-radius:var(--radius-md);aspect-ratio:1;object-fit:cover;max-width:440px;width:100%" />
-    </div>
-    <div>
-      <div class="ta-stack">
-        <span class="ta-eyebrow">Quem é Gustavo Bijos?</span>
-        <span class="ta-line ta-line--l">{bio.anos} anos de</span>
-        <h2 class="ta-impact ta-impact--l">Apicultura</h2>
+<section class="ta-section ta-section--light" data-theme="light" id="quem-ensina" data-secao="4-gustavo">
+  <div class:list={['ta-container', 'autor', { 'autor--sem-foto': !temFoto }]}>
+    {temFoto && (
+      <div class="autor__foto">
+        <img src="/img/gustavo.jpg" alt={CAMPANHA.professor} width="480" height="600" loading="lazy" />
       </div>
-      <p class="ta-lead" style="margin-top:var(--space-6)">{bio.resumo}</p>
-      <ul class="ta-list" style="margin-top:var(--space-6)">
+    )}
+    <div class="autor__texto">
+      <h2 class="display-l">Gustavo Bijos, {bio.anos}&nbsp;anos de apicultura</h2>
+      <p class="ta-lead">{bio.resumo}</p>
+      <ul class="ta-list">
         {bio.cargos.map((c) => <li><Icons name="check" /><span>{c}</span></li>)}
       </ul>
-      <p class="ta-body" style="margin-top:var(--space-6)">{bio.palestras}</p>
-      <p class="ta-body" style="margin-top:var(--space-3)">Hoje, no Clube Tecnoapis, são 25 cursos, mais de 130 horas de conteúdo e 115 lives gravadas desde 2023, com live nova toda segunda-feira para os membros.</p>
+      <p class="ta-body">{bio.palestras}</p>
+      <p class="ta-body">Hoje o Clube tem 25 cursos, mais de 130 horas e 115 lives gravadas.</p>
     </div>
   </div>
 </section>
+<style>
+  .autor { display: grid; gap: var(--space-8); }
+  .autor__foto img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius-lg); }
+  .autor__texto { display: flex; flex-direction: column; gap: var(--space-6); }
+  @media (min-width: 900px) { .autor { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-16); align-items: start; } .autor--sem-foto { grid-template-columns: minmax(0, 760px); } .autor__foto { position: sticky; top: 96px; } }
+</style>

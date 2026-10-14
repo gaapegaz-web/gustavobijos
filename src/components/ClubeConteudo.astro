@@ -1,0 +1,154 @@
+---
+/** "O que tem no Clube Tecnoapis": números + áreas de conteúdo (fonte: mapa de conteúdos de 13/10/2026) */
+import Icons from './Icons.astro';
+import { semViuva } from '~/lib/texto';
+
+const NUMEROS = [
+  { n: '25', l: 'cursos' },
+  { n: '130h', l: 'de conteúdo' },
+  { n: '115', l: 'lives gravadas' },
+];
+type Tipo = 'Curso' | 'Aula' | 'Live' | 'PDF' | 'Palestra' | 'Bônus' | 'Benefício' | 'Grupo';
+type Item = [Tipo, string, string];
+const AREAS: { icone: 'split' | 'crown' | 'hex' | 'bulb' | 'chart' | 'calendar' | 'whatsapp' | 'shield'; titulo: string; texto: string; itens: Item[] }[] = [
+  { icone: 'split', titulo: 'Multiplicação', texto: 'Núcleos, Palmer e Demaree.', itens: [
+    ['Curso', 'Produção de Núcleos', '31 aulas, 6 métodos'],
+    ['Curso', 'Método Palmer Adaptado', '6 aulas'],
+    ['Aula', 'Método Demaree', 'prática + PDF'],
+    ['Aula', 'Segurança e transporte', 'de núcleos'],
+  ] },
+  { icone: 'crown', titulo: 'Rainhas', texto: 'Miller, Doolittle e Geleia Real.', itens: [
+    ['Curso', 'Método Miller', '4 aulas, ideal para começar'],
+    ['Curso', 'Método Doolittle', '34 conteúdos'],
+    ['PDF', 'Apostila de Produção de Rainhas', 'passo a passo'],
+    ['Curso', 'Produção de Geleia Real', 'com apostila'],
+  ] },
+  { icone: 'hex', titulo: 'Produtos', texto: 'Própolis, favos e polinização.', itens: [
+    ['Curso', 'Produção de Própolis', '26 conteúdos'],
+    ['Curso', 'Favos em embalagem de acrílico', '8 aulas'],
+    ['Curso', 'Poliniza Brasil', '12 aulas'],
+    ['Curso', 'Alternativas de Renda', '4 aulas'],
+  ] },
+  { icone: 'bulb', titulo: 'Manejo', texto: 'Leitura de enxame e alimentação.', itens: [
+    ['Curso', 'Leitura de Enxame', 'alvado, cria, clima e floradas'],
+    ['Aula', 'Alimentação', 'bife proteico e alimentação sólida'],
+    ['Bônus', 'Perda Zero', 'diário de recuperação de apiário'],
+    ['Aula', 'Verniz ecológico', 'contra o pequeno besouro'],
+  ] },
+  { icone: 'chart', titulo: 'Gestão', texto: 'APISMONEY e planilha de custos.', itens: [
+    ['Curso', 'APISMONEY', '12 aulas, mais de 5 horas'],
+    ['PDF', 'Planilha de custos e faturamento', 'pronta para usar'],
+    ['Aula', 'Cadastro de apicultor e GTA', 'com manual'],
+  ] },
+  { icone: 'calendar', titulo: 'Lives semanais', texto: '115 gravadas, uma nova toda segunda.', itens: [
+    ['Live', 'Live toda segunda-feira', 'ao vivo, com tira-dúvidas'],
+    ['Live', '115 lives gravadas', 'mais de 100 horas desde 2023'],
+    ['Live', 'Temas variados', 'rainhas, sanidade, clima e mercado'],
+  ] },
+  { icone: 'whatsapp', titulo: 'Comunidade', texto: 'Grupo, carteirinha e descontos.', itens: [
+    ['Grupo', 'Grupo de membros', 'no WhatsApp'],
+    ['Benefício', 'Carteirinha digital', 'de membro do clube'],
+    ['Benefício', 'Descontos', 'nas lojas parceiras'],
+  ] },
+  { icone: 'shield', titulo: 'Especialistas', texto: 'Palestras e 12 cartilhas.', itens: [
+    ['Palestra', 'Nutrição das abelhas', 'com Dr.\u00A0Heber Pereira'],
+    ['Palestra', 'Nutrição de abelhas Apis', 'com Dr.\u00A0James Salomé'],
+    ['Aula', 'Uso do poncho no frio', 'com Décio Sehnen'],
+    ['PDF', '12 cartilhas e livros', 'como A Biologia da Abelha'],
+  ] },
+];
+---
+<section class="ta-section ta-section--surface clube" data-secao="3-clube">
+  <div class="ta-container">
+    <div class="ta-intro ta-intro--center clube__topo">
+      <span class="ta-pill">Clube Tecnoapis</span>
+      <h2 class="display-l">O que tem no <em>Clube Tecnoapis</em></h2>
+      <p class="ta-lead">Teoria e prática gravadas no apiário, do primeiro núcleo à venda do mel.</p>
+    </div>
+
+    <figure class="clube__plat">
+      <div class="clube__barra" aria-hidden="true"><i></i><i></i><i></i><span>gustavo-bijos.memberkit.com.br</span></div>
+      <div class="clube__tela">
+        <img src="/img/plataforma-tecnoapis-completa.webp" alt="Tela da plataforma do Clube Tecnoapis com todos os cursos" width="1800" height="1561" loading="lazy" />
+      </div>
+      <figcaption class="ta-small clube__desk">A plataforma por dentro: cursos, aulas especiais e bônus.</figcaption>
+    </figure>
+
+    <div class="clube__numeros">
+      {NUMEROS.map((x) => <div><b>{x.n}</b><span>{x.l}</span></div>)}
+    </div>
+
+    <div class="clube__grid">
+      {AREAS.map((a) => (
+        <details class="clube__card" open>
+          <summary>
+            <span class="clube__icone"><Icons name={a.icone} size={22} /></span>
+            <span class="clube__txt"><h3>{a.titulo}</h3><p>{semViuva(a.texto)}</p></span>
+            <span class="clube__seta" aria-hidden="true"></span>
+          </summary>
+          <ul class="clube__itens">
+            {a.itens.map(([tipo, nome, detalhe]) => (
+              <li>
+                <span class:list={['clube__tag', `clube__tag--${tipo === 'Curso' ? 'curso' : tipo === 'Live' ? 'live' : 'outro'}`]}>{tipo}</span>
+                <span class="clube__nome">{nome} <span class="clube__det">·&nbsp;{semViuva(detalhe)}</span></span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .clube__topo { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+  .clube__topo em { font-style: normal; color: var(--accent); }
+  .clube__topo .ta-lead { margin-inline: auto; text-wrap: balance; }
+
+  .clube__plat { margin: var(--space-8) 0 0; }
+  .clube__barra { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: #1d1d1d; border: 1px solid var(--border); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .clube__barra i { width: 9px; height: 9px; border-radius: 50%; background: #3a3a3a; }
+  .clube__barra i:first-child { background: #ff5f57; } .clube__barra i:nth-child(2) { background: #febc2e; } .clube__barra i:nth-child(3) { background: #28c840; }
+  .clube__barra span { margin-left: 8px; font: 500 11.5px/1 var(--font-sans); color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clube__tela { overflow: hidden; border: 1px solid var(--border); border-radius: 0 0 var(--radius-lg) var(--radius-lg); background: #0b0b0b; box-shadow: 0 30px 80px -30px rgba(242,169,0,.3); }
+  .clube__tela img { display: block; width: 100%; height: auto; }
+  .clube__desk { margin-top: var(--space-3); text-align: center; }
+  .clube__numeros { margin: var(--space-8) auto 0; max-width: 720px; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid rgba(242,169,0,.35); border-radius: var(--radius-lg); background: linear-gradient(180deg, rgba(242,169,0,.10), rgba(242,169,0,.02)); overflow: hidden; }
+  .clube__numeros > div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--space-4) var(--space-2); text-align: center; }
+  .clube__numeros > div + div { border-left: 1px solid rgba(242,169,0,.25); }
+  .clube__numeros b { font: 500 clamp(26px, 7vw, 40px)/1 var(--font-display); color: var(--accent); }
+  .clube__numeros span { font: 500 12.5px/1.3 var(--font-sans); color: var(--ink-muted); }
+
+  .clube__grid { margin-top: var(--space-6); display: grid; grid-template-columns: 1fr; gap: var(--space-3); align-items: start; }
+  .clube__card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); transition: border-color .2s; }
+  .clube__card[open] { border-color: rgba(242,169,0,.55); }
+  .clube__card summary { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+  .clube__card summary::-webkit-details-marker { display: none; }
+  .clube__icone { flex: 0 0 48px; display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background: var(--accent); color: var(--on-accent); }
+  .clube__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .clube__txt h3 { font: 600 17px/1.25 var(--font-sans); color: var(--ink); }
+  .clube__txt p { text-wrap: balance; font: 400 14.5px/1.4 var(--font-sans); color: var(--ink-muted); }
+  .clube__seta { flex: 0 0 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); position: relative; transition: background .2s; }
+  .clube__seta::before { content: ''; position: absolute; left: 50%; top: 45%; width: 8px; height: 8px; border-right: 2px solid var(--ink-muted); border-bottom: 2px solid var(--ink-muted); transform: translate(-50%, -50%) rotate(45deg); transition: transform .2s; }
+  .clube__card[open] .clube__seta { background: rgba(242,169,0,.15); border-color: rgba(242,169,0,.5); }
+  .clube__card[open] .clube__seta::before { top: 58%; transform: translate(-50%, -50%) rotate(-135deg); border-color: var(--accent); }
+  .clube__itens { list-style: none; margin: 0; padding: 0 var(--space-4) var(--space-5, 20px); display: flex; flex-direction: column; gap: var(--space-3); }
+  .clube__itens li { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding-top: var(--space-3); border-top: 1px solid var(--border); }
+  .clube__itens li:first-child { border-top: 0; padding-top: 0; }
+  .clube__tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: var(--radius-full); font: 700 10.5px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; }
+  .clube__tag--curso { background: var(--accent); color: var(--on-accent); }
+  .clube__tag--live { background: #25d366; color: #06210f; }
+  .clube__tag--outro { border: 1px solid rgba(242,169,0,.5); color: var(--accent); }
+  .clube__nome { font: 600 15px/1.4 var(--font-sans); color: var(--ink); }
+  .clube__det { font-weight: 400; color: var(--ink-muted); }
+  .clube__dica { margin-top: var(--space-4); text-align: center; }
+  @media (max-width: 380px) { .clube__itens { padding-left: var(--space-4); } }
+  @media (min-width: 900px) {
+    .clube__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+    .clube__card summary { padding: var(--space-5, 20px) var(--space-6); }
+    .clube__itens { padding-right: var(--space-6); }
+    .clube__numeros > div { padding: var(--space-6) var(--space-4); }
+    .clube__numeros span { font-size: 14px; }
+  }
+</style>
+

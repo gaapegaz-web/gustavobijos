@@ -7,7 +7,7 @@ export const prerender = false;
 export const GET: APIRoute = ({ params, url }) => {
   const slug = String(params.slug || '').toLowerCase();
   const link = db().prepare('SELECT * FROM links WHERE slug = ?').get(slug) as any;
-  if (!link) return new Response(null, { status: 302, headers: { location: '/' } });
+  if (!link) return new Response(null, { status: 302, headers: { location: '/black' } });
   db().prepare('UPDATE links SET cliques = cliques + 1 WHERE slug = ?').run(slug);
 
   const dest = new URL(link.destino, url.origin);

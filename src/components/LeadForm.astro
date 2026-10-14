@@ -1,14 +1,16 @@
 ---
-interface Props { variante?: string; pagina?: string; cta?: string; titulo?: string; subtitulo?: string; id?: string }
-const { variante = '', pagina = Astro.url.pathname, cta = 'Receber o link no WhatsApp', titulo = 'Garanta sua vaga na live', subtitulo = 'Grátis. O link do grupo chega no seu WhatsApp agora.', id = 'form' } = Astro.props;
+interface Props { variante?: string; pagina?: string; cta?: string; titulo?: string; subtitulo?: string; id?: string; comEmail?: boolean; comConsentimento?: boolean }
+const { variante = '', pagina = Astro.url.pathname, cta = 'Receber o link no WhatsApp', titulo = 'Garanta sua vaga', subtitulo = 'Grátis. O link do grupo chega no seu WhatsApp agora.', id = 'form', comEmail = true, comConsentimento = true } = Astro.props;
 const erro = Astro.url.searchParams.get('erro');
 const campoErro = Astro.url.searchParams.get('campo');
 ---
 <form class="ta-form lead-form" id={id} method="post" action="/api/lead" novalidate>
-  <div>
-    <h3>{titulo}</h3>
-    {subtitulo && <p class="ta-small" style="margin-top:var(--space-1)">{subtitulo}</p>}
-  </div>
+  {(titulo || subtitulo) && (
+    <div>
+      {titulo && <h3>{titulo}</h3>}
+      {subtitulo && <p class="ta-small" style="margin-top:var(--space-2)">{subtitulo}</p>}
+    </div>
+  )}
   <input type="hidden" name="variante" value={variante} />
   <input type="hidden" name="pagina" value={pagina} />
   <input type="text" name="site" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true" />
@@ -22,16 +24,16 @@ const campoErro = Astro.url.searchParams.get('campo');
     <input type="tel" name="whatsapp" inputmode="numeric" autocomplete="tel-national" required placeholder="(67) 99999-9999" />
     <div class="msg">{campoErro === 'whatsapp' ? erro : ''}</div>
   </label>
-  <label class={`ta-field ${campoErro === 'email' ? 'erro' : ''}`}>
-    <span>Seu e-mail <span class="ta-muted" style="font-weight:300">(se quiser)</span></span>
+  {comEmail && <label class={`ta-field ${campoErro === 'email' ? 'erro' : ''}`}>
+    <span>Seu e-mail <span class="ta-muted" style="font-weight:400">(se quiser)</span></span>
     <input type="email" name="email" autocomplete="email" placeholder="voce@email.com" />
     <div class="msg">{campoErro === 'email' ? erro : ''}</div>
-  </label>
-  <label class="ta-consent">
+  </label>}
+  {comConsentimento && <label class="ta-consent">
     <input type="checkbox" name="consentimento" value="1" checked required />
     <span>Aceito receber mensagens sobre a live e a Black Tecnoapis no WhatsApp e no e-mail. Posso sair quando quiser.</span>
-  </label>
-  <button class="ta-btn ta-btn--primary ta-btn--lg" type="submit" data-track-click="Contact" data-track-params='{"content_name":"form_submit"}'><span data-label>{cta}</span></button>
+  </label>}
+  <button class="ta-btn ta-btn--primary ta-btn--lg" type="submit" data-alvo="form:enviar"><span data-label>{cta}</span></button>
   <p class="ta-small" style="text-align:center">Sem spam. Seus dados ficam só com a equipe do Gustavo.</p>
 </form>
 
@@ -58,7 +60,8 @@ const campoErro = Astro.url.searchParams.get('campo');
         const body: Record<string, string> = {}; fd.forEach((v, k) => (body[k] = String(v)));
         const res = await fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' }, body: JSON.stringify(body) });
         const j = await res.json();
-        if (j.ok) { label.textContent = 'Pronto, abrindo o WhatsApp…'; location.href = j.redirect; return; }
+        if (j.ok) { window.dispatchEvent(new CustomEvent('ta:form-envio')); label.textContent = 'Pronto, só um instante…'; setTimeout(() => { location.href = j.redirect; }, 150); return; }
+        window.dispatchEvent(new CustomEvent('ta:form-erro', { detail: { campo: j.campo || 'geral' } }));
         const f = form.querySelector(`input[name=${j.campo}]`)?.closest('.ta-field');
         if (f) { f.classList.add('erro'); f.querySelector('.msg')!.textContent = j.erro; (f.querySelector('input') as HTMLInputElement).focus(); }
         else alert(j.erro || 'Não foi possível enviar. Tente de novo.');

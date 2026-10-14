@@ -1,25 +1,113 @@
 ---
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Icons from '~/components/Icons.astro';
 import { ENV } from '~/lib/env';
 import { CAMPANHA } from '~/config/black';
 import { fmtDataHora, fmtDiaSemana } from '~/lib/phases';
+import { db, insertEvento, type Lead } from '~/lib/db';
+import { enviarCapi, novoEventId, separarNome } from '~/lib/capi';
+import { createHash } from 'node:crypto';
 
-const leadEventId = Astro.url.searchParams.get('e') || undefined;
 const grupo = ENV.WHATSAPP_GRUPO_URL;
 const live = new Date(CAMPANHA.live.data);
+const quando = `${fmtDiaSemana(live)}, ${fmtDataHora(live)}`;
+
+/**
+ * O evento Lead dispara AQUI, quando a página /obrigado carrega — não mais no POST do formulário.
+ * Servidor (CAPI) e navegador (Pixel) usam o mesmo event_id, gerado uma vez só nesta carga.
+ * Trava atômica em leads.lead_enviado_em: só o primeiro carregamento desta página para este
+ * lead dispara; um F5 ou "voltar" depois não manda Lead de novo.
+ * meta_lead = 0 (ex.: cadastro repetido no mesmo aparelho) nunca dispara.
+ */
+const leadId = Number(Astro.cookies.get('ta_lead')?.value || 0) || null;
+const lead = leadId ? (db().prepare('SELECT * FROM leads WHERE id = ?').get(leadId) as Lead | undefined) : undefined;
+
+let leadEventId: string | undefined;
+if (lead && lead.meta_lead === 1) {
+  const marcou = db()
+    .prepare("UPDATE leads SET lead_enviado_em = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ? AND lead_enviado_em IS NULL")
+    .run(lead.id);
+  if (marcou.changes === 1) {
+    leadEventId = novoEventId();
+    const { firstName, lastName } = separarNome(lead.nome);
+    const capi = await enviarCapi({
+      name: 'Lead',
+      eventId: leadEventId,
+      sourceUrl: new URL('/obrigado', CAMPANHA.dominio).toString(),
+      user: { email: lead.email, phone: lead.whatsapp, firstName, lastName, fbp: lead.fbp, fbc: lead.fbc, ip: lead.ip, userAgent: lead.user_agent, externalId: lead.id },
+      custom: { content_name: 'Live De 10 para 100 colmeias', lead_source: lead.utm_source ?? 'direto' },
+    });
+    insertEvento({ lead_id: lead.id, tipo: 'Lead', event_id: leadEventId, origem: 'server', utm_source: lead.utm_source, utm_campaign: lead.utm_campaign, utm_content: lead.utm_content, capi_status: capi.status, payload: capi.ok ? null : capi.body });
+  }
+}
+
+// Advanced matching do Pixel: dados do lead em hash SHA-256 (nunca em texto puro)
+const sha = (v: string) => createHash('sha256').update(v).digest('hex');
+const partes = (lead?.nome || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+const am: Record<string, string> | undefined = lead ? {
+  ph: sha(lead.whatsapp.replace(/\D/g, '')),
+  ...(partes[0] ? { fn: sha(partes[0]) } : {}),
+  ...(partes.length > 1 ? { ln: sha(partes[partes.length - 1]) } : {}),
+  external_id: sha(String(lead.id)),
+  country: sha('br'),
+} : undefined;
 ---
-<Tecnoapis title="Falta um passo: entre no grupo" noindex leadEventId={leadEventId}>
-  {!grupo.startsWith('#') && <meta http-equiv="refresh" content={`4;url=${grupo}`} />}
-  <main class="ta-section" style="min-height:100vh;display:flex;align-items:center">
-    <div class="ta-container" style="max-width:640px">
-      <div class="ta-stack">
-        <span class="ta-eyebrow">Cadastro feito</span>
-        <span class="ta-line ta-line--l">Agora entre no</span>
-        <h1 class="ta-impact ta-impact--xl">Grupo</h1>
-      </div>
-      <p class="ta-lead" style="margin:var(--space-6) 0">É lá que chega o link da live de {fmtDiaSemana(live)}, {fmtDataHora(live)}, e a condição de abertura da Black antes de todo mundo.</p>
-      <a class="ta-btn ta-btn--primary ta-btn--lg" href={grupo} id="btn-grupo" data-track-click="Schedule" data-track-params='{"content_name":"entrar_grupo"}' style="width:100%;max-width:420px">Entrar no grupo do WhatsApp</a>
-      <p class="ta-small" style="margin-top:var(--space-3)">O WhatsApp abre sozinho em alguns segundos. Se não abrir, toque no botão.</p>
+<Tecnoapis title="Inscrição confirmada: entre no grupo" noindex leadEventId={leadEventId} am={am}>
+  <main class="ob" data-secao="obrigado">
+    <div class="ob__in">
+      <img class="ob__logo" src="/img/black-friday-logo.webp" alt="Black Friday Tecnoapis" width="353" height="160" />
+
+      <div class="ob__ok"><Icons name="check" size={22} /></div>
+      <h1 class="ob__titulo">Obrigado por se inscrever!</h1>
+      <p class="ob__sub">Agora só falta <strong>um passo</strong> para não perder&nbsp;nada.</p>
+
+      <ol class="ob__passos">
+        <li class="ob__passo ob__passo--ativo">
+          <span class="ob__n">1</span>
+          <div><b>Entre no grupo do WhatsApp</b><span>É por lá que chega o link da live, {quando}.</span></div>
+        </li>
+        <li class="ob__passo">
+          <span class="ob__n">2</span>
+          <div><b>Ative as notificações</b><span>Assim você recebe os avisos na&nbsp;hora.</span></div>
+        </li>
+        <li class="ob__passo">
+          <span class="ob__n">3</span>
+          <div><b>Aguarde no grupo</b><span>Lá chegam o lembrete e a oferta da&nbsp;Black.</span></div>
+        </li>
+      </ol>
+
+      <a class="ta-btn ta-btn--lg cta-pulse ob__btn" href={grupo} id="btn-grupo" data-alvo="grupo" data-track-once="grupo" data-track-click="Schedule" data-track-params='{"content_name":"entrar_grupo"}'>
+        <Icons name="whatsapp" size={22} />Entrar no grupo
+      </a>
+      <p class="ob__nota">Grátis. Você pode sair quando&nbsp;quiser.</p>
     </div>
   </main>
 </Tecnoapis>
+
+<style>
+  .ob { min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: var(--space-4) var(--gutter); background: radial-gradient(90% 50% at 50% 0%, #2a1e06 0%, #0a0a0a 70%); }
+  .ob__in { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+  .ob__logo { height: 36px; width: auto; }
+  .ob__ok { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #25d366; color: #06210f; }
+  .ob__titulo { font: 500 clamp(26px, 7vw, 34px)/1.1 var(--font-display); color: var(--ink); text-wrap: balance; }
+  .ob__sub { font: 400 16px/1.4 var(--font-sans); color: var(--ink-muted); }
+  .ob__sub strong { color: var(--accent); font-weight: 700; }
+
+  .ob__passos { list-style: none; margin: 4px 0 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+  .ob__passo { display: flex; align-items: center; gap: var(--space-3); padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+  .ob__passo--ativo { border-color: #25d366; background: rgba(37,211,102,.08); }
+  .ob__n { flex: 0 0 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 16px/1 var(--font-sans); background: var(--surface-2, #222); border: 1px solid var(--border); color: var(--ink); }
+  .ob__passo--ativo .ob__n { background: #25d366; border-color: #25d366; color: #06210f; }
+  .ob__passo div { display: flex; flex-direction: column; gap: 2px; }
+  .ob__passo b { font: 700 16px/1.25 var(--font-sans); color: var(--ink); }
+  .ob__passo span { font: 400 14.5px/1.35 var(--font-sans); color: var(--ink-muted); }
+
+  .ob__btn { margin-top: 6px; width: 100%; gap: var(--space-2); background: #25d366; color: #06210f; animation-name: cta-pulse-verde; }
+  @keyframes cta-pulse-verde {
+    0% { box-shadow: 0 0 0 0 rgba(37,211,102,.6); transform: scale(1); }
+    50% { transform: scale(1.025); }
+    70% { box-shadow: 0 0 0 16px rgba(37,211,102,0); }
+    100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); transform: scale(1); }
+  }
+  .ob__nota { font: 400 13.5px/1.4 var(--font-sans); color: var(--ink-muted); }
+</style>

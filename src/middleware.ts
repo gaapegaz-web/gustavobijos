@@ -27,8 +27,8 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   }
 
   // Rate limit nos endpoints públicos de escrita
-  if (request.method === 'POST' && (url.pathname === '/api/lead' || url.pathname === '/api/event')) {
-    if (rateLimited(ip)) return new Response(JSON.stringify({ ok: false, erro: 'Muitas tentativas. Aguarde um minuto.' }), { status: 429, headers: { 'content-type': 'application/json' } });
+  if (request.method === 'POST' && (url.pathname === '/api/lead' || url.pathname === '/api/event' || url.pathname === '/api/comportamento')) {
+    if (rateLimited(ip, url.pathname === '/api/lead' ? 20 : 120)) return new Response(JSON.stringify({ ok: false, erro: 'Muitas tentativas. Aguarde um minuto.' }), { status: 429, headers: { 'content-type': 'application/json' } });
   }
 
   // Captura UTMs / fbclid em cookie first-party (90 dias), só em páginas HTML
@@ -49,6 +49,8 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 
   const res = await next();
   res.headers.set('X-Content-Type-Options', 'nosniff');
+  // HTML sempre revalida: evita navegador servir página antiga apontando para CSS de build anterior
+  if (!url.pathname.startsWith('/_astro') && (res.headers.get('content-type') || '').includes('text/html')) res.headers.set('Cache-Control', 'no-cache');
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   return res;
 });

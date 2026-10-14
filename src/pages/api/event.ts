@@ -6,7 +6,8 @@ import type { Lead } from '~/lib/db';
 
 export const prerender = false;
 
-const PERMITIDOS = new Set(['PageView', 'ViewContent', 'InitiateCheckout', 'AddToCart', 'Contact', 'Schedule']);
+// Padrão da Meta + personalizados: AbriuFormulario (clicou em Garantir minha vaga), Rolou75 (75% da página), Engajou60s (60 s ativo)
+const PERMITIDOS = new Set(['PageView', 'ViewContent', 'InitiateCheckout', 'AddToCart', 'Contact', 'Schedule', 'AbriuFormulario', 'Rolou75', 'Engajou60s']);
 
 /** Réplica server-side de eventos do navegador, com o mesmo event_id para deduplicação. */
 export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
@@ -29,7 +30,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   });
 
   // PageView não precisa poluir a tabela de eventos; os outros sim
-  if (name !== 'PageView') {
+  if (!['PageView', 'Rolou75', 'Engajou60s'].includes(name)) {
     insertEvento({ lead_id: leadId, tipo: name, event_id: eventId, origem: 'browser', utm_source: utms.utm_source, utm_campaign: utms.utm_campaign, utm_content: utms.utm_content, capi_status: capi.status, valor: typeof body.params?.value === 'number' ? body.params.value : null });
   }
   return new Response(null, { status: 204 });

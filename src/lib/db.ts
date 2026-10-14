@@ -15,8 +15,22 @@ export function db(): Database.Database {
   _db.pragma('synchronous = NORMAL');
   _db.pragma('busy_timeout = 5000');
   _db.exec(readFileSync(resolve(process.cwd(), 'schema.sql'), 'utf8'));
+  migrar(_db);
   seedLinks(_db);
   return _db;
+}
+
+/** Colunas novas em tabelas antigas (CREATE TABLE IF NOT EXISTS não altera tabela existente). */
+function migrar(d: Database.Database) {
+  const cols = (t: string) => new Set((d.prepare(`PRAGMA table_info(${t})`).all() as { name: string }[]).map((c) => c.name));
+  if (!cols('leads').has('sessao_id')) d.exec('ALTER TABLE leads ADD COLUMN sessao_id TEXT');
+  if (!cols('leads').has('visitante_id')) d.exec('ALTER TABLE leads ADD COLUMN visitante_id TEXT');
+  if (!cols('leads').has('envios')) d.exec('ALTER TABLE leads ADD COLUMN envios INTEGER NOT NULL DEFAULT 1');
+  if (!cols('leads').has('ultimo_envio_em')) d.exec('ALTER TABLE leads ADD COLUMN ultimo_envio_em TEXT');
+  if (!cols('leads').has('meta_lead')) d.exec('ALTER TABLE leads ADD COLUMN meta_lead INTEGER NOT NULL DEFAULT 1'); // 0 = não contou como Lead na Meta (mesmo aparelho)
+  if (!cols('leads').has('lead_enviado_em')) d.exec('ALTER TABLE leads ADD COLUMN lead_enviado_em TEXT'); // marca quando o evento Lead já foi disparado (evita duplicar em reload de /obrigado)
+  // Um lead por WhatsApp (o cadastro repetido só soma em "envios")
+  try { d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp_unico ON leads(whatsapp)'); } catch (e) { console.error('[db] há WhatsApp duplicado; índice único não criado:', (e as Error).message); }
 }
 
 function seedLinks(d: Database.Database) {

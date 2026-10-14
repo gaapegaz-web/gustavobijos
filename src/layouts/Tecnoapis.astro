@@ -4,8 +4,8 @@ import '~/styles/tecnoapis.css';
 import '~/styles/site.css';
 import { ENV } from '~/lib/env';
 import { CAMPANHA } from '~/config/black';
-interface Props { title: string; description?: string; leadEventId?: string; noindex?: boolean; ogImage?: string }
-const { title, description = CAMPANHA.live.subtitulo, leadEventId, noindex = false, ogImage = '/img/og.jpg' } = Astro.props;
+interface Props { title: string; description?: string; leadEventId?: string; noindex?: boolean; ogImage?: string; am?: Record<string, string> }
+const { title, description = CAMPANHA.live.subtitulo, leadEventId, noindex = false, ogImage = '/img/og.jpg', am } = Astro.props;
 const canonical = new URL(Astro.url.pathname, CAMPANHA.dominio).toString();
 ---
 <!doctype html>
@@ -21,13 +21,13 @@ const canonical = new URL(Astro.url.pathname, CAMPANHA.dominio).toString();
   <meta property="og:description" content={description} />
   <meta property="og:image" content={new URL(ogImage, CAMPANHA.dominio).toString()} />
   <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#0d0d0e" />
+  <meta name="theme-color" content="#0a0a0a" />
   <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:ital,wght@0,500;1,500&family=Lexend:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <script is:inline define:vars={{ pixelId: ENV.META_PIXEL_ID, leadEventId }}>window.__TA = { pixelId, leadEventId };</script>
-  <script is:inline src="/js/tracking.js" defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script is:inline define:vars={{ pixelId: ENV.META_PIXEL_ID, leadEventId, am }}>window.__TA = { pixelId, leadEventId, am };</script>
+  <script is:inline src="/js/ta-v4.js" defer></script>
   {ENV.META_PIXEL_ID && <noscript><img height="1" width="1" style="display:none" src={`https://www.facebook.com/tr?id=${ENV.META_PIXEL_ID}&ev=PageView&noscript=1`} /></noscript>}
 </head>
 <body class="ta-root">

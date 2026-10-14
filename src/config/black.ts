@@ -15,7 +15,7 @@ export const CAMPANHA = {
   live: {
     titulo: 'De 10 para 100 colmeias',
     subtitulo: 'O passo a passo para multiplicar o seu apiário sem comprar enxame',
-    data: '2026-10-29T20:00:00-03:00', // [CONFIRMAR] data e hora da live
+    data: '2026-11-06T20:00:00-03:00', // live: sexta, 6/11 às 20h (antes era 29/10)
     duracaoMin: 90,
   },
 
@@ -38,16 +38,14 @@ export const CAMPANHA = {
   // Bio real (site tecnoapis.com.br, 2024)
   professorBio: {
     anos: 27,
-    resumo: 'Idealizador do Clube Tecnoapis e da Expo Tecnoapis. Em 2017 criou o primeiro curso online de apicultura do Brasil.',
+    resumo: 'Criador do Clube Tecnoapis e do primeiro curso online de apicultura do Brasil, em 2017.',
     cargos: [
-      'Presidente da Associação Sul-mato-grossense de Apicultores (ASA)',
-      'Presidente da Federação de Apicultura e Meliponicultura do MS (FEAMS)',
-      'Presidente da Associação Leste Pantaneira de Apicultores (ALESPANA)',
-      'Coordenador da Câmara Setorial Consultiva da Apicultura do MS (CSEAP)',
-      'Diretor-presidente do Conselho de Entidades Apícolas do Pantanal (COFENAL)',
+      'Presidente da ASA, da FEAMS e da ALESPANA',
+      'Coordenador da Câmara Setorial da Apicultura do MS',
+      'Diretor-presidente do COFENAL',
       'Instrutor do SENAR e consultor do SEBRAE',
     ],
-    palestras: 'Palestrou em congressos no Brasil e no exterior: PEC Nordeste 2022, Congreso Nacional de Apicultura del Paraguay, Congresso Brasileiro de Apicultura e Meliponicultura, Congresso Sul Brasileiro de Apicultura, entre outros.',
+    palestras: 'Palestrante em congressos de apicultura no Brasil e no Paraguai.',
   },
 } as const;
 
@@ -173,12 +171,12 @@ export const FAQ = [
 
 /** Links curtos: /r/<slug>. Também são semeados no banco na primeira execução. */
 export const LINKS = [
-  { slug: 'bio', destino: '/', utm_source: 'instagram', utm_medium: 'bio', utm_campaign: 'black26', descricao: 'Link da bio do Instagram' },
-  { slug: 'stories', destino: '/', utm_source: 'instagram', utm_medium: 'stories', utm_campaign: 'black26', descricao: 'Stories' },
-  { slug: 'yt', destino: '/', utm_source: 'youtube', utm_medium: 'descricao', utm_campaign: 'black26', descricao: 'Descrição dos vídeos' },
-  { slug: 'live-01', destino: '/', utm_source: 'youtube', utm_medium: 'live', utm_campaign: 'black26', utm_content: 'live-01', descricao: 'Live semanal 1' },
-  { slug: 'reprise-01', destino: '/', utm_source: 'youtube', utm_medium: 'reprise', utm_campaign: 'black26', utm_content: 'reprise-01', descricao: 'Reprise 1' },
-  { slug: 'zap', destino: '/', utm_source: 'whatsapp', utm_medium: 'grupo', utm_campaign: 'black26', descricao: 'Mensagem nos grupos' },
-  { slug: 'email', destino: '/', utm_source: 'email', utm_medium: 'email', utm_campaign: 'black26', descricao: 'E-mail' },
+  { slug: 'bio', destino: '/black', utm_source: 'instagram', utm_medium: 'bio', utm_campaign: 'black26', descricao: 'Link da bio do Instagram' },
+  { slug: 'stories', destino: '/black', utm_source: 'instagram', utm_medium: 'stories', utm_campaign: 'black26', descricao: 'Stories' },
+  { slug: 'yt', destino: '/black', utm_source: 'youtube', utm_medium: 'descricao', utm_campaign: 'black26', descricao: 'Descrição dos vídeos' },
+  { slug: 'live-01', destino: '/black', utm_source: 'youtube', utm_medium: 'live', utm_campaign: 'black26', utm_content: 'live-01', descricao: 'Live semanal 1' },
+  { slug: 'reprise-01', destino: '/black', utm_source: 'youtube', utm_medium: 'reprise', utm_campaign: 'black26', utm_content: 'reprise-01', descricao: 'Reprise 1' },
+  { slug: 'zap', destino: '/black', utm_source: 'whatsapp', utm_medium: 'grupo', utm_campaign: 'black26', descricao: 'Mensagem nos grupos' },
+  { slug: 'email', destino: '/black', utm_source: 'email', utm_medium: 'email', utm_campaign: 'black26', descricao: 'E-mail' },
   { slug: 'black', destino: '/black', utm_source: 'whatsapp', utm_medium: 'grupo', utm_campaign: 'black26', utm_content: 'abertura', descricao: 'Página de vendas (grupos)' },
 ];

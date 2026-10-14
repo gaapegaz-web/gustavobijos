@@ -1,79 +1,201 @@
 ---
 import { db } from '~/lib/db';
 import { CAMPANHA } from '~/config/black';
-import { estado, resolverAgora, fmtDataHora, brl } from '~/lib/phases';
-const d = db();
-const st = estado(resolverAgora(Astro.url));
+import { fmtDataHora, fmtDiaSemana, brl } from '~/lib/phases';
+import { ENV } from '~/lib/env';
 
-const total = (d.prepare('SELECT count(*) n FROM leads').get() as any).n;
-const hoje = (d.prepare("SELECT count(*) n FROM leads WHERE date(created_at, '-3 hours') = date('now', '-3 hours')").get() as any).n;
-const compradores = (d.prepare('SELECT count(*) n FROM leads WHERE comprou = 1').get() as any).n;
-const vendas = d.prepare("SELECT count(*) n, coalesce(sum(valor),0) v FROM eventos WHERE tipo='Purchase'").get() as any;
-const reembolsos = (d.prepare("SELECT count(*) n FROM eventos WHERE tipo='Reembolso'").get() as any).n;
-const porDia = d.prepare("SELECT date(created_at, '-3 hours') dia, count(*) n FROM leads GROUP BY dia ORDER BY dia DESC LIMIT 31").all() as any[];
-const porFonte = d.prepare(`SELECT coalesce(l.utm_source,'(direto)') fonte, coalesce(l.utm_medium,'') medio, coalesce(l.utm_content,'') conteudo, count(*) leads,
-  sum(l.comprou) compras, (SELECT coalesce(sum(valor),0) FROM eventos e WHERE e.tipo='Purchase' AND e.lead_id IN (SELECT id FROM leads x WHERE coalesce(x.utm_source,'(direto)')=coalesce(l.utm_source,'(direto)') AND coalesce(x.utm_medium,'')=coalesce(l.utm_medium,'') AND coalesce(x.utm_content,'')=coalesce(l.utm_content,''))) receita
-  FROM leads l GROUP BY fonte, medio, conteudo ORDER BY leads DESC`).all() as any[];
-const porVariante = d.prepare("SELECT coalesce(variante,'(padrão)') v, count(*) n, sum(comprou) c FROM leads GROUP BY v ORDER BY n DESC").all() as any[];
-const links = d.prepare('SELECT * FROM links ORDER BY cliques DESC').all() as any[];
-const recentes = d.prepare('SELECT id, nome, whatsapp, email, utm_source, utm_medium, utm_content, variante, comprou, created_at FROM leads ORDER BY id DESC LIMIT 50').all() as any[];
-const ultimosEventos = d.prepare('SELECT e.*, l.nome FROM eventos e LEFT JOIN leads l ON l.id = e.lead_id ORDER BY e.id DESC LIMIT 40').all() as any[];
-const capiErros = (d.prepare("SELECT count(*) n FROM eventos WHERE capi_status LIKE 'erro%'").get() as any).n;
+const d = db();
+const live = new Date(CAMPANHA.live.data);
+const dias = [1, 7, 30, 3650].includes(Number(Astro.url.searchParams.get('dias'))) ? Number(Astro.url.searchParams.get('dias')) : 30;
+const desde = `-${dias} days`;
+const q = <T = any>(sql: string, ...p: unknown[]) => d.prepare(sql).all(desde, ...p) as T[];
+const q1 = <T = any>(sql: string, ...p: unknown[]) => d.prepare(sql).get(desde, ...p) as T;
+const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : 0);
+const seg = (s: number | null) => (s == null ? '' : s < 60 ? `${Math.round(s)} s` : `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`);
+
+/* ---------- Meta ---------- */
+const meta = {
+  pixel: !!ENV.META_PIXEL_ID, token: !!ENV.META_CAPI_TOKEN, teste: !!ENV.META_TEST_EVENT_CODE,
+  ...(d.prepare(`SELECT sum(capi_status='ok') ok, sum(capi_status LIKE 'erro%') erro, sum(capi_status='pulado') pulado FROM eventos WHERE created_at >= datetime('now', ?)`).get(desde) as any),
+};
 const webhooksErro = d.prepare('SELECT * FROM webhooks WHERE processado = 0 ORDER BY id DESC LIMIT 10').all() as any[];
-const semCapi = (d.prepare("SELECT count(*) n FROM eventos WHERE capi_status = 'pulado'").get() as any).n;
-const dt = (s: string) => fmtDataHora(new Date(s));
+
+/* ---------- Números do período ---------- */
+const s = q1(`SELECT count(*) sessoes, count(DISTINCT visitante_id) visitantes, sum(scroll_max >= 50) rolou50, sum(abriu_form) abriu, sum(iniciou_form) iniciou,
+  sum(lead_id IS NOT NULL) leads_sessao, sum(clicou_grupo) grupo, sum(clicou_checkout) checkout, avg(tempo_ativo_s) ativo, avg(scroll_max) scroll
+  FROM sessoes WHERE created_at >= datetime('now', ?)`);
+const leads = q1<any>(`SELECT count(*) n, sum(comprou) compraram, coalesce(sum(envios - 1), 0) repetidos, sum(meta_lead = 0) mesmo_aparelho FROM leads WHERE created_at >= datetime('now', ?)`);
+const vendas = q1<any>(`SELECT count(*) n, coalesce(sum(valor),0) v FROM eventos WHERE tipo='Purchase' AND created_at >= datetime('now', ?)`);
+const reembolsos = q1<any>(`SELECT count(*) n FROM eventos WHERE tipo='Reembolso' AND created_at >= datetime('now', ?)`).n;
+
+const funil = [
+  { nome: 'Visitas', n: s.sessoes ?? 0 },
+  { nome: 'Rolaram metade da página', n: s.rolou50 ?? 0 },
+  { nome: 'Abriram o formulário', n: s.abriu ?? 0 },
+  { nome: 'Começaram a preencher', n: s.iniciou ?? 0 },
+  { nome: 'Viraram lead', n: s.leads_sessao ?? 0 },
+  { nome: 'Clicaram no grupo', n: s.grupo ?? 0 },
+];
+
+/* ---------- Comportamento ---------- */
+const scroll = q(`SELECT valor m, count(DISTINCT c.sessao_id) n FROM comportamento c WHERE tipo='scroll' AND created_at >= datetime('now', ?) GROUP BY valor ORDER BY valor`);
+const paginasComDados = q<{ pagina: string; n: number }>(`SELECT pagina, count(DISTINCT sessao_id) n FROM comportamento WHERE tipo='pagina' AND created_at >= datetime('now', ?) GROUP BY pagina ORDER BY n DESC`);
+const secoes = q(`SELECT c.pagina, c.alvo secao, count(DISTINCT c.sessao_id) n,
+  (SELECT avg(soma) FROM (SELECT sum(t.valor) soma FROM comportamento t WHERE t.tipo='secao_tempo' AND t.alvo=c.alvo AND t.pagina=c.pagina AND t.created_at >= datetime('now', ?) GROUP BY t.sessao_id)) / 1000.0 tempo
+  FROM comportamento c WHERE c.tipo='secao_vista' AND c.created_at >= datetime('now', ?) GROUP BY c.pagina, c.alvo ORDER BY c.pagina, c.alvo`, desde);
+const baseSecao = Object.fromEntries(paginasComDados.map((p) => [p.pagina, p.n]));
+const ordemSecao = (a: string) => { const m = a.match(/^(\d+)-/); return m ? Number(m[1]) : 999; };
+secoes.sort((a: any, b: any) => (a.pagina === b.pagina ? ordemSecao(a.secao) - ordemSecao(b.secao) : a.pagina.localeCompare(b.pagina)));
+const cliques = q(`SELECT pagina, alvo, count(*) n, count(DISTINCT sessao_id) s FROM comportamento WHERE tipo='clique' AND created_at >= datetime('now', ?) GROUP BY pagina, alvo ORDER BY n DESC LIMIT 20`);
+const erros = q(`SELECT alvo, count(*) n FROM comportamento WHERE tipo='form_erro' AND created_at >= datetime('now', ?) GROUP BY alvo ORDER BY n DESC`);
+const popup = q1<any>(`SELECT sum(tipo='popup_aberto') abriu, sum(tipo='popup_fechado') fechou, sum(tipo='form_envio') enviou,
+  (SELECT avg(valor) FROM comportamento WHERE tipo='popup_fechado' AND created_at >= datetime('now', ?)) tempo FROM comportamento WHERE created_at >= datetime('now', ?)`, desde);
+const origem = q(`SELECT coalesce(utm_source, CASE WHEN referrer IS NOT NULL THEN 'referência' ELSE '(direto)' END) fonte, coalesce(utm_medium,'') midia, coalesce(utm_content,'') conteudo,
+  count(*) n, sum(abriu_form) abriu, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo, avg(scroll_max) scroll
+  FROM sessoes WHERE created_at >= datetime('now', ?) GROUP BY fonte, midia, conteudo ORDER BY n DESC LIMIT 25`);
+const dispositivos = q(`SELECT coalesce(dispositivo,'?') disp, count(*) n, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo FROM sessoes WHERE created_at >= datetime('now', ?) GROUP BY disp ORDER BY n DESC`);
+const porDia = d.prepare(`SELECT dia, sessoes, leads, abriu_form, clicou_grupo, tempo_ativo_medio_s FROM v_funil_diario LIMIT 31`).all() as any[];
+const leadsDia = Object.fromEntries((d.prepare(`SELECT date(created_at,'-3 hours') dia, count(*) n FROM leads GROUP BY dia`).all() as any[]).map((r) => [r.dia, r.n]));
+
+/* ---------- Leads, links, eventos ---------- */
+const porFonte = q(`SELECT coalesce(l.utm_source,'(direto)') fonte, coalesce(l.utm_medium,'') medio, coalesce(l.utm_content,'') conteudo, count(*) leads, sum(l.comprou) compras
+  FROM leads l WHERE l.created_at >= datetime('now', ?) GROUP BY fonte, medio, conteudo ORDER BY leads DESC`);
+const recentes = d.prepare(`SELECT l.id, l.nome, l.whatsapp, l.utm_source, l.utm_medium, l.utm_content, l.comprou, l.created_at, l.envios, l.meta_lead, s.tempo_ativo_s, s.scroll_max, s.dispositivo, s.clicou_grupo
+  FROM leads l LEFT JOIN sessoes s ON s.id = l.sessao_id ORDER BY l.id DESC LIMIT 30`).all() as any[];
+const ultimosEventos = d.prepare('SELECT e.*, l.nome FROM eventos e LEFT JOIN leads l ON l.id = e.lead_id ORDER BY e.id DESC LIMIT 25').all() as any[];
+const dt = (x: string) => fmtDataHora(new Date(x));
+const maxScroll = Math.max(1, s.sessoes ?? 0);
 ---
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Admin · {CAMPANHA.nome}</title>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Painel · {CAMPANHA.nome}</title>
 <style>
-  body{font:14px/1.5 system-ui,sans-serif;background:#0b0b0d;color:#eee;margin:0;padding:24px}
-  h1{font-size:20px;margin:0 0 4px} h2{font-size:15px;margin:32px 0 8px;color:#f26b1d;text-transform:uppercase;letter-spacing:.08em}
-  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
-  .kpi div{background:#141418;border:1px solid #2a2a33;border-radius:10px;padding:14px} .kpi b{display:block;font-size:26px;color:#f26b1d}
-  table{border-collapse:collapse;width:100%;font-size:13px;background:#141418;border-radius:10px;overflow:hidden} th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #2a2a33;vertical-align:top} th{color:#a7a3a0;font-weight:600;font-size:12px;text-transform:uppercase}
-  .wrap{overflow-x:auto} .ok{color:#3ccb7f}.err{color:#ff5a5a}.muted{color:#777} a{color:#ff8a3d}
-  .alert{background:#3a1b10;border:1px solid #b94e12;padding:10px 14px;border-radius:8px;margin:12px 0}
-</style></head><body>
-<h1>{CAMPANHA.nome} · painel</h1>
-<div class="muted">Fase atual: <b style="color:#eee">{st.fase}</b> · {st.faixa} · <a href="/admin/leads.csv">Exportar leads (CSV)</a> · <a href="/admin/eventos.csv">eventos (CSV)</a></div>
+  :root{--bg:#0b0b0d;--card:#141418;--line:#26262e;--ink:#eee;--mut:#8d8a88;--acc:#f2a900;--ok:#3ccb7f;--err:#ff5a5a}
+  *{box-sizing:border-box} body{font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 64px}
+  header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+  h1{font-size:22px;margin:0} .sub{color:var(--mut);font-size:13px;margin-top:4px}
+  h2{font-size:13px;margin:36px 0 10px;color:var(--acc);text-transform:uppercase;letter-spacing:.08em}
+  h2 small{color:var(--mut);text-transform:none;letter-spacing:0;font-weight:400;margin-left:8px}
+  a{color:#ffb84d} .mut{color:var(--mut)} .ok{color:var(--ok)} .err{color:var(--err)}
+  .filtro a{display:inline-block;padding:6px 12px;border:1px solid var(--line);border-radius:999px;margin-left:6px;text-decoration:none;color:var(--ink);font-size:13px}
+  .filtro a.on{background:var(--acc);border-color:var(--acc);color:#111;font-weight:600}
+  .grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))} .g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .kpi b{display:block;font-size:28px;line-height:1.1;color:var(--acc)} .kpi span{color:var(--mut);font-size:13px}
+  .alert{background:#3a1b10;border:1px solid #b94e12;padding:10px 14px;border-radius:10px;margin:10px 0}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13px}
+  table{border-collapse:collapse;width:100%;font-size:13px} th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em} td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .tbl{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto}
+  .bar{display:grid;grid-template-columns:200px 1fr 120px;gap:12px;align-items:center;padding:7px 0;font-size:13px}
+  .bar i{display:block;height:22px;border-radius:6px;background:linear-gradient(90deg,var(--acc),#c98600);min-width:2px}
+  .bar .tr{background:#1e1e24;border-radius:6px;overflow:hidden}
+  .vazio{color:var(--mut);padding:14px;font-size:13px}
+  @media (max-width:640px){.bar{grid-template-columns:120px 1fr 80px}}
+</style></head><body><div class="wrap">
 
-{semCapi > 0 && <div class="alert">⚠️ {semCapi} eventos não foram enviados para a Meta (META_PIXEL_ID / META_CAPI_TOKEN não configurados).</div>}
-{capiErros > 0 && <div class="alert">⚠️ {capiErros} eventos com erro na CAPI. Veja a coluna CAPI abaixo.</div>}
-{webhooksErro.length > 0 && <div class="alert">⚠️ {webhooksErro.length} webhooks da Hubla com erro de processamento (último: {webhooksErro[0].erro}).</div>}
+<header>
+  <div>
+    <h1>Captação da live · painel</h1>
+    <div class="sub">Live: <b style="color:var(--ink)">{fmtDiaSemana(live)}, {fmtDataHora(live)}</b> · <a href="/admin/leads.csv">leads.csv</a> · <a href="/admin/eventos.csv">eventos.csv</a> · <a href="/admin/comportamento.csv">comportamento.csv</a></div>
+  </div>
+  <nav class="filtro">{[[1, 'Hoje'], [7, '7 dias'], [30, '30 dias'], [3650, 'Tudo']].map(([v, l]) => <a href={`?dias=${v}`} class={v === dias ? 'on' : ''}>{l}</a>)}</nav>
+</header>
 
-<div class="kpi">
-  <div><b>{total}</b>leads</div>
-  <div><b>{hoje}</b>leads hoje</div>
-  <div><b>{vendas.n}</b>vendas (Hubla)</div>
-  <div><b>{brl(vendas.v)}</b>receita</div>
-  <div><b>{compradores}</b>leads que compraram</div>
-  <div><b>{total ? ((compradores / total) * 100).toFixed(1) : 0}%</b>conversão lead→venda</div>
-  <div><b>{reembolsos}</b>reembolsos</div>
+<div class="card meta">
+  <b>Meta</b>
+  <span>Pixel: {meta.pixel ? <span class="ok">configurado</span> : <span class="err">sem ID</span>}</span>
+  <span>Conversions API: {meta.token ? <span class="ok">configurada</span> : <span class="err">sem token</span>}</span>
+  {meta.teste && <span class="err">modo de teste ligado (META_TEST_EVENT_CODE)</span>}
+  <span class="mut">No período: {meta.ok ?? 0} enviados · {meta.erro ?? 0} com erro · {meta.pulado ?? 0} não enviados</span>
+</div>
+{(!meta.pixel || !meta.token) && <div class="alert">A Meta não está recebendo eventos. Falta {[!meta.pixel && 'META_PIXEL_ID', !meta.token && 'META_CAPI_TOKEN'].filter(Boolean).join(' e ')} no arquivo /srv/tecnoapis/.env.</div>}
+{(meta.erro ?? 0) > 0 && <div class="alert">{meta.erro} eventos com erro na Conversions API. Veja "Eventos enviados à Meta" no fim da página.</div>}
+{webhooksErro.length > 0 && <div class="alert">{webhooksErro.length} webhooks da Hubla com erro (último: {webhooksErro[0].erro}).</div>}
+
+<h2>Resumo <small>{dias === 3650 ? 'desde o início' : dias === 1 ? 'últimas 24 h' : `últimos ${dias} dias`}</small></h2>
+<div class="grid g4">
+  <div class="card kpi"><b>{s.sessoes ?? 0}</b><span>visitas ({s.visitantes ?? 0} pessoas)</span></div>
+  <div class="card kpi"><b>{leads.n ?? 0}</b><span>leads · {pct(s.leads_sessao ?? 0, s.sessoes ?? 0)}% das visitas</span></div>
+  <div class="card kpi"><b>{leads.repetidos ?? 0}</b><span>cadastros repetidos bloqueados{(leads.mesmo_aparelho ?? 0) > 0 ? ` · ${leads.mesmo_aparelho} do mesmo aparelho` : ''}</span></div>
+  <div class="card kpi"><b>{seg(s.ativo)}</b><span>tempo ativo médio</span></div>
+  <div class="card kpi"><b>{Math.round(s.scroll ?? 0)}%</b><span>rolagem média</span></div>
+  <div class="card kpi"><b>{s.grupo ?? 0}</b><span>clicaram no grupo</span></div>
+  <div class="card kpi"><b>{vendas.n}</b><span>vendas · {brl(vendas.v)}</span></div>
+  <div class="card kpi"><b>{pct(leads.compraram ?? 0, leads.n ?? 0)}%</b><span>leads que compraram</span></div>
+  <div class="card kpi"><b>{reembolsos}</b><span>reembolsos</span></div>
 </div>
 
-<h2>Por origem (UTM)</h2>
-<div class="wrap"><table><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th>Leads</th><th>Compras</th><th>Receita</th><th>Conv.</th></tr>
-{porFonte.map((r) => <tr><td>{r.fonte}</td><td>{r.medio}</td><td>{r.conteudo}</td><td>{r.leads}</td><td>{r.compras}</td><td>{brl(r.receita)}</td><td>{r.leads ? ((r.compras / r.leads) * 100).toFixed(1) : 0}%</td></tr>)}
-</table></div>
+<h2>Funil <small>cada etapa em relação às visitas</small></h2>
+<div class="card">
+  {funil.map((f, i) => (
+    <div class="bar"><span>{f.nome}</span><div class="tr"><i style={`width:${pct(f.n, funil[0].n || 1)}%`}></i></div><span class="n">{f.n} · {pct(f.n, funil[0].n)}%{i > 0 && funil[i - 1].n ? <span class="mut"> ({pct(f.n, funil[i - 1].n)}% da etapa anterior)</span> : ''}</span></div>
+  ))}
+</div>
 
-<h2>Por variante de página</h2>
-<div class="wrap"><table><tr><th>Variante</th><th>Leads</th><th>Compras</th></tr>{porVariante.map((r) => <tr><td>{r.v}</td><td>{r.n}</td><td>{r.c}</td></tr>)}</table></div>
+<div class="grid g2">
+  <div>
+    <h2>Até onde rolam</h2>
+    <div class="card">
+      {scroll.length ? scroll.map((r: any) => <div class="bar"><span>{r.m}% da página</span><div class="tr"><i style={`width:${pct(r.n, maxScroll)}%`}></i></div><span class="n">{r.n} · {pct(r.n, maxScroll)}%</span></div>) : <div class="vazio">Sem dados ainda.</div>}
+    </div>
+  </div>
+  <div>
+    <h2>Formulário</h2>
+    <div class="card">
+      <div class="bar"><span>Abriram o pop-up</span><div class="tr"><i style="width:100%"></i></div><span class="n">{popup.abriu ?? 0}</span></div>
+      <div class="bar"><span>Enviaram</span><div class="tr"><i style={`width:${pct(popup.enviou ?? 0, popup.abriu || 1)}%`}></i></div><span class="n">{popup.enviou ?? 0} · {pct(popup.enviou ?? 0, popup.abriu ?? 0)}%</span></div>
+      <p class="mut" style="margin:8px 0 0">Tempo médio com o pop-up aberto antes de fechar: {seg(popup.tempo) || '—'}</p>
+      <p class="mut" style="margin:4px 0 0">Erros: {erros.length ? erros.map((e: any) => `${e.alvo} (${e.n})`).join(', ') : 'nenhum'}</p>
+    </div>
+  </div>
+</div>
 
-<h2>Leads por dia</h2>
-<div class="wrap"><table><tr><th>Dia</th><th>Leads</th></tr>{porDia.map((r) => <tr><td>{r.dia}</td><td>{r.n}</td></tr>)}</table></div>
+<h2>Seções da página <small>quantas visitas viram cada parte e quanto tempo ficaram nela</small></h2>
+<div class="card">
+  {secoes.length ? secoes.map((r: any) => (
+    <div class="bar"><span>{r.pagina} · {r.secao}</span><div class="tr"><i style={`width:${pct(r.n, baseSecao[r.pagina] || 1)}%`}></i></div><span class="n">{pct(r.n, baseSecao[r.pagina])}% · {seg(r.tempo) || '—'}</span></div>
+  )) : <div class="vazio">Sem dados ainda.</div>}
+</div>
 
-<h2>Links curtos (/r/slug)</h2>
-<div class="wrap"><table><tr><th>Link</th><th>Descrição</th><th>Destino</th><th>UTMs</th><th>Cliques</th></tr>
-{links.map((l) => <tr><td><code>{CAMPANHA.dominio}/r/{l.slug}</code></td><td>{l.descricao}</td><td>{l.destino}</td><td class="muted">{[l.utm_source, l.utm_medium, l.utm_content].filter(Boolean).join(' / ')}</td><td>{l.cliques}</td></tr>)}
-</table></div>
+<div class="grid g2">
+  <div>
+    <h2>Cliques</h2>
+    <div class="tbl"><table><thead><tr><th>Página</th><th>Onde</th><th class="n">Cliques</th><th class="n">Visitas</th></tr></thead><tbody>
+      {cliques.length ? cliques.map((r: any) => <tr><td class="mut">{r.pagina}</td><td>{r.alvo}</td><td class="n">{r.n}</td><td class="n">{r.s}</td></tr>) : <tr><td colspan="4" class="vazio">Sem dados ainda.</td></tr>}
+    </tbody></table></div>
+  </div>
+  <div>
+    <h2>Dispositivo</h2>
+    <div class="tbl"><table><thead><tr><th>Tipo</th><th class="n">Visitas</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th></tr></thead><tbody>
+      {dispositivos.length ? dispositivos.map((r: any) => <tr><td>{r.disp}</td><td class="n">{r.n}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td></tr>) : <tr><td colspan="5" class="vazio">Sem dados ainda.</td></tr>}
+    </tbody></table></div>
+  </div>
+</div>
 
-<h2>Últimos leads</h2>
-<div class="wrap"><table><tr><th>#</th><th>Quando</th><th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Origem</th><th>Var.</th><th>Comprou</th></tr>
-{recentes.map((l) => <tr><td>{l.id}</td><td>{dt(l.created_at)}</td><td>{l.nome}</td><td>{l.whatsapp}</td><td>{l.email}</td><td class="muted">{[l.utm_source, l.utm_medium, l.utm_content].filter(Boolean).join('/')}</td><td>{l.variante}</td><td>{l.comprou ? <span class="ok">sim</span> : ''}</td></tr>)}
-</table></div>
+<h2>Origem das visitas</h2>
+<div class="tbl"><table><thead><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th class="n">Visitas</th><th class="n">Abriram form</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th><th class="n">Rolagem</th></tr></thead><tbody>
+  {origem.length ? origem.map((r: any) => <tr><td>{r.fonte}</td><td>{r.midia}</td><td>{r.conteudo}</td><td class="n">{r.n}</td><td class="n">{r.abriu}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td><td class="n">{Math.round(r.scroll)}%</td></tr>) : <tr><td colspan="9" class="vazio">Sem dados ainda.</td></tr>}
+</tbody></table></div>
 
-<h2>Últimos eventos</h2>
-<div class="wrap"><table><tr><th>Quando</th><th>Tipo</th><th>Origem</th><th>Lead</th><th>Valor</th><th>CAPI</th><th>event_id</th></tr>
-{ultimosEventos.map((e) => <tr><td>{dt(e.created_at)}</td><td>{e.tipo}</td><td>{e.origem}</td><td>{e.nome}</td><td>{e.valor != null ? brl(e.valor) : ''}</td><td class={e.capi_status === 'ok' ? 'ok' : e.capi_status?.startsWith('erro') ? 'err' : 'muted'}>{e.capi_status}</td><td class="muted" style="font-size:11px">{e.event_id}</td></tr>)}
-</table></div>
-</body></html>
+<h2>Por dia</h2>
+<div class="tbl"><table><thead><tr><th>Dia</th><th class="n">Visitas</th><th class="n">Abriram form</th><th class="n">Leads</th><th class="n">Clicaram no grupo</th><th class="n">Tempo ativo médio</th></tr></thead><tbody>
+  {porDia.length ? porDia.map((r) => <tr><td>{r.dia}</td><td class="n">{r.sessoes}</td><td class="n">{r.abriu_form}</td><td class="n">{leadsDia[r.dia] ?? r.leads}</td><td class="n">{r.clicou_grupo}</td><td class="n">{seg(r.tempo_ativo_medio_s)}</td></tr>) : <tr><td colspan="6" class="vazio">Sem dados ainda.</td></tr>}
+</tbody></table></div>
+
+<h2>Leads por origem</h2>
+<div class="tbl"><table><thead><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th class="n">Leads</th><th class="n">Compras</th></tr></thead><tbody>
+  {porFonte.length ? porFonte.map((r: any) => <tr><td>{r.fonte}</td><td>{r.medio}</td><td>{r.conteudo}</td><td class="n">{r.leads}</td><td class="n">{r.compras}</td></tr>) : <tr><td colspan="5" class="vazio">Sem leads no período.</td></tr>}
+</tbody></table></div>
+
+<h2>Últimos leads <small>com o que fizeram na página</small></h2>
+<div class="tbl"><table><thead><tr><th>#</th><th>Quando</th><th>Nome</th><th>WhatsApp</th><th>Origem</th><th class="n">Envios</th><th>Aparelho</th><th class="n">Tempo ativo</th><th class="n">Rolagem</th><th>Grupo</th><th>Comprou</th></tr></thead><tbody>
+  {recentes.length ? recentes.map((l) => <tr><td>{l.id}</td><td>{dt(l.created_at)}</td><td>{l.nome}</td><td>{l.whatsapp}</td><td class="mut">{[l.utm_source, l.utm_medium, l.utm_content].filter(Boolean).join('/')}</td><td class="n">{l.envios > 1 ? <span class="err">{l.envios}</span> : l.envios}{l.meta_lead === 0 ? <span class="mut"> · mesmo aparelho</span> : ''}</td><td class="mut">{l.dispositivo}</td><td class="n">{seg(l.tempo_ativo_s)}</td><td class="n">{l.scroll_max != null ? `${l.scroll_max}%` : ''}</td><td>{l.clicou_grupo ? <span class="ok">sim</span> : ''}</td><td>{l.comprou ? <span class="ok">sim</span> : ''}</td></tr>) : <tr><td colspan="11" class="vazio">Nenhum lead ainda.</td></tr>}
+</tbody></table></div>
+
+<h2>Eventos enviados à Meta <small>últimos 25</small></h2>
+<div class="tbl"><table><thead><tr><th>Quando</th><th>Evento</th><th>Origem</th><th>Lead</th><th class="n">Valor</th><th>Meta</th></tr></thead><tbody>
+  {ultimosEventos.length ? ultimosEventos.map((e) => <tr><td>{dt(e.created_at)}</td><td>{e.tipo}</td><td class="mut">{e.origem}</td><td>{e.nome}</td><td class="n">{e.valor != null ? brl(e.valor) : ''}</td><td class={e.capi_status === 'ok' ? 'ok' : e.capi_status?.startsWith('erro') ? 'err' : 'mut'}>{e.capi_status === 'pulado' ? 'não enviado' : e.capi_status === 'repetido' ? 'não enviado: cadastro repetido' : e.capi_status === 'mesmo_aparelho' ? 'não enviado: mesmo aparelho' : e.capi_status}</td></tr>) : <tr><td colspan="6" class="vazio">Nenhum evento.</td></tr>}
+</tbody></table></div>
+
+</div></body></html>
