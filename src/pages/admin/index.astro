@@ -19,6 +19,7 @@ const meta = {
   ...(d.prepare(`SELECT sum(capi_status='ok') ok, sum(capi_status LIKE 'erro%') erro, sum(capi_status='pulado') pulado FROM eventos WHERE created_at >= datetime('now', ?)`).get(desde) as any),
 };
 const webhooksErro = d.prepare('SELECT * FROM webhooks WHERE processado = 0 ORDER BY id DESC LIMIT 10').all() as any[];
+const comprasSemValor = (d.prepare("SELECT count(*) n FROM eventos WHERE tipo='Purchase' AND capi_status LIKE 'pulado: sem valor%' AND created_at >= datetime('now','-30 days')").get() as any).n;
 
 /* ---------- Números do período ---------- */
 const s = q1(`SELECT count(*) sessoes, count(DISTINCT visitante_id) visitantes, sum(scroll_max >= 50) rolou50, sum(abriu_form) abriu, sum(iniciou_form) iniciou,
@@ -130,6 +131,7 @@ const maxScroll = Math.max(1, s.sessoes ?? 0);
 </div>
 {(!meta.pixel || !meta.token) && <div class="alert">A Meta não está recebendo eventos. Falta {[!meta.pixel && 'META_PIXEL_ID', !meta.token && 'META_CAPI_TOKEN'].filter(Boolean).join(' e ')} no arquivo /srv/tecnoapis/.env.</div>}
 {(meta.erro ?? 0) > 0 && <div class="alert">{meta.erro} eventos com erro na Conversions API. Veja "Eventos enviados à Meta" no fim da página.</div>}
+{comprasSemValor > 0 && <div class="alert">{comprasSemValor} compra(s) da Hubla chegaram sem valor e NÃO foram enviadas à Meta (a Meta recusa Purchase sem valor). Provável mudança no formato do webhook da Hubla: o payload bruto está na tabela webhooks.</div>}
 {webhooksErro.length > 0 && <div class="alert">{webhooksErro.length} webhooks da Hubla com erro (último: {webhooksErro[0].erro}).</div>}
 
 <h2>Gerador de UTM <small>vincule com o tema/campanha do Meta Ads — use o mesmo texto para cruzar os dados depois no Gerenciador de Anúncios</small></h2>
@@ -364,7 +366,7 @@ const maxScroll = Math.max(1, s.sessoes ?? 0);
 
 <h2>Eventos enviados à Meta <small>últimos 25</small></h2>
 <div class="tbl"><table><thead><tr><th>Quando</th><th>Evento</th><th>Origem</th><th>Lead</th><th class="n">Valor</th><th>Meta</th></tr></thead><tbody>
-  {ultimosEventos.length ? ultimosEventos.map((e) => <tr><td>{dt(e.created_at)}</td><td>{e.tipo}</td><td class="mut">{e.origem}</td><td>{e.nome}</td><td class="n">{e.valor != null ? brl(e.valor) : ''}</td><td class={e.capi_status === 'ok' ? 'ok' : e.capi_status?.startsWith('erro') ? 'err' : 'mut'}>{e.capi_status === 'pulado' ? 'não enviado' : e.capi_status === 'repetido' ? 'não enviado: cadastro repetido' : e.capi_status === 'mesmo_aparelho' ? 'não enviado: mesmo aparelho' : e.capi_status}</td></tr>) : <tr><td colspan="6" class="vazio">Nenhum evento.</td></tr>}
+  {ultimosEventos.length ? ultimosEventos.map((e) => <tr><td>{dt(e.created_at)}</td><td>{e.tipo}</td><td class="mut">{e.origem}</td><td>{e.nome}</td><td class="n">{e.valor != null ? brl(e.valor) : ''}</td><td class={e.capi_status === 'ok' ? 'ok' : e.capi_status?.startsWith('erro') ? 'err' : 'mut'}>{e.capi_status === 'pulado' ? 'não enviado' : e.capi_status === 'repetido' ? 'não enviado: cadastro repetido' : e.capi_status === 'mesmo_aparelho' ? 'não enviado: mesmo aparelho' : e.capi_status?.startsWith('pulado: sem valor') ? 'não enviado: Hubla não mandou o valor' : e.capi_status}</td></tr>) : <tr><td colspan="6" class="vazio">Nenhum evento.</td></tr>}
 </tbody></table></div>
 
 </div></body></html>
