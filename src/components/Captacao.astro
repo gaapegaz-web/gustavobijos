@@ -38,7 +38,7 @@ const fotoHero = ['webp', 'jpg', 'png'].map((ext) => `/img/gustavo-hero.${ext}`)
       {fotoHero ? <img src={fotoHero} alt="" width="1080" height="1920" fetchpriority="high" /> : <span class="hero__fundo-aviso">Fundo: foto do Gustavo</span>}
     </div>
     <div class="ta-container hero__body">
-      <span class="hero__tag">{liveJaPassou ? 'A Black já começou' : `Evento ao vivo · ${quando}`}</span>
+      <span class="hero__tag">{liveJaPassou ? 'A Black já começou' : `Evento ao vivo · ${live.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })} · ${live.toLocaleTimeString('pt-BR', { hour: 'numeric', timeZone: 'America/Sao_Paulo' }).replace(/:00(:00)?$/, '')}h`}</span>
       <h1 class="hero__titulo" set:html={titulo} />
       <p class="hero__sub">{sub}</p>
       <button type="button" class="ta-btn ta-btn--lg cta-pulse cta-verde" data-abrir-form data-alvo="form:hero" data-track-click="AbriuFormulario" data-track-params='{"content_name":"hero_cta"}'>Entrar no grupo</button>
@@ -105,7 +105,7 @@ const fotoHero = ['webp', 'jpg', 'png'].map((ext) => `/img/gustavo-hero.${ext}`)
   .hero__fundo-aviso { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); padding: 8px 14px; border: 1px dashed rgba(242,169,0,.5); border-radius: var(--radius-full); font: 500 13px/1 var(--font-sans); color: var(--ink-muted); white-space: nowrap; }
   .hero__body { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding-bottom: var(--space-10, 40px); }
   .hero__titulo { max-width: 18ch; font-family: var(--font-display); font-size: clamp(28px, 7vw, 46px); line-height: 1.08; font-weight: 500; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
-  .hero__tag { display: inline-flex; align-items: center; height: 30px; padding: 0 14px; border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent, #111); font: 700 12.5px/1 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+  .hero__tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent, #111); font: 700 10.5px/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
   .hero__titulo :global(em) { font-style: normal; font-weight: 700; color: var(--accent); letter-spacing: .01em; }
   .hero__sub { max-width: 46ch; font: 400 15.5px/1.55 var(--font-sans); color: rgba(255,255,255,.78); text-wrap: pretty; }
   .hero__sub strong { color: var(--accent); font-weight: 600; }
