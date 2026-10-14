@@ -36,7 +36,7 @@ if (lead && lead.meta_lead === 1) {
       eventId: leadEventId,
       sourceUrl: new URL('/obrigado', CAMPANHA.dominio).toString(),
       user: { email: lead.email, phone: lead.whatsapp, firstName, lastName, fbp: lead.fbp, fbc: lead.fbc, ip: lead.ip, userAgent: lead.user_agent, externalId: lead.id },
-      custom: { content_name: 'Live De 10 para 100 colmeias', lead_source: lead.utm_source ?? 'direto' },
+      custom: { content_name: 'Black Tecnoapis 2026', lead_source: lead.utm_source ?? 'direto' },
     });
     insertEvento({ lead_id: lead.id, tipo: 'Lead', event_id: leadEventId, origem: 'server', utm_source: lead.utm_source, utm_campaign: lead.utm_campaign, utm_content: lead.utm_content, capi_status: capi.status, payload: capi.ok ? null : capi.body });
   }
@@ -66,7 +66,7 @@ const am: Record<string, string> | undefined = lead ? {
       <ol class="ob__passos">
         <li class="ob__passo ob__passo--ativo">
           <span class="ob__n">1</span>
-          <div><b>Entre no grupo do WhatsApp</b><span>É por lá que chega o link da live, {quando}.</span></div>
+          <div><b>Entre no grupo do WhatsApp</b><span>É por lá que chega a oferta especial da Black e o link da aula, {quando}.</span></div>
         </li>
         <li class="ob__passo">
           <span class="ob__n">2</span>

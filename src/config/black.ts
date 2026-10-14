@@ -11,10 +11,10 @@ export const CAMPANHA = {
   professor: 'Gustavo Nadeu Bijos',
   clube: 'Clube Tecnoapis',
 
-  // Live de captação (outubro)
+  // Aula ao vivo em que a Black é aberta (captação em outubro)
   live: {
-    titulo: 'De 10 para 100 colmeias',
-    subtitulo: 'O passo a passo para multiplicar o seu apiário sem comprar enxame',
+    titulo: 'Black Friday Tecnoapis 2026',
+    subtitulo: 'Todos os cursos, as lives semanais e a comunidade do Clube Tecnoapis, na maior oferta de Black Friday da história do clube.',
     data: '2026-11-06T20:00:00-03:00', // live: sexta, 6/11 às 20h (antes era 29/10)
     duracaoMin: 90,
   },
