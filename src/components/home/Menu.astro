@@ -1,0 +1,31 @@
+---
+/** Menu fixo da home: marca à esquerda, âncoras no meio (desktop), botão do Clube à direita (slot "cta" troca o botão). */
+import { SITE } from '~/config/site';
+const LINKS = [
+  { href: '/#sobre', l: 'Sobre' },
+  { href: SITE.clubeUrl, l: 'Clube' },
+  { href: '/#trajetoria', l: 'Trajetória' },
+  { href: '/#perguntas', l: 'Perguntas' },
+];
+---
+<header class="menu">
+  <div class="ta-container menu__in">
+    <a class="menu__marca" href="/" aria-label={`${SITE.apelido}, página inicial`}>Gustavo <em>Bijos</em></a>
+    <nav class="menu__links" aria-label="Seções">
+      {LINKS.map((x) => <a href={x.href}>{x.l}</a>)}
+    </nav>
+    <slot name="cta"><a class="ta-btn ta-btn--primary menu__cta" href={SITE.clubeUrl} data-track-click="CliqueClube" data-track-params='{"content_name":"menu"}'>Clube Tecnoapis</a></slot>
+  </div>
+</header>
+
+<style>
+  .menu { position: sticky; top: 0; z-index: 50; background: rgba(10,10,10,.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  .menu__in { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 64px; }
+  .menu__marca { font: 500 22px/1 var(--font-display); color: var(--ink); text-decoration: none; letter-spacing: -.01em; white-space: nowrap; }
+  .menu__marca em { font-style: normal; color: var(--accent-ink); }
+  .menu__links { display: none; gap: var(--space-8); }
+  .menu__links a { font: 500 14px/1 var(--font-sans); color: var(--ink-muted); text-decoration: none; }
+  .menu__links a:hover { color: var(--ink); }
+  .menu__cta, .menu__in :global(.menu__cta) { min-height: 40px; padding: 0 var(--space-4); font-size: 13.5px; }
+  @media (min-width: 900px) { .menu__links { display: flex; } .menu__in { min-height: 72px; } .menu__cta, .menu__in :global(.menu__cta) { min-height: 44px; padding: 0 var(--space-6); } }
+</style>

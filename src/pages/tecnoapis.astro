@@ -1,0 +1,216 @@
+---
+/**
+ * /tecnoapis: página FIXA do Clube Tecnoapis e da Assinatura Anual (R$ 697).
+ * Copy: tecnoapis.com.br (dez/2024). Dados em src/config/clube.ts. Botões de compra: BotaoAssinar (topo, meio e fim).
+ */
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
+import Rodape from '~/components/home/Rodape.astro';
+import ClubeConteudo from '~/components/ClubeConteudo.astro';
+import BotaoAssinar from '~/components/clube/BotaoAssinar.astro';
+import Icons from '~/components/Icons.astro';
+import { BIO_CLUBE, FAQ_CLUBE, INCLUSO_CLUBE, NIVEIS_CLUBE, OFERTA_CLUBE, RESULTADOS_CLUBE } from '~/config/clube';
+import { BIO, SITE } from '~/config/site';
+import { ENV } from '~/lib/env';
+import { acharImagem } from '~/lib/imagens';
+
+export const prerender = false;
+
+const foto = acharImagem('gustavo');
+// Herói: mesma foto vertical da Black (public/img/gustavo-hero.*). Sem ela, o herói fica só texto.
+const fotoHero = acharImagem('gustavo-hero');
+const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
+const suporte = ENV.WHATSAPP_SUPORTE_URL;
+const url = `${SITE.dominio}/tecnoapis`;
+const ld = [
+  {
+    '@type': 'Product', '@id': `${url}#assinatura`, name: OFERTA_CLUBE.produto, brand: { '@id': `${SITE.dominio}/#clube` },
+    description: 'Assinatura anual do Clube Tecnoapis: 25 cursos de apicultura online, lives exclusivas toda segunda-feira, grupo de membros e contato direto com o professor Gustavo Bijos.',
+    image: `${SITE.dominio}/img/og-gustavo.jpg`,
+    offers: { '@type': 'Offer', price: OFERTA_CLUBE.preco, priceCurrency: 'BRL', availability: 'https://schema.org/InStock', url,
+      hasMerchantReturnPolicy: { '@type': 'MerchantReturnPolicy', applicableCountry: 'BR', returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow', merchantReturnDays: OFERTA_CLUBE.garantiaDias, returnFees: 'https://schema.org/FreeReturn' } },
+  },
+  { '@type': 'FAQPage', '@id': `${url}#duvidas`, mainEntity: FAQ_CLUBE.map((f) => ({ '@type': 'Question', name: f.p, acceptedAnswer: { '@type': 'Answer', text: f.r } })) },
+];
+---
+<Tecnoapis
+  title="Clube Tecnoapis | Curso de apicultura online com Gustavo Bijos"
+  ogTitle="Clube Tecnoapis: todo o conhecimento para viver da apicultura"
+  description="Curso de apicultura online do Gustavo Bijos: 25 cursos, live exclusiva toda segunda e contato direto com o professor. Assinatura anual com 7 dias de garantia."
+  jsonLd={ld}
+>
+  <Menu><BotaoAssinar slot="cta" local="menu" class="ta-btn ta-btn--primary menu__cta">Assinar</BotaoAssinar></Menu>
+  <main data-track-view="ViewContent" data-track-params='{"content_name":"clube-tecnoapis"}'>
+
+    <section data-secao="1-hero" class:list={['cl-hero', { 'cl-hero--sem-foto': !fotoHero }]}>
+      <div class="cl-hero__fundo" aria-hidden="true">
+        {fotoHero && <img src={fotoHero} alt="" width="1080" height="1920" fetchpriority="high" />}
+      </div>
+      <div class="ta-container cl-hero__body">
+        <span class="cl-hero__tag">Clube Tecnoapis · Apicultura online</span>
+        <h1 class="cl-hero__titulo">Todo o conhecimento para <em>viver da apicultura</em>.</h1>
+        <p class="cl-hero__sub">Aumente a sua produção, tenha resultado financeiro e domine os manejos corretos.</p>
+        <BotaoAssinar local="topo" class="ta-btn ta-btn--primary ta-btn--lg cta-pulse">Quero assinar o Clube</BotaoAssinar>
+        <p class="ta-small">1 ano de acesso · 7 dias de garantia · {BIO.anos} anos de apicultura</p>
+      </div>
+    </section>
+
+    <section class="ta-section ta-section--light" data-theme="light" data-secao="2-niveis">
+      <div class="ta-container">
+        <div class="ta-intro">
+          <h2 class="display-l">O Clube Tecnoapis é para apicultores que querem…</h2>
+        </div>
+        <div class="niveis">
+          {NIVEIS_CLUBE.map((n) => (
+            <div class="ta-level"><span class="ta-badge ta-badge--soft">{n.nivel}</span><h3>{n.titulo}</h3><p>{n.texto}</p></div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <ClubeConteudo titulo="Estes são os <em>cursos</em> da plataforma" lead="Teoria e prática gravadas no apiário, do primeiro núcleo à venda do mel." />
+
+    <section class="ta-section ta-section--light" data-theme="light" data-secao="4-live">
+      <div class="ta-container live">
+        <div class="ta-intro">
+          <span class="ta-pill">Toda segunda-feira</span>
+          <h2 class="display-l">Uma <em>live exclusiva</em> só para os membros.</h2>
+          <p class="ta-lead">O tema geralmente é escolhido pelo grupo do WhatsApp de membros. A live é usada para distribuir o conhecimento e tirar todas as dúvidas dos participantes.</p>
+          <BotaoAssinar local="live">Quero assinar o Clube</BotaoAssinar>
+        </div>
+        <div class="ta-block live__card">
+          <span class="live__icone"><Icons name="star" size={22} /></span>
+          <h3>APISCARD para membros</h3>
+          <p>Todo membro do Tecnoapis tem um APISCARD para usar nas lojas parceiras e conseguir descontos.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="ta-section" data-secao="5-resultados">
+      <div class="ta-container">
+        <div class="ta-intro">
+          <span class="ta-pill">Resultado</span>
+          <h2 class="display-l">Investir no seu conhecimento terá como resultado:</h2>
+        </div>
+        <ul class="ta-results resultados">
+          {RESULTADOS_CLUBE.map((r) => <li><h3>{r.titulo}</h3><p>{r.texto}</p></li>)}
+        </ul>
+      </div>
+    </section>
+
+    <section class="ta-section ta-section--surface" id="assinatura" data-secao="6-oferta">
+      <div class="ta-container oferta">
+        <div class="ta-price">
+          <div>
+            <h2 class="ta-heading">{OFERTA_CLUBE.produto}</h2>
+            <p class="ta-small">A melhor comunidade online de cursos para apicultores do Brasil.</p>
+          </div>
+          <ul>{INCLUSO_CLUBE.map((i) => <li><Icons name="check" size={16} /><span>{i}</span></li>)}</ul>
+          <div>
+            <p class="ta-price__value">{brl(OFERTA_CLUBE.preco)}</p>
+            <p class="ta-small">à vista, ou em até {OFERTA_CLUBE.parcelas}x no cartão</p>
+          </div>
+          <BotaoAssinar local="oferta" class="ta-btn ta-btn--primary ta-btn--lg oferta__btn">Assinar agora</BotaoAssinar>
+          <p class="ta-price__note">Acesso por 1 ano a todos os cursos, bônus e atualizações.</p>
+        </div>
+        <div class="garantia">
+          <span class="garantia__selo"><Icons name="shield" size={28} /></span>
+          <h3 class="display-m">Garantia incondicional de {OFERTA_CLUBE.garantiaDias} dias</h3>
+          <p class="ta-body">Se por qualquer motivo você não estiver satisfeito(a) com sua compra, fique tranquilo(a): garantimos a devolução do seu dinheiro, sem complicações.</p>
+          <p class="ta-body">Basta entrar em contato conosco dentro do prazo de {OFERTA_CLUBE.garantiaDias} dias após a compra, e faremos o reembolso completo.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="ta-section ta-section--light" data-theme="light" data-secao="7-gustavo">
+      <div class:list={['ta-container', 'prof', { 'prof--foto': foto }]}>
+        {foto && <figure class="prof__foto"><img src={foto} alt={`${SITE.professor}`} width="960" height="1200" loading="lazy" /></figure>}
+        <div class="prof__texto">
+          <span class="ta-pill">{BIO.anos} anos de apicultura</span>
+          <h2 class="display-l">Quem é Gustavo Bijos?</h2>
+          <p class="ta-body prof__destaque">{BIO_CLUBE.abertura}</p>
+          <p class="ta-body">{BIO_CLUBE.cargos}</p>
+          <p class="ta-body">{BIO_CLUBE.senar}</p>
+          <p class="ta-body">{BIO_CLUBE.palestras}</p>
+          <p class="ta-body">{BIO_CLUBE.online}</p>
+          <a class="ta-btn ta-btn--outline" href="/">Conheça a trajetória do Gustavo</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="ta-section" data-secao="8-duvidas">
+      <div class="ta-container duvidas">
+        <div class="ta-intro"><h2 class="display-l">Dúvidas que você pode ter</h2></div>
+        <div class="ta-faq">
+          {FAQ_CLUBE.map((f, i) => <details open={i === 0}><summary>{f.p}</summary><p>{f.r}</p></details>)}
+        </div>
+      </div>
+    </section>
+
+    <section class="ta-section ta-section--surface cl-fim" data-secao="9-fim">
+      <div class="ta-container ta-intro ta-intro--center">
+        <h2 class="display-l">Comece hoje no <em>Clube Tecnoapis</em>.</h2>
+        <p class="ta-lead">{brl(OFERTA_CLUBE.preco)} à vista ou em até {OFERTA_CLUBE.parcelas}x no cartão, com {OFERTA_CLUBE.garantiaDias} dias de garantia.</p>
+        <BotaoAssinar local="fim">Quero assinar o Clube</BotaoAssinar>
+        {suporte && (
+          <div class="ta-help ajuda">
+            <div><p class="ta-heading">Precisa de ajuda?</p><p class="ta-small">Se você está com alguma dúvida ou precisa de ajuda para fazer sua inscrição, nossa equipe está disponível para falar com você.</p></div>
+            <a class="ta-btn ta-btn--outline" href={suporte} target="_blank" rel="noopener" data-track-click="Contact" data-track-params='{"content_name":"suporte-clube"}'><Icons name="whatsapp" size={18} />Atendimento por WhatsApp</a>
+          </div>
+        )}
+      </div>
+    </section>
+  </main>
+  <Rodape />
+</Tecnoapis>
+
+<style>
+  /* Herói no molde da Black: foto do Gustavo de fundo, texto e botão centralizados embaixo, tudo na primeira tela */
+  .cl-hero { position: relative; display: flex; align-items: flex-end; min-height: calc(100svh - 64px); overflow: hidden; background: #0a0a0a; }
+  .cl-hero__fundo { position: absolute; inset: 0; z-index: 0; }
+  .cl-hero__fundo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+  .cl-hero__fundo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,.15) 0%, rgba(10,10,10,.1) 35%, rgba(10,10,10,.82) 62%, #0a0a0a 88%); }
+  .cl-hero--sem-foto .cl-hero__fundo { background: radial-gradient(90% 55% at 50% 20%, #2a1e06 0%, #0a0a0a 75%); }
+  .cl-hero--sem-foto { min-height: auto; align-items: center; }
+  .cl-hero--sem-foto .cl-hero__body { padding-top: var(--space-16); padding-bottom: var(--space-16); }
+  .cl-hero__body { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding-bottom: var(--space-10, 40px); }
+  .cl-hero__tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent, #111); font: 700 10.5px/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+  .cl-hero__titulo { max-width: 18ch; font-family: var(--font-display); font-size: clamp(28px, 7vw, 46px); line-height: 1.08; font-weight: 500; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
+  .cl-hero__titulo em { font-style: normal; font-weight: 700; color: var(--accent); }
+  .cl-hero__sub { max-width: 46ch; font: 400 15.5px/1.55 var(--font-sans); color: rgba(255,255,255,.78); text-wrap: balance; }
+  .cl-hero__body :global(.ta-btn) { margin-top: var(--space-2); width: 100%; max-width: 420px; }
+  .cl-hero__body .ta-small { text-align: center; }
+  @media (min-width: 900px) {
+    .cl-hero { min-height: min(calc(100svh - 72px), 860px); }
+    .cl-hero__body { padding-bottom: var(--space-16); }
+    .cl-hero__sub { font-size: 17px; }
+    .cl-hero__fundo::after { background: linear-gradient(180deg, rgba(10,10,10,.1) 0%, rgba(10,10,10,.25) 40%, rgba(10,10,10,.85) 70%, #0a0a0a 95%); }
+  }
+  .ta-section h2 em, .cl-fim h2 em { font-style: normal; color: var(--accent-ink); }
+  .niveis { margin-top: var(--space-8); display: grid; gap: var(--space-4); }
+  @media (min-width: 820px) { .niveis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .live { display: grid; gap: var(--space-8); align-items: center; }
+  .live .ta-intro { display: flex; flex-direction: column; align-items: flex-start; }
+  .live__card { display: flex; flex-direction: column; gap: var(--space-2); }
+  .live__icone { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--accent); color: var(--on-accent); margin-bottom: var(--space-2); }
+  .live__icone :global(svg) { fill: var(--on-accent); }
+  @media (min-width: 900px) { .live { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: var(--space-16); } }
+  .resultados { margin-top: var(--space-12); }
+  .oferta { display: grid; gap: var(--space-12); align-items: center; }
+  .oferta .ta-price { margin-inline: auto; width: 100%; }
+  .oferta__btn { width: 100%; }
+  .garantia { display: flex; flex-direction: column; gap: var(--space-4); }
+  .garantia__selo { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent-ink); }
+  @media (min-width: 900px) { .oferta { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--space-16); } }
+  .prof { display: grid; gap: var(--space-12); }
+  .prof__texto { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); max-width: 720px; }
+  .prof__texto .ta-body { color: var(--ink); opacity: .82; max-width: 68ch; }
+  .prof__destaque { font-weight: 600; opacity: 1 !important; }
+  .prof__foto img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius-lg); }
+  @media (min-width: 900px) { .prof--foto { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-16); align-items: start; } .prof__foto { position: sticky; top: 96px; } }
+  .duvidas { display: grid; gap: var(--space-8); }
+  @media (min-width: 900px) { .duvidas { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: var(--space-16); } }
+  .cl-fim .ta-intro { display: flex; flex-direction: column; align-items: center; }
+  .ajuda { margin-top: var(--space-12); text-align: left; width: 100%; max-width: 720px; }
+  [data-theme="light"] .ta-pill, [data-theme="light"] .ta-badge--soft { color: #7a5200; }
+</style>
