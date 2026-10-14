@@ -17,8 +17,9 @@ import { acharImagem } from '~/lib/imagens';
 export const prerender = false;
 
 const foto = acharImagem('gustavo');
-// Herói: mesma foto vertical da Black (public/img/gustavo-hero.*). Sem ela, o herói fica só texto.
-const fotoHero = acharImagem('gustavo-hero');
+// Herói: mesma foto vertical da Black (public/img/gustavo-hero.*). Sem ela, silhueta provisória no mesmo lugar.
+const fotoReal = acharImagem('gustavo-hero');
+const fotoHero = fotoReal ?? '/img/gustavo-hero-vazio.svg';
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
 const suporte = ENV.WHATSAPP_SUPORTE_URL;
 const url = `${SITE.dominio}/tecnoapis`;
@@ -42,9 +43,9 @@ const ld = [
   <Menu><BotaoAssinar slot="cta" local="menu" class="ta-btn ta-btn--primary menu__cta">Assinar</BotaoAssinar></Menu>
   <main data-track-view="ViewContent" data-track-params='{"content_name":"clube-tecnoapis"}'>
 
-    <section data-secao="1-hero" class:list={['cl-hero', { 'cl-hero--sem-foto': !fotoHero }]}>
+    <section data-secao="1-hero" class:list={['cl-hero', { 'cl-hero--sem-foto': !fotoReal }]}>
       <div class="cl-hero__fundo" aria-hidden="true">
-        {fotoHero && <img src={fotoHero} alt="" width="1080" height="1920" fetchpriority="high" />}
+        <img src={fotoHero} alt="" width="1080" height="1920" fetchpriority="high" />
       </div>
       <div class="ta-container cl-hero__body">
         <span class="cl-hero__tag">Clube Tecnoapis · Apicultura online</span>
@@ -170,9 +171,7 @@ const ld = [
   .cl-hero__fundo { position: absolute; inset: 0; z-index: 0; }
   .cl-hero__fundo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
   .cl-hero__fundo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,.15) 0%, rgba(10,10,10,.1) 35%, rgba(10,10,10,.82) 62%, #0a0a0a 88%); }
-  .cl-hero--sem-foto .cl-hero__fundo { background: radial-gradient(90% 55% at 50% 20%, #2a1e06 0%, #0a0a0a 75%); }
-  .cl-hero--sem-foto { min-height: auto; align-items: center; }
-  .cl-hero--sem-foto .cl-hero__body { padding-top: var(--space-16); padding-bottom: var(--space-16); }
+  @media (min-width: 900px) { .cl-hero--sem-foto .cl-hero__fundo img { object-position: center 30%; } }
   .cl-hero__body { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding-bottom: var(--space-10, 40px); }
   .cl-hero__tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent, #111); font: 700 10.5px/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
   .cl-hero__titulo { max-width: 18ch; font-family: var(--font-display); font-size: clamp(28px, 7vw, 46px); line-height: 1.08; font-weight: 500; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
