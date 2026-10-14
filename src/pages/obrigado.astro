@@ -7,6 +7,7 @@ import { fmtDataHora, fmtDiaSemana } from '~/lib/phases';
 import { db, insertEvento, type Lead } from '~/lib/db';
 import { enviarCapi, novoEventId, separarNome } from '~/lib/capi';
 import { createHash } from 'node:crypto';
+import { ufDoTelefone } from '~/lib/phone';
 
 const grupo = ENV.WHATSAPP_GRUPO_URL;
 const live = new Date(CAMPANHA.live.data);
@@ -49,6 +50,7 @@ const am: Record<string, string> | undefined = lead ? {
   ...(partes[0] ? { fn: sha(partes[0]) } : {}),
   ...(partes.length > 1 ? { ln: sha(partes[partes.length - 1]) } : {}),
   external_id: sha(String(lead.id)),
+  ...(ufDoTelefone(lead.whatsapp) ? { st: sha(ufDoTelefone(lead.whatsapp)!) } : {}),
   country: sha('br'),
 } : undefined;
 ---

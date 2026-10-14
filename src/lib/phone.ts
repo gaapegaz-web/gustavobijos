@@ -29,3 +29,23 @@ export function formatarWhatsapp(e164: string) {
   const d = e164.replace(/\D/g, '').replace(/^55/, '');
   return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : e164;
 }
+
+/** UF por DDD (Anatel). Usado como `st` no match da Meta: dado informado pela pessoa, mais confiável que geolocalização por IP. */
+const UF_POR_DDD: Record<number, string> = {
+  11: 'sp', 12: 'sp', 13: 'sp', 14: 'sp', 15: 'sp', 16: 'sp', 17: 'sp', 18: 'sp', 19: 'sp',
+  21: 'rj', 22: 'rj', 24: 'rj', 27: 'es', 28: 'es',
+  31: 'mg', 32: 'mg', 33: 'mg', 34: 'mg', 35: 'mg', 37: 'mg', 38: 'mg',
+  41: 'pr', 42: 'pr', 43: 'pr', 44: 'pr', 45: 'pr', 46: 'pr', 47: 'sc', 48: 'sc', 49: 'sc',
+  51: 'rs', 53: 'rs', 54: 'rs', 55: 'rs',
+  61: 'df', 62: 'go', 64: 'go', 63: 'to', 65: 'mt', 66: 'mt', 67: 'ms', 68: 'ac', 69: 'ro',
+  71: 'ba', 73: 'ba', 74: 'ba', 75: 'ba', 77: 'ba', 79: 'se',
+  81: 'pe', 87: 'pe', 82: 'al', 83: 'pb', 84: 'rn', 85: 'ce', 88: 'ce', 86: 'pi', 89: 'pi',
+  91: 'pa', 93: 'pa', 94: 'pa', 92: 'am', 97: 'am', 95: 'rr', 96: 'ap', 98: 'ma', 99: 'ma',
+};
+
+/** "+5567999999999" -> "ms". Só para números brasileiros; senão null. */
+export function ufDoTelefone(e164?: string | null): string | null {
+  const d = (e164 || '').replace(/\D/g, '');
+  if (!d.startsWith('55') || d.length < 12) return null;
+  return UF_POR_DDD[Number(d.slice(2, 4))] ?? null;
+}

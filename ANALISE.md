@@ -21,7 +21,7 @@ Mantemos poucos eventos de propósito: scroll e tempo de engajamento (ver "Tabel
 
 **Lead, em detalhe:** o cadastro em `/api/lead` grava o lead mas NÃO dispara nada para a Meta. O disparo acontece quando a pessoa abre `/obrigado`: o servidor marca `leads.lead_enviado_em` de forma atômica (um F5 ou "voltar" na página não duplica) e manda a CAPI; o mesmo `event_id` é passado para o Pixel no navegador na mesma carga. Cadastro repetido com o mesmo WhatsApp, ou outro número no mesmo aparelho em 24h (`meta_lead = 0`), nunca dispara Lead.
 
-Correspondência (match quality): o servidor manda telefone, nome e external_id (id do lead) em SHA-256, mais fbp, fbc, IP e user agent. Na /obrigado o Pixel também recebe telefone, nome e external_id em hash (advanced matching).
+Correspondência (match quality): o servidor manda telefone, nome, external_id (id do lead) e estado (`st`, tirado do DDD do WhatsApp) em SHA-256, mais fbp, fbc, IP e user agent. Na /obrigado o Pixel também recebe telefone, nome e external_id em hash (advanced matching).
 
 **Fbp/fbc robustos:** o `_fbp` só existe depois que o fbevents.js (script de terceiro, assíncrono) termina de carregar. Num clique muito rápido logo que a página abre, a réplica para o servidor poderia sair sem esse cookie. `ta-v4.js` agora espera até ~800ms por ele antes de mandar PageView e os outros eventos para `/api/event`, sem atrasar o disparo do Pixel em si (que é imediato). O `_fbc` sintético a partir de `fbclid` já é criado no middleware em qualquer página carregada com esse parâmetro, antes de qualquer clique.
 

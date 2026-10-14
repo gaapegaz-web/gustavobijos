@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { ENV } from './env';
+import { ufDoTelefone } from './phone';
 
 const API_VERSION = 'v21.0';
 
@@ -31,7 +32,9 @@ function hashedUser(u: UserData) {
   if (u.firstName) out.fn = [sha(norm(u.firstName))];
   if (u.lastName) out.ln = [sha(norm(u.lastName))];
   if (u.city) out.ct = [sha(norm(u.city).replace(/\s/g, ''))];
-  if (u.state) out.st = [sha(norm(u.state))];
+  // Estado: o informado, ou o do DDD do WhatsApp (todo evento com telefone ganha st)
+  const uf = u.state ? norm(u.state) : ufDoTelefone(u.phone);
+  if (uf) out.st = [sha(uf)];
   out.country = [sha(u.country ? norm(u.country) : 'br')];
   if (u.externalId != null) out.external_id = [sha(String(u.externalId))];
   if (u.fbp) out.fbp = u.fbp;
