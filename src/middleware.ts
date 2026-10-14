@@ -17,8 +17,8 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   const { url, cookies, request } = ctx;
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || ctx.clientAddress || 'x';
 
-  // Proteção do /admin: basic auth
-  if (url.pathname.startsWith('/admin')) {
+  // Proteção do /admin e /api/admin: basic auth
+  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
     const auth = request.headers.get('authorization') || '';
     const [user, pass] = Buffer.from(auth.replace(/^Basic\s+/i, ''), 'base64').toString().split(':');
     if (!ENV.ADMIN_PASS || user !== ENV.ADMIN_USER || pass !== ENV.ADMIN_PASS) {

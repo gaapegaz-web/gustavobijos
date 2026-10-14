@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_eventos_created ON eventos(created_at);
 CREATE TABLE IF NOT EXISTS links (
   slug TEXT PRIMARY KEY,
   destino TEXT NOT NULL,             -- caminho interno ou URL completa
-  utm_source TEXT, utm_medium TEXT, utm_campaign TEXT, utm_content TEXT,
+  utm_source TEXT, utm_medium TEXT, utm_campaign TEXT, utm_content TEXT, utm_term TEXT,
   descricao TEXT,
   cliques INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))

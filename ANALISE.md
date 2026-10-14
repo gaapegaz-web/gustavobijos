@@ -23,6 +23,18 @@ Mantemos poucos eventos de propósito: scroll e tempo de engajamento (ver "Tabel
 
 Correspondência (match quality): o servidor manda telefone, nome e external_id (id do lead) em SHA-256, mais fbp, fbc, IP e user agent. Na /obrigado o Pixel também recebe telefone, nome e external_id em hash (advanced matching).
 
+**Fbp/fbc robustos:** o `_fbp` só existe depois que o fbevents.js (script de terceiro, assíncrono) termina de carregar. Num clique muito rápido logo que a página abre, a réplica para o servidor poderia sair sem esse cookie. `ta-v4.js` agora espera até ~800ms por ele antes de mandar PageView e os outros eventos para `/api/event`, sem atrasar o disparo do Pixel em si (que é imediato). O `_fbc` sintético a partir de `fbclid` já é criado no middleware em qualquer página carregada com esse parâmetro, antes de qualquer clique.
+
+## Gerador de UTM (/admin)
+
+Seção no topo do painel, dois modos:
+- **Link curto (`/r/<slug>`):** cria uma linha na tabela `links` e sempre redireciona para a mesma página com as UTMs. Bom para divulgar em grupo, bio, descrição de vídeo — e para contar cliques.
+- **Só as UTMs:** monta a URL completa (ex. `https://gustavobijos.com.br/black?utm_source=...`) no navegador, sem gravar nada no banco nem criar link curto. Para colar direto como link de um anúncio do Meta Ads, onde o próprio Meta já encurta/rastreia o clique.
+
+Os dois modos aceitam `utm_term`, para guardar o nome do anúncio/criativo do Meta Ads — use o mesmo texto de `utm_campaign`/`utm_term` que está na campanha do Meta Ads para os números baterem depois no Gerenciador de Anúncios e na tabela "Leads por origem"/"Origem das visitas" do painel.
+
+API: `POST /api/admin/links` (criar) e `DELETE /api/admin/links?slug=...` (excluir), protegidas pela mesma basic auth do `/admin`.
+
 Configuração em `/srv/tecnoapis/.env`: `META_PIXEL_ID`, `META_CAPI_TOKEN` e, só para testar no Gerenciador de Eventos, `META_TEST_EVENT_CODE` (apagar depois).
 
 ## Tabelas de comportamento

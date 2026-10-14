@@ -32,18 +32,31 @@
     fbq('init', pixelId, cfg.am || {});
   }
 
+  // _fbp só existe depois que o fbevents.js (script de terceiro, assíncrono) terminar de rodar.
+  // Num clique muito rápido (ex.: CTA do topo, a pessoa já clica assim que a página abre) a réplica
+  // pro servidor pode sair sem esse cookie, piorando o match da CAPI. Espera até ~800ms por ele,
+  // sem atrasar o Pixel (que dispara na hora, de qualquer forma).
+  function aguardarFbp(cb) {
+    if (cookie('_fbp') || !pixelId) return cb();
+    var tentativas = 0;
+    var iv = setInterval(function () {
+      tentativas++;
+      if (cookie('_fbp') || tentativas >= 16) { clearInterval(iv); cb(); } // 16 x 50ms = 800ms
+    }, 50);
+  }
+
   /** taTrack('ViewContent', {content_name: 'x'}) -> Pixel + CAPI com o mesmo event_id */
   window.taTrack = function (name, params, eventId, opts) {
     opts = opts || {};
     eventId = eventId || uuid();
     if (window.fbq) fbq(PADRAO[name] ? 'track' : 'trackCustom', name, params || {}, { eventID: eventId });
-    if (opts.server !== false) beacon('/api/event', { name: name, eventId: eventId, params: params || {}, url: location.href });
+    if (opts.server !== false) aguardarFbp(function () { beacon('/api/event', { name: name, eventId: eventId, params: params || {}, url: location.href }); });
     return eventId;
   };
 
   var pvId = uuid();
   if (window.fbq) fbq('track', 'PageView', {}, { eventID: pvId });
-  beacon('/api/event', { name: 'PageView', eventId: pvId, params: {}, url: location.href });
+  aguardarFbp(function () { beacon('/api/event', { name: 'PageView', eventId: pvId, params: {}, url: location.href }); });
 
   document.querySelectorAll('[data-track-view]').forEach(function (el) {
     var p = {}; try { p = JSON.parse(el.getAttribute('data-track-params') || '{}'); } catch (e) {}
