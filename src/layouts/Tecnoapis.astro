@@ -1,4 +1,5 @@
 ---
+import '~/styles/fontes.css';
 import '~/styles/tokens.css';
 import '~/styles/tecnoapis.css';
 import '~/styles/site.css';
@@ -102,10 +103,9 @@ const grafo = {
   <link rel="apple-touch-icon" href="/img/apple-touch-icon.png?v=2" />
   <link rel="alternate" type="text/markdown" href="/llms.txt" title="Resumo do site para IAs" />
   {preload && <link rel="preload" as="image" href={preload} />}
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  {/* Fontes variáveis: um arquivo por família cobre todos os pesos usados (Fraunces 500 a 700, Inter 400 a 800) */}
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..700&family=Inter:wght@400..800&display=swap" rel="stylesheet" />
+  {/* Fontes próprias (src/styles/fontes.css): pré-carrega as duas para o texto aparecer antes */}
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-v20-latin.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="/fonts/fraunces-v38-latin.woff2" crossorigin />
   {!semPixel && <script is:inline define:vars={{ pixelId: ENV.META_PIXEL_ID, leadEventId, am }}>window.__TA = { pixelId, leadEventId, am };</script>}
   {!semPixel && <script is:inline src="/js/ta-v4.js" defer></script>}
 </head>

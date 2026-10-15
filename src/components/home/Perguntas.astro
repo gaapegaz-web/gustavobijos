@@ -1,18 +1,23 @@
 ---
-/** Perguntas frequentes. O mesmo conteúdo vira FAQPage no JSON-LD da home (só as confirmadas). */
+/**
+ * Perguntas frequentes em acordeão. Sem props, mostra as do Gustavo (home); com `itens`, qualquer lista
+ * (ex.: FAQ_CLUBE no /tecnoapis). O mesmo conteúdo vira FAQPage no JSON-LD de cada página.
+ */
 import { FAQ_PROFESSOR, visiveis } from '~/config/site';
-interface Props { preview?: boolean }
-const { preview = false } = Astro.props;
+type Item = { p: string; r: string; confirmado?: boolean };
+interface Props { preview?: boolean; itens?: Item[]; titulo?: string; pill?: string; id?: string; secao?: string; claro?: boolean }
+const { preview = false, titulo = 'Sobre o Gustavo', pill = 'Perguntas frequentes', id = 'perguntas', secao = '6-perguntas', claro = true } = Astro.props;
+const itens: Item[] = Astro.props.itens ?? visiveis(FAQ_PROFESSOR, preview);
 ---
-<section class="ta-section ta-section--light" data-theme="light" id="perguntas" data-secao="6-perguntas">
+<section class:list={['ta-section', { 'ta-section--light': claro }]} data-theme={claro ? 'light' : undefined} id={id} data-secao={secao}>
   <div class="ta-container perguntas">
     <div class="ta-intro">
-      <span class="ta-pill">Perguntas frequentes</span>
-      <h2 class="display-l">Sobre o Gustavo</h2>
+      {pill && <span class="ta-pill">{pill}</span>}
+      <h2 class="display-l">{titulo}</h2>
     </div>
     <div class="ta-faq">
-      {visiveis(FAQ_PROFESSOR, preview).map((f, i) => (
-        <details class:list={{ pendente: !f.confirmado }} open={i === 0}><summary>{f.p}</summary><p>{f.r}</p></details>
+      {itens.map((f, i) => (
+        <details class:list={{ pendente: f.confirmado === false }} open={i === 0}><summary>{f.p}</summary><p>{f.r}</p></details>
       ))}
     </div>
   </div>

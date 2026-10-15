@@ -11,8 +11,8 @@ gustavobijos.com.br, www.gustavobijos.com.br {
 
     encode zstd gzip
 
-    # /_astro/* tem hash no nome: pode ficar 1 ano no cache
-    @imutavel path /_astro/*
+    # /_astro/* tem hash no nome e /fonts/* tem versão no nome: podem ficar 1 ano no cache
+    @imutavel path /_astro/* /fonts/*
     header @imutavel Cache-Control "public, max-age=31536000, immutable"
 
     # demais estáticos: 7 dias (imagens trocam de nome com ?v=)

@@ -1,0 +1,18 @@
+---
+/** Bloco "Precisa de ajuda?" com o botão do WhatsApp de suporte. Só aparece com WHATSAPP_SUPORTE_URL no .env. */
+import Icons from './Icons.astro';
+import { ENV } from '~/lib/env';
+interface Props { texto: string; rotulo?: string; nome: string; class?: string }
+const { texto, rotulo = 'Falar no WhatsApp', nome, class: classe } = Astro.props;
+const suporte = ENV.WHATSAPP_SUPORTE_URL;
+---
+{suporte && (
+  <div class:list={['ta-help', classe]}>
+    <div><p class="ta-heading">Precisa de ajuda?</p><p class="ta-small ajuda__texto">{texto}</p></div>
+    <a class="ta-btn ta-btn--outline" href={suporte} target="_blank" rel="noopener" data-track-click="Contact" data-track-params={JSON.stringify({ content_name: nome })}><Icons name="whatsapp" size={18} />{rotulo}</a>
+  </div>
+)}
+
+<style>
+  .ajuda__texto { margin-top: var(--space-1); }
+</style>

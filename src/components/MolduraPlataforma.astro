@@ -1,0 +1,36 @@
+---
+/** A plataforma por dentro, numa moldura de navegador. `escura`: variante da /black (fundo carvão, base fundida no fundo). */
+interface Props { legenda: string; escura?: boolean }
+const { legenda, escura = false } = Astro.props;
+---
+<figure class:list={['plat', { 'plat--escura': escura }]}>
+  <div class="plat__barra" aria-hidden="true"><i></i><i></i><i></i><span>gustavo-bijos.memberkit.com.br</span></div>
+  <div class="plat__tela">
+    <img src="/img/plataforma-tecnoapis-completa-900.webp" srcset="/img/plataforma-tecnoapis-completa-900.webp 900w, /img/plataforma-tecnoapis-completa-1300.webp 1300w, /img/plataforma-tecnoapis-completa.webp 1800w" sizes="(min-width: 1120px) 1056px, calc(100vw - 40px)" alt="Tela da plataforma do Clube Tecnoapis com todos os cursos" width="1800" height="1561" loading="lazy" />
+  </div>
+  <figcaption class="ta-small">{legenda}</figcaption>
+</figure>
+
+<style>
+  .plat { margin: var(--space-8) 0 0; }
+  .plat__barra { display: flex; align-items: center; gap: 6px; padding: 10px 14px; background: #1d1d1d; border: 1px solid var(--border); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .plat__barra i { width: 9px; height: 9px; border-radius: 50%; background: #3a3a3a; }
+  .plat__barra i:first-child { background: #ff5f57; } .plat__barra i:nth-child(2) { background: #febc2e; } .plat__barra i:nth-child(3) { background: #28c840; }
+  .plat__barra span { margin-left: 8px; font: 500 11.5px/1 var(--font-sans); color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plat__tela { overflow: hidden; border: 1px solid var(--border); border-radius: 0 0 var(--radius-lg) var(--radius-lg); background: #0b0b0b; box-shadow: 0 30px 80px -30px rgba(242,169,0,.3); }
+  .plat__tela img { display: block; width: 100%; height: auto; }
+  .plat figcaption { margin-top: var(--space-3); text-align: center; }
+
+  /* /black: moldura carvão, mostra o alto da plataforma e funde a base no fundo */
+  .plat--escura { margin-top: 48px; }
+  .plat--escura .plat__barra { gap: 7px; height: 40px; padding: 0 16px; background: #262722; border-color: var(--bf-linha); border-radius: 18px 18px 0 0; }
+  .plat--escura .plat__barra i { width: 10px; height: 10px; background: #d66b58; }
+  .plat--escura .plat__barra i:nth-child(2) { background: #e3bd45; }
+  .plat--escura .plat__barra i:nth-child(3) { background: #5ab56f; }
+  .plat--escura .plat__barra span { margin-inline: auto; padding-right: 40px; color: #a9a79a; }
+  .plat--escura .plat__tela { position: relative; aspect-ratio: 4 / 3; border-color: var(--bf-linha); border-top: 0; border-radius: 0 0 18px 18px; background: #0b0c0b; box-shadow: 0 30px 80px -30px rgba(242, 169, 0, .28); }
+  .plat--escura .plat__tela img { height: 100%; object-fit: cover; object-position: center top; }
+  .plat--escura .plat__tela::after { content: ''; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(transparent, var(--bf-coal)); }
+  .plat--escura figcaption { margin-top: 14px; font: 400 13.5px/1.5 var(--font-sans); color: #a9a79a; }
+  @media (min-width: 900px) { .plat--escura { margin-top: 72px; } .plat--escura .plat__tela { aspect-ratio: 16 / 9; } }
+</style>

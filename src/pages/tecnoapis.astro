@@ -6,24 +6,24 @@
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import Rodape from '~/components/home/Rodape.astro';
 import ClubeConteudo from '~/components/ClubeConteudo.astro';
+import Sobre from '~/components/home/Sobre.astro';
+import Perguntas from '~/components/home/Perguntas.astro';
+import AjudaWhatsapp from '~/components/AjudaWhatsapp.astro';
 import BotaoAssinar from '~/components/clube/BotaoAssinar.astro';
 import Icons from '~/components/Icons.astro';
 import { AREAS, BIO_CLUBE, FAQ_CLUBE, INCLUSO_CLUBE, NIVEIS_CLUBE, OFERTA_CLUBE, RESULTADOS_CLUBE } from '~/config/clube';
 import { BIO, SITE } from '~/config/site';
-import { ENV } from '~/lib/env';
 import { acharImagem, srcsetImagem } from '~/lib/imagens';
 import { brl } from '~/lib/texto';
 
 export const prerender = false;
 
-const foto = acharImagem('gustavo');
 // Herói: mesma foto vertical da Black (public/img/gustavo-hero.*). Sem ela, silhueta provisória no mesmo lugar.
 const fotoReal = acharImagem('gustavo-hero');
 const fotoHero = fotoReal ?? '/img/gustavo-hero-vazio.svg';
 const fotoLarga = fotoReal && acharImagem('gustavo-hero-largo');
 const srcsetHero = fotoReal && srcsetImagem('gustavo-hero', [720], 1080);
 const srcsetLarga = fotoLarga && srcsetImagem('gustavo-hero-largo', [1280], 1920);
-const suporte = ENV.WHATSAPP_SUPORTE_URL;
 const url = `${SITE.dominio}/tecnoapis`;
 const ld = [
   {
@@ -131,42 +131,18 @@ const ld = [
       </div>
     </section>
 
-    <section class="ta-section ta-section--light" data-theme="light" data-secao="7-gustavo">
-      <div class:list={['ta-container', 'prof', { 'prof--foto': foto }]}>
-        {foto && <figure class="prof__foto"><img src={foto} srcset={srcsetImagem('gustavo', [480, 720], 960)} sizes="(min-width: 900px) 440px, 100vw" alt={`${SITE.professor}`} width="960" height="1200" loading="lazy" /></figure>}
-        <div class="prof__texto">
-          <span class="ta-pill">{BIO.anos} anos de apicultura</span>
-          <h2 class="display-l">Quem é Gustavo Bijos?</h2>
-          <p class="ta-body prof__destaque">{BIO_CLUBE.abertura}</p>
-          <p class="ta-body">{BIO_CLUBE.cargos}</p>
-          <p class="ta-body">{BIO_CLUBE.senar}</p>
-          <p class="ta-body">{BIO_CLUBE.palestras}</p>
-          <p class="ta-body">{BIO_CLUBE.online}</p>
-          <a class="ta-btn ta-btn--outline" href="/">Conheça a trajetória do Gustavo</a>
-        </div>
-      </div>
-    </section>
+    <Sobre id="gustavo" secao="7-gustavo" pill={`${BIO.anos} anos de apicultura`} titulo="Quem é Gustavo Bijos?" paragrafos={[BIO_CLUBE.abertura, BIO_CLUBE.cargos, BIO_CLUBE.senar, BIO_CLUBE.palestras, BIO_CLUBE.online]}>
+      <a class="ta-btn ta-btn--outline" href="/">Conheça a trajetória do Gustavo</a>
+    </Sobre>
 
-    <section class="ta-section" data-secao="8-duvidas">
-      <div class="ta-container duvidas">
-        <div class="ta-intro"><h2 class="display-l">Dúvidas que você pode ter</h2></div>
-        <div class="ta-faq">
-          {FAQ_CLUBE.map((f, i) => <details open={i === 0}><summary>{f.p}</summary><p>{f.r}</p></details>)}
-        </div>
-      </div>
-    </section>
+    <Perguntas id="duvidas" secao="8-duvidas" titulo="Dúvidas que você pode ter" pill="" itens={FAQ_CLUBE} claro={false} />
 
     <section class="ta-section ta-section--surface cl-fim" data-secao="9-fim">
       <div class="ta-container ta-intro ta-intro--center">
         <h2 class="display-l">Comece hoje no <em>Clube Tecnoapis</em>.</h2>
         <p class="ta-lead">{brl(OFERTA_CLUBE.preco)} à vista ou em até {OFERTA_CLUBE.parcelas}x no cartão, com {OFERTA_CLUBE.garantiaDias} dias de garantia.</p>
         <BotaoAssinar local="fim">Quero assinar o Clube</BotaoAssinar>
-        {suporte && (
-          <div class="ta-help ajuda">
-            <div><p class="ta-heading">Precisa de ajuda?</p><p class="ta-small">Se você está com alguma dúvida ou precisa de ajuda para fazer sua inscrição, nossa equipe está disponível para falar com você.</p></div>
-            <a class="ta-btn ta-btn--outline" href={suporte} target="_blank" rel="noopener" data-track-click="Contact" data-track-params='{"content_name":"suporte-clube"}'><Icons name="whatsapp" size={18} />Atendimento por WhatsApp</a>
-          </div>
-        )}
+        <AjudaWhatsapp class="ajuda" texto="Se você está com alguma dúvida ou precisa de ajuda para fazer sua inscrição, nossa equipe está disponível para falar com você." rotulo="Atendimento por WhatsApp" nome="suporte-clube" />
       </div>
     </section>
   </main>
@@ -211,14 +187,6 @@ const ld = [
   .garantia { display: flex; flex-direction: column; gap: var(--space-4); }
   .garantia__selo { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent-ink); }
   @media (min-width: 900px) { .oferta { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--space-16); } }
-  .prof { display: grid; gap: var(--space-12); }
-  .prof__texto { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); max-width: 720px; }
-  .prof__texto .ta-body { color: var(--ink); opacity: .82; max-width: 68ch; }
-  .prof__destaque { font-weight: 600; opacity: 1 !important; }
-  .prof__foto img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius-lg); }
-  @media (min-width: 900px) { .prof--foto { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-16); align-items: start; } .prof__foto { position: sticky; top: 32px; } }
-  .duvidas { display: grid; gap: var(--space-8); }
-  @media (min-width: 900px) { .duvidas { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: var(--space-16); } }
   .cl-fim .ta-intro { display: flex; flex-direction: column; align-items: center; }
-  .ajuda { margin-top: var(--space-12); text-align: left; width: 100%; max-width: 720px; }
+  :global(.ajuda) { margin-top: var(--space-12); text-align: left; width: 100%; max-width: 720px; }
 </style>

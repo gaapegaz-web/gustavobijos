@@ -1,6 +1,6 @@
 ---
 /** Faixa amarela no fim da página com o último botão. */
-import Icons from '../Icons.astro';
+import BotaoGrupo from './BotaoGrupo.astro';
 interface Props { selo: string; nota: string }
 const { selo, nota } = Astro.props;
 ---
@@ -9,7 +9,7 @@ const { selo, nota } = Astro.props;
     <span class="bf-olho final__olho">{selo}</span>
     <h2 class="bf-titulo final__titulo">Seu próximo passo começa aqui.</h2>
     <p class="final__texto">Entre no grupo e receba o acesso ao evento da Black Friday Clube Tecnoapis 2026.</p>
-    <button type="button" class="ta-btn ta-btn--lg final__btn" data-abrir-form data-alvo="form:fim" data-track-click="AbriuFormulario" data-track-params='{"content_name":"fim_cta"}'><Icons name="whatsapp" size={22} />Entrar no grupo</button>
+    <BotaoGrupo alvo="form:fim" nome="fim_cta" pulso={false} grande verde={false} class="final__btn" />
     <p class="final__nota">{nota}</p>
   </div>
 </section>
@@ -24,10 +24,10 @@ const { selo, nota } = Astro.props;
   .final__olho { color: #5c3f05; }
   .final__titulo { max-width: 14ch; }
   .final__texto { max-width: 46ch; margin-top: 18px; font: 500 17px/1.55 var(--font-sans); color: #3a2c0c; text-wrap: balance; }
-  .final__btn { margin-top: 30px; background: var(--bf-ink); color: #fff; text-transform: uppercase; letter-spacing: .05em; font-weight: 800; font-size: 17px; box-shadow: 0 14px 34px -12px rgba(16, 16, 14, .55); }
-  .final__btn:hover { background: #26271f; transform: translateY(-1px); }
-  .final__btn :global(svg) { color: #25d366; }
-  .final__btn:focus-visible { outline: 3px solid var(--bf-ink); outline-offset: 4px; }
+  :global(.final__btn.ta-btn) { margin-top: 30px; background: var(--bf-ink); color: #fff; text-transform: uppercase; letter-spacing: .05em; font-weight: 800; font-size: 17px; box-shadow: 0 14px 34px -12px rgba(16, 16, 14, .55); }
+  :global(.final__btn.ta-btn:hover) { background: #26271f; transform: translateY(-1px); }
+  :global(.final__btn svg) { color: #25d366; }
+  :global(.final__btn.ta-btn:focus-visible) { outline: 3px solid var(--bf-ink); outline-offset: 4px; }
   .final__nota { margin-top: 14px; font: 600 13.5px/1.4 var(--font-sans); color: #5c3f05; }
-  @media (min-width: 900px) { .final { padding-block: 112px; } .final__btn { min-width: 340px; } .final::before { width: 260px; height: 290px; } }
+  @media (min-width: 900px) { .final { padding-block: 112px; } :global(.final__btn.ta-btn) { min-width: 340px; } .final::before { width: 260px; height: 290px; } }
 </style>
