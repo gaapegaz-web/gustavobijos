@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { ENV } from '~/lib/env';
-import { COOKIE_UTM, fbcDeFbclid, lerUtmsDaUrl, lerUtmsDoCookie, salvarUtms } from '~/lib/tracking';
+import { COOKIE_UTM, fbcDeFbclid, ipDoRequest, lerUtmsDaUrl, lerUtmsDoCookie, salvarUtms } from '~/lib/tracking';
 
 // Rate limit simples em memória por IP (reinicia com o processo; suficiente para formulário)
 const buckets = new Map<string, { n: number; t: number }>();
@@ -15,7 +15,12 @@ setInterval(() => { const now = Date.now(); for (const [k, v] of buckets) if (no
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const { url, cookies, request } = ctx;
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || ctx.clientAddress || 'x';
+  const ip = ipDoRequest(request, ctx.clientAddress) || 'x';
+
+  // /tecnoapis/ e /tecnoapis são a mesma página: só uma URL canônica (301 para a sem barra)
+  if (request.method === 'GET' && url.pathname.length > 1 && url.pathname.endsWith('/') && !url.pathname.startsWith('/api')) {
+    return new Response(null, { status: 301, headers: { location: url.pathname.replace(/\/+$/, '') + url.search } });
+  }
 
   // Proteção do /admin e /api/admin: basic auth
   if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
@@ -50,7 +55,12 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   const res = await next();
   res.headers.set('X-Content-Type-Options', 'nosniff');
   // HTML sempre revalida: evita navegador servir página antiga apontando para CSS de build anterior
-  if (!url.pathname.startsWith('/_astro') && (res.headers.get('content-type') || '').includes('text/html')) res.headers.set('Cache-Control', 'no-cache');
+  if (!url.pathname.startsWith('/_astro') && (res.headers.get('content-type') || '').includes('text/html')) {
+    res.headers.set('Cache-Control', 'no-cache');
+    if (!/charset/i.test(res.headers.get('content-type') || '')) res.headers.set('content-type', 'text/html; charset=utf-8');
+  }
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Fora do Google: painel, API, página pós-cadastro e links curtos (que só redirecionam)
+  if (/^\/(admin|api|obrigado|r)(\/|$)/.test(url.pathname)) res.headers.set('X-Robots-Tag', 'noindex, nofollow');
   return res;
 });

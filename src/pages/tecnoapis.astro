@@ -4,15 +4,15 @@
  * Copy: tecnoapis.com.br (dez/2024). Dados em src/config/clube.ts. Botões de compra: BotaoAssinar (topo, meio e fim).
  */
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
-import Menu from '~/components/home/Menu.astro';
 import Rodape from '~/components/home/Rodape.astro';
 import ClubeConteudo from '~/components/ClubeConteudo.astro';
 import BotaoAssinar from '~/components/clube/BotaoAssinar.astro';
 import Icons from '~/components/Icons.astro';
-import { BIO_CLUBE, FAQ_CLUBE, INCLUSO_CLUBE, NIVEIS_CLUBE, OFERTA_CLUBE, RESULTADOS_CLUBE } from '~/config/clube';
+import { AREAS, BIO_CLUBE, FAQ_CLUBE, INCLUSO_CLUBE, NIVEIS_CLUBE, OFERTA_CLUBE, RESULTADOS_CLUBE } from '~/config/clube';
 import { BIO, SITE } from '~/config/site';
 import { ENV } from '~/lib/env';
-import { acharImagem } from '~/lib/imagens';
+import { acharImagem, srcsetImagem } from '~/lib/imagens';
+import { brl } from '~/lib/texto';
 
 export const prerender = false;
 
@@ -20,36 +20,44 @@ const foto = acharImagem('gustavo');
 // Herói: mesma foto vertical da Black (public/img/gustavo-hero.*). Sem ela, silhueta provisória no mesmo lugar.
 const fotoReal = acharImagem('gustavo-hero');
 const fotoHero = fotoReal ?? '/img/gustavo-hero-vazio.svg';
-const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 });
+const fotoLarga = fotoReal && acharImagem('gustavo-hero-largo');
+const srcsetHero = fotoReal && srcsetImagem('gustavo-hero', [720], 1080);
+const srcsetLarga = fotoLarga && srcsetImagem('gustavo-hero-largo', [1280], 1920);
 const suporte = ENV.WHATSAPP_SUPORTE_URL;
 const url = `${SITE.dominio}/tecnoapis`;
 const ld = [
   {
     '@type': 'Product', '@id': `${url}#assinatura`, name: OFERTA_CLUBE.produto, brand: { '@id': `${SITE.dominio}/#clube` },
     description: 'Assinatura anual do Clube Tecnoapis: 25 cursos de apicultura online, lives exclusivas toda segunda-feira, grupo de membros e contato direto com o professor Gustavo Bijos.',
-    image: `${SITE.dominio}/img/og-gustavo.jpg`,
+    image: `${SITE.dominio}/img/plataforma-tecnoapis-completa-1300.webp`,
     offers: { '@type': 'Offer', price: OFERTA_CLUBE.preco, priceCurrency: 'BRL', availability: 'https://schema.org/InStock', url,
       hasMerchantReturnPolicy: { '@type': 'MerchantReturnPolicy', applicableCountry: 'BR', returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow', merchantReturnDays: OFERTA_CLUBE.garantiaDias, returnFees: 'https://schema.org/FreeReturn' } },
   },
+  // Lista de cursos (rich result "Course list" do Google): só os itens do tipo Curso, cada um como Course do Clube
+  { '@type': 'ItemList', '@id': `${url}#cursos`, name: `Cursos do ${SITE.clube}`, itemListElement: AREAS.flatMap((a) => a.itens).filter(([tipo]) => tipo === 'Curso').map(([, nome, det], i) => ({
+    '@type': 'ListItem', position: i + 1, item: { '@type': 'Course', name: nome, description: `${det}. Curso de apicultura online do ${SITE.clube}, com ${SITE.professor}.`, url, inLanguage: 'pt-BR', provider: { '@id': `${SITE.dominio}/#clube` }, hasCourseInstance: { '@type': 'CourseInstance', courseMode: 'Online' } },
+  })) },
   { '@type': 'FAQPage', '@id': `${url}#duvidas`, mainEntity: FAQ_CLUBE.map((f) => ({ '@type': 'Question', name: f.p, acceptedAnswer: { '@type': 'Answer', text: f.r } })) },
 ];
 ---
 <Tecnoapis
-  title="Clube Tecnoapis | Curso de apicultura online com Gustavo Bijos"
+  title="Clube Tecnoapis: curso de apicultura online | Gustavo Bijos"
   ogTitle="Clube Tecnoapis: todo o conhecimento para viver da apicultura"
   description="Curso de apicultura online do Gustavo Bijos: 25 cursos, live exclusiva toda segunda e contato direto com o professor. Assinatura anual com 7 dias de garantia."
   jsonLd={ld}
 >
-  <Menu><BotaoAssinar slot="cta" local="menu" class="ta-btn ta-btn--primary menu__cta">Assinar</BotaoAssinar></Menu>
-  <main data-track-view="ViewContent" data-track-params='{"content_name":"clube-tecnoapis"}'>
+  <main>
 
     <section data-secao="1-hero" class:list={['cl-hero', { 'cl-hero--sem-foto': !fotoReal }]}>
       <div class="cl-hero__fundo" aria-hidden="true">
-        <img src={fotoHero} alt="" width="1080" height="1920" fetchpriority="high" />
+        <picture>
+          {fotoLarga && <source media="(min-width: 900px)" srcset={srcsetLarga} sizes="100vw" width="1920" height="1280" />}
+          <img src={fotoHero} srcset={srcsetHero} sizes="100vw" alt="" width="1080" height="1920" fetchpriority="high" />
+        </picture>
       </div>
       <div class="ta-container cl-hero__body">
-        <span class="cl-hero__tag">Clube Tecnoapis · Apicultura online</span>
-        <h1 class="cl-hero__titulo">Todo o conhecimento para <em>viver da apicultura</em>.</h1>
+        {/* A tag entra no H1 para ele conter "curso de apicultura online" (a busca principal da página) */}
+        <h1 class="cl-hero__h1"><span class="cl-hero__tag">Curso de apicultura online</span> <span class="cl-hero__titulo">Todo o conhecimento para <em>viver da apicultura</em>.</span></h1>
         <p class="cl-hero__sub">Aumente a sua produção, tenha resultado financeiro e domine os manejos corretos.</p>
         <BotaoAssinar local="topo" class="ta-btn ta-btn--primary ta-btn--lg cta-pulse">Quero assinar o Clube</BotaoAssinar>
         <p class="ta-small">1 ano de acesso · 7 dias de garantia · {BIO.anos} anos de apicultura</p>
@@ -125,7 +133,7 @@ const ld = [
 
     <section class="ta-section ta-section--light" data-theme="light" data-secao="7-gustavo">
       <div class:list={['ta-container', 'prof', { 'prof--foto': foto }]}>
-        {foto && <figure class="prof__foto"><img src={foto} alt={`${SITE.professor}`} width="960" height="1200" loading="lazy" /></figure>}
+        {foto && <figure class="prof__foto"><img src={foto} srcset={srcsetImagem('gustavo', [480, 720], 960)} sizes="(min-width: 900px) 440px, 100vw" alt={`${SITE.professor}`} width="960" height="1200" loading="lazy" /></figure>}
         <div class="prof__texto">
           <span class="ta-pill">{BIO.anos} anos de apicultura</span>
           <h2 class="display-l">Quem é Gustavo Bijos?</h2>
@@ -167,20 +175,22 @@ const ld = [
 
 <style>
   /* Herói no molde da Black: foto do Gustavo de fundo, texto e botão centralizados embaixo, tudo na primeira tela */
-  .cl-hero { position: relative; display: flex; align-items: flex-end; min-height: calc(100svh - 64px); overflow: hidden; background: #0a0a0a; }
+  .cl-hero { position: relative; display: flex; align-items: flex-end; min-height: 100svh; overflow: hidden; background: #0a0a0a; }
   .cl-hero__fundo { position: absolute; inset: 0; z-index: 0; }
+  .cl-hero__fundo picture { display: contents; }
   .cl-hero__fundo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
   .cl-hero__fundo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,.15) 0%, rgba(10,10,10,.1) 35%, rgba(10,10,10,.82) 62%, #0a0a0a 88%); }
   @media (min-width: 900px) { .cl-hero--sem-foto .cl-hero__fundo img { object-position: center 30%; } }
-  .cl-hero__body { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding-bottom: var(--space-10, 40px); }
+  .cl-hero__body { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding-bottom: var(--space-10); }
+  .cl-hero__h1 { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
   .cl-hero__tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent, #111); font: 700 10.5px/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
-  .cl-hero__titulo { max-width: 18ch; font-family: var(--font-display); font-size: clamp(28px, 7vw, 46px); line-height: 1.08; font-weight: 500; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
+  .cl-hero__titulo { display: block; max-width: 18ch; font-family: var(--font-display); font-size: clamp(28px, 7vw, 46px); line-height: 1.08; font-weight: 500; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
   .cl-hero__titulo em { font-style: normal; font-weight: 700; color: var(--accent); }
   .cl-hero__sub { max-width: 46ch; font: 400 15.5px/1.55 var(--font-sans); color: rgba(255,255,255,.78); text-wrap: balance; }
   .cl-hero__body :global(.ta-btn) { margin-top: var(--space-2); width: 100%; max-width: 420px; }
   .cl-hero__body .ta-small { text-align: center; }
   @media (min-width: 900px) {
-    .cl-hero { min-height: min(calc(100svh - 72px), 860px); }
+    .cl-hero { min-height: min(100svh, 860px); }
     .cl-hero__body { padding-bottom: var(--space-16); }
     .cl-hero__sub { font-size: 17px; }
     .cl-hero__fundo::after { background: linear-gradient(180deg, rgba(10,10,10,.1) 0%, rgba(10,10,10,.25) 40%, rgba(10,10,10,.85) 70%, #0a0a0a 95%); }
@@ -205,11 +215,10 @@ const ld = [
   .prof__texto { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); max-width: 720px; }
   .prof__texto .ta-body { color: var(--ink); opacity: .82; max-width: 68ch; }
   .prof__destaque { font-weight: 600; opacity: 1 !important; }
-  .prof__foto img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius-lg); }
-  @media (min-width: 900px) { .prof--foto { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-16); align-items: start; } .prof__foto { position: sticky; top: 96px; } }
+  .prof__foto img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius-lg); }
+  @media (min-width: 900px) { .prof--foto { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-16); align-items: start; } .prof__foto { position: sticky; top: 32px; } }
   .duvidas { display: grid; gap: var(--space-8); }
   @media (min-width: 900px) { .duvidas { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: var(--space-16); } }
   .cl-fim .ta-intro { display: flex; flex-direction: column; align-items: center; }
   .ajuda { margin-top: var(--space-12); text-align: left; width: 100%; max-width: 720px; }
-  [data-theme="light"] .ta-pill, [data-theme="light"] .ta-badge--soft { color: #7a5200; }
 </style>

@@ -1,0 +1,39 @@
+/* Black Friday 2026: base visual das seções da /black (editorial: preto quente, creme e mel). Só é carregado na /black. */
+html { scroll-padding-top: 76px; }
+.bf {
+  --bf-ink: #10100e;
+  --bf-coal: #161713;
+  --bf-coal-2: #1f201b;
+  --bf-brown: #1e1912;
+  --bf-cream: #f6f2e9;
+  --bf-paper: #ede7d9;
+  --bf-mel: var(--accent);
+  --bf-mel-escuro: #8f5b00;
+  --bf-texto-2: #c4bfb1;
+  --bf-linha: rgba(255, 255, 255, .12);
+  background: var(--bf-ink);
+}
+
+.bf-secao { padding-block: 72px; position: relative; }
+@media (min-width: 900px) { .bf-secao { padding-block: 112px; } }
+
+/* Olho: rótulo curto acima do título, com losango */
+.bf-olho { display: inline-flex; align-items: center; gap: 10px; color: var(--bf-mel); font: 700 12px/1.2 var(--font-sans); letter-spacing: .16em; text-transform: uppercase; }
+.bf-olho::before { content: ''; flex: none; width: 7px; height: 7px; background: currentColor; transform: rotate(45deg); }
+
+.bf-titulo { margin-top: 16px; font-family: var(--font-display); font-weight: 600; font-size: clamp(36px, 9vw, 64px); line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
+.bf-titulo em { font-style: normal; color: var(--bf-mel); }
+.bf-texto { font: 400 17px/1.6 var(--font-sans); color: var(--bf-texto-2); max-width: 60ch; text-wrap: pretty; }
+@media (min-width: 900px) { .bf-texto { font-size: 18px; } }
+
+/* Faixas claras: o mel vira marca-texto, para manter o contraste no creme */
+.bf-claro { background: var(--bf-cream); color: var(--bf-ink); }
+.bf-claro .bf-olho { color: var(--bf-mel-escuro); }
+.bf-claro .bf-titulo em { color: inherit; background: linear-gradient(transparent 62%, rgba(242, 169, 0, .55) 62%, rgba(242, 169, 0, .55) 92%, transparent 92%); padding-inline: .04em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.bf-claro .bf-texto { color: #57534a; }
+
+.bf-hex { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+
+.bf-btn-fantasma { background: transparent; color: var(--bf-cream); border-color: rgba(255, 255, 255, .28); }
+.bf-btn-fantasma:hover { background: rgba(255, 255, 255, .07); }
+.bf summary:focus-visible, .bf a:focus-visible { outline: 3px solid var(--bf-mel); outline-offset: 4px; border-radius: 6px; }

@@ -2,7 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { ENV } from './env';
 import { ufDoTelefone } from './phone';
 
-const API_VERSION = 'v21.0';
+// Versão da Graph API. A Meta aposenta cada versão ~2 anos depois do lançamento (v25.0: fev/2026).
+const API_VERSION = 'v25.0';
 
 export type UserData = {
   email?: string | null; phone?: string | null; firstName?: string | null; lastName?: string | null;

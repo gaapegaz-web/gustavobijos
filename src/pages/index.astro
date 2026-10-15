@@ -1,0 +1,63 @@
+---
+/**
+ * Home: a página fixa sobre o Gustavo Bijos (layout derivado de ericorocha.com.br, design system Tecnoapis).
+ * Não depende de nenhuma campanha. Enquanto REDIRECT_RAIZ estiver preenchido no .env, a raiz manda para a
+ * campanha (mantendo UTMs) e a home só abre como prévia em /?preview=1 (noindex, mostra itens a confirmar).
+ */
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
+import Hero from '~/components/home/Hero.astro';
+import Numeros from '~/components/home/Numeros.astro';
+import Marcas from '~/components/home/Marcas.astro';
+import ClubeConteudo from '~/components/ClubeConteudo.astro';
+import Sobre from '~/components/home/Sobre.astro';
+import Trajetoria from '~/components/home/Trajetoria.astro';
+import Perguntas from '~/components/home/Perguntas.astro';
+import Rodape from '~/components/home/Rodape.astro';
+import { BIO, FAQ_PROFESSOR, MARCAS, SITE, visiveis } from '~/config/site';
+import { ENV } from '~/lib/env';
+
+export const prerender = false;
+
+const { url } = Astro;
+const preview = url.searchParams.has('preview');
+if (ENV.REDIRECT_RAIZ && !preview) {
+  const destino = new URL(ENV.REDIRECT_RAIZ, url);
+  url.searchParams.forEach((v, k) => destino.searchParams.set(k, v));
+  return new Response(null, { status: 302, headers: { location: destino.pathname + destino.search, 'cache-control': 'no-store' } });
+}
+
+const faqLd = {
+  '@type': 'FAQPage',
+  '@id': `${SITE.dominio}/#perguntas`,
+  mainEntity: visiveis(FAQ_PROFESSOR).map((f) => ({ '@type': 'Question', name: f.p, acceptedAnswer: { '@type': 'Answer', text: f.r } })),
+};
+---
+<Tecnoapis
+  title="Gustavo Bijos | Apicultor e criador do Clube Tecnoapis"
+  ogTitle="Gustavo Bijos | Apicultor e criador do Clube Tecnoapis"
+  description={`${SITE.apelido}, apicultor há ${BIO.anos} anos, criou o primeiro curso online de apicultura do Brasil. Conheça o ${SITE.clube} e veja como começar na apicultura.`}
+  pageType="ProfilePage"
+  noindex={preview}
+  semPixel={preview}
+  jsonLd={[faqLd]}
+>
+  {preview && <div class="previa">Prévia · tracejado = aguardando confirmação (fica fora da versão pública)</div>}
+  <Menu />
+  <main data-preview={preview ? '1' : undefined}>
+    <Hero />
+    <Numeros />
+    <ClubeConteudo titulo="Curso de apicultura online: <em>Clube Tecnoapis</em>" lead="Teoria e prática gravadas no apiário, do primeiro núcleo à venda do mel. Para quem está começando e para quem quer crescer." />
+    <Sobre preview={preview} />
+    <Trajetoria preview={preview} />
+    {/* Marcas só aparece com 3 ou mais confirmadas */}
+    {visiveis(MARCAS, preview).length >= 3 && <Marcas preview={preview} />}
+    <Perguntas preview={preview} />
+  </main>
+  <Rodape />
+</Tecnoapis>
+
+<style is:global>
+  .previa { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 60; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: var(--radius-full); background: #fff3d1; color: #5a3d00; font: 600 12.5px/1.35 var(--font-sans); text-align: center; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+  main[data-preview] .pendente { outline: 2px dashed #f2a900; outline-offset: 4px; border-radius: 4px; }
+</style>

@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ENV } from './env';
+import { ehRobo } from './tracking';
 import { LINKS } from '~/config/black';
 
 let _db: Database.Database | null = null;
@@ -31,6 +32,16 @@ function migrar(d: Database.Database) {
   if (!cols('leads').has('lead_enviado_em')) d.exec('ALTER TABLE leads ADD COLUMN lead_enviado_em TEXT'); // marca quando o evento Lead já foi disparado (evita duplicar em reload de /obrigado)
   if (!cols('links').has('utm_term')) d.exec('ALTER TABLE links ADD COLUMN utm_term TEXT'); // granularidade de anúncio/criativo do Meta Ads
   if (!cols('leads').has('ultima_pagina_checkout')) d.exec('ALTER TABLE leads ADD COLUMN ultima_pagina_checkout TEXT'); // última página de onde a pessoa clicou em BotaoCheckout (para o sourceUrl do Purchase/InitiateCheckout no webhook da Hubla)
+  if (!cols('sessoes').has('ip')) d.exec('ALTER TABLE sessoes ADD COLUMN ip TEXT');
+  if (!cols('sessoes').has('robo')) {
+    d.exec('ALTER TABLE sessoes ADD COLUMN robo INTEGER NOT NULL DEFAULT 0');
+    const marca = d.prepare('UPDATE sessoes SET robo = 1 WHERE id = ?');
+    for (const r of d.prepare('SELECT id, user_agent, largura, altura FROM sessoes').all() as any[]) if (ehRobo(r.user_agent, r.largura, r.altura)) marca.run(r.id);
+    // a visão antiga contava robôs
+    d.exec(`DROP VIEW IF EXISTS v_funil_diario`);
+    const sql = readFileSync(resolve(process.cwd(), 'schema.sql'), 'utf8').match(/CREATE VIEW IF NOT EXISTS v_funil_diario[\s\S]*?;/);
+    if (sql) d.exec(sql[0]);
+  }
   // Um lead por WhatsApp (o cadastro repetido só soma em "envios")
   try { d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp_unico ON leads(whatsapp)'); } catch (e) { console.error('[db] há WhatsApp duplicado; índice único não criado:', (e as Error).message); }
 }

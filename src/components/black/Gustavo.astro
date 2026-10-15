@@ -1,0 +1,44 @@
+---
+/** Quem é o Gustavo (dados fixos de site.ts). Foto: public/img/gustavo.(webp|jpg|png), 4:5; sem ela, fica só o texto. */
+import Icons from '../Icons.astro';
+import { BIO } from '~/config/site';
+import { acharImagem, srcsetImagem } from '~/lib/imagens';
+const foto = acharImagem('gustavo');
+---
+<section class="bf-secao bf-claro gustavo" id="gustavo" data-secao="6-gustavo">
+  <div class:list={['ta-container', 'gustavo__grid', { 'gustavo__grid--foto': foto }]}>
+    {foto && (
+      <div class="gustavo__foto">
+        <img src={foto} srcset={srcsetImagem('gustavo', [480, 720], 960)} sizes="(min-width: 900px) 420px, 100vw" alt="Gustavo Bijos, apicultor e criador do Clube Tecnoapis" width="960" height="1200" loading="lazy" />
+        <span class="bf-hex gustavo__hex" aria-hidden="true"></span>
+      </div>
+    )}
+    <div>
+      <span class="bf-olho">Quem está por trás do Clube</span>
+      <h2 class="bf-titulo">Gustavo&nbsp;Bijos, <em>{BIO.anos}&nbsp;anos de apicultura.</em></h2>
+      <p class="bf-texto gustavo__resumo">{BIO.resumo}</p>
+      <ul class="gustavo__cargos">
+        <li class="gustavo__hoje"><Icons name="arrow" size={18} /><span><b>Hoje:</b> {BIO.hoje.toLowerCase()}</span></li>
+        {BIO.cargos.map((c) => <li><Icons name="arrow" size={18} /><span>{c}</span></li>)}
+        <li><Icons name="arrow" size={18} /><span>{BIO.palestras}</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .gustavo { background: var(--bf-paper); }
+  .gustavo__grid { display: grid; gap: 48px; align-items: center; }
+  .gustavo__foto { position: relative; max-width: 420px; margin-right: 20px; }
+  .gustavo__foto img { position: relative; z-index: 1; display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: center top; border-radius: 22px; }
+  .gustavo__hex { position: absolute; right: -20px; bottom: -20px; width: 100px; height: 110px; background: var(--accent); }
+  .gustavo__resumo { margin-top: 20px; }
+  .gustavo__cargos { display: grid; gap: 0; margin: 28px 0 0; padding: 0; list-style: none; }
+  .gustavo__cargos li { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-top: 1px solid #d3c7b5; font: 600 15px/1.4 var(--font-sans); color: #2a2822; }
+  .gustavo__hoje b { font-weight: 800; }
+  .gustavo__cargos li :global(svg) { flex: none; margin-top: 1px; color: var(--bf-mel-escuro); }
+  @media (min-width: 900px) {
+    .gustavo__grid--foto { grid-template-columns: .85fr 1.15fr; gap: 88px; }
+    .gustavo__foto { max-width: none; }
+  }
+</style>

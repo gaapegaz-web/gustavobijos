@@ -1,0 +1,45 @@
+---
+/** Herói: nome grande, frase-tese e foto. Sem foto (public/img/gustavo-hero.*), o lado direito vira só o brilho de fundo. */
+import { BIO, SITE } from '~/config/site';
+import { acharImagem, srcsetImagem } from '~/lib/imagens';
+const foto = acharImagem('gustavo-hero');
+const fotoLarga = foto && acharImagem('gustavo-hero-largo');
+const srcset = srcsetImagem('gustavo-hero', [720], 1080);
+const srcsetLarga = srcsetImagem('gustavo-hero-largo', [1280], 1920);
+---
+<section class:list={['hero', { 'hero--foto': foto }]} data-secao="1-hero">
+  {foto && <div class="hero__foto" aria-hidden="true"><picture>{fotoLarga && <source media="(min-width: 900px)" srcset={srcsetLarga} sizes="60vw" width="1920" height="1280" />}<img src={foto} srcset={srcset} sizes="100vw" alt="" width="1080" height="1920" fetchpriority="high" /></picture></div>}
+  <div class="ta-container hero__body">
+    <span class="ta-pill">Apicultor há {BIO.anos} anos</span>
+    <h1 class="hero__nome">Gustavo <em>Bijos</em></h1>
+    <p class="hero__tese">{BIO.anos} anos de apicultura e o primeiro curso online de apicultura do Brasil.</p>
+    <p class="hero__sub">Criador do {SITE.clube}, o curso de apicultura online com 25 cursos e live toda segunda. Já foi instrutor do SENAR e do SEBRAE e ensina do primeiro enxame à multiplicação de colmeias e à produção de rainhas.</p>
+    <div class="hero__ctas">
+      <a class="ta-btn ta-btn--primary ta-btn--lg" href="#sobre">Conheça o Gustavo</a>
+      <a class="ta-btn ta-btn--outline ta-btn--lg" href={SITE.clubeUrl} data-track-click="CliqueClube" data-track-params='{"content_name":"hero"}'>Conheça o {SITE.clube}</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero { position: relative; overflow: hidden; background: radial-gradient(70% 60% at 85% 20%, #2a1e06 0%, #0a0a0a 70%); }
+  .hero__body { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); padding-block: var(--space-16) var(--space-16); }
+  .hero__nome { font: 500 clamp(52px, 13vw, 104px)/.95 var(--font-display); letter-spacing: -.02em; color: var(--ink); }
+  .hero__nome em { font-style: normal; color: var(--accent-ink); }
+  .hero__tese { max-width: 22ch; font: 500 clamp(22px, 4.6vw, 32px)/1.2 var(--font-display); color: var(--ink); letter-spacing: -.01em; }
+  .hero__sub { max-width: 52ch; font: 400 16px/1.6 var(--font-sans); color: var(--ink-muted); }
+  .hero__ctas { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); width: 100%; }
+  .hero__foto { position: absolute; inset: 0; }
+  .hero__foto picture { display: contents; }
+  .hero__foto img { width: 100%; height: 100%; object-fit: cover; object-position: 70% top; }
+  .hero__foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,.2) 0%, rgba(10,10,10,.75) 45%, #0a0a0a 85%); }
+  .hero--foto .hero__body { padding-top: 46svh; }
+  @media (min-width: 900px) {
+    .hero__body { padding-block: var(--space-24) calc(var(--space-24) + var(--space-8)); }
+    .hero__sub { font-size: 17px; }
+    .hero__ctas { width: auto; }
+    .hero__foto { left: 42%; }
+    .hero__foto::after { background: linear-gradient(90deg, #0a0a0a 0%, rgba(10,10,10,.55) 30%, rgba(10,10,10,0) 60%), linear-gradient(0deg, #0a0a0a 0%, rgba(10,10,10,0) 30%); }
+    .hero--foto .hero__body { padding-top: var(--space-24); min-height: min(86svh, 760px); justify-content: center; }
+  }
+</style>

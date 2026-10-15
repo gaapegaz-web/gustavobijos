@@ -34,6 +34,15 @@ export function ipDoRequest(request: Request, fallback?: string) {
   return (h.get('x-forwarded-for')?.split(',')[0] || h.get('x-real-ip') || fallback || '').trim() || null;
 }
 
+/**
+ * Robôs e testes automáticos (navegador headless, crawlers, revisor de anúncio da Meta).
+ * A Meta abre o link do anúncio numa janela de 1050x1893 com user agents variados: não é gente.
+ */
+const UA_ROBO = /headless|bot\b|bot\/|crawl|spider|slurp|facebookexternalhit|meta-externalagent|lighthouse|pagespeed|gtmetrix|python|curl|wget|phantom|selenium|puppeteer|playwright/i;
+export function ehRobo(ua: string | null | undefined, largura?: number | null, altura?: number | null) {
+  return !ua || UA_ROBO.test(ua) || (largura === 1050 && altura === 1893);
+}
+
 /** Monta a URL do checkout repassando UTMs e dados do lead (Hubla aceita utm_* e src na query). */
 export function urlCheckout(base: string, utms: Utms, extra: Record<string, string | undefined> = {}) {
   if (!base || base.startsWith('#')) return base;

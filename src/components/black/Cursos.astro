@@ -1,0 +1,49 @@
+---
+/** Capas dos cursos (carrossel) e a plataforma por dentro, numa moldura de navegador. */
+import CarrosselCapas from '../CarrosselCapas.astro';
+---
+<section class="bf-secao cursos" id="conteudo" data-secao="3-cursos">
+  <div class="ta-container cursos__topo">
+    <div>
+      <span class="bf-olho">Aprenda no seu ritmo</span>
+      <h2 class="bf-titulo">Da colmeia ao <em>resultado.</em></h2>
+    </div>
+    <p class="bf-texto">Multiplicação, rainhas, manejo, produtos e gestão. Cursos, aulas e materiais para cada etapa da sua jornada.</p>
+  </div>
+
+  <CarrosselCapas />
+
+  <div class="ta-container">
+    <figure class="cursos__plat">
+      <div class="cursos__barra" aria-hidden="true"><i></i><i></i><i></i><span>gustavo-bijos.memberkit.com.br</span></div>
+      <div class="cursos__tela">
+        <img src="/img/plataforma-tecnoapis-completa-900.webp" srcset="/img/plataforma-tecnoapis-completa-900.webp 900w, /img/plataforma-tecnoapis-completa-1300.webp 1300w, /img/plataforma-tecnoapis-completa.webp 1800w" sizes="(min-width: 1120px) 1056px, calc(100vw - 40px)" alt="Tela da plataforma do Clube Tecnoapis com todos os cursos" width="1800" height="1561" loading="lazy" />
+      </div>
+      <figcaption>A plataforma por dentro: cursos, aulas especiais e bônus em um só lugar.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<style>
+  .cursos { background: var(--bf-coal); }
+  .cursos__topo { display: grid; gap: 16px; }
+  .cursos :global(.capas) { margin-top: 40px; }
+  .cursos__plat { margin: 48px 0 0; }
+  .cursos__barra { display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; background: #262722; border: 1px solid var(--bf-linha); border-bottom: 0; border-radius: 18px 18px 0 0; }
+  .cursos__barra i { width: 10px; height: 10px; border-radius: 50%; background: #d66b58; }
+  .cursos__barra i:nth-child(2) { background: #e3bd45; }
+  .cursos__barra i:nth-child(3) { background: #5ab56f; }
+  .cursos__barra span { margin-inline: auto; padding-right: 40px; font: 500 11.5px/1 var(--font-sans); color: #a9a79a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Mostra o alto da plataforma e funde a base no fundo */
+  .cursos__tela { position: relative; overflow: hidden; aspect-ratio: 4 / 3; border: 1px solid var(--bf-linha); border-top: 0; border-radius: 0 0 18px 18px; background: #0b0c0b; box-shadow: 0 30px 80px -30px rgba(242, 169, 0, .28); }
+  .cursos__tela img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+  .cursos__tela::after { content: ''; position: absolute; inset: auto 0 0; height: 30%; background: linear-gradient(transparent, var(--bf-coal)); }
+  .cursos__plat figcaption { margin-top: 14px; text-align: center; font: 400 13.5px/1.5 var(--font-sans); color: #a9a79a; }
+  @media (min-width: 900px) {
+    .cursos__topo { grid-template-columns: 1.1fr .9fr; align-items: end; gap: 56px; }
+    .cursos__topo .bf-texto { padding-bottom: 8px; }
+    .cursos :global(.capas) { margin-top: 56px; }
+    .cursos__plat { margin-top: 72px; }
+    .cursos__tela { aspect-ratio: 16 / 9; }
+  }
+</style>

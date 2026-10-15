@@ -1,0 +1,75 @@
+---
+/** Conteúdo completo do Clube por área, em acordeões (dados de clube.ts). Título fixo ao lado no computador. */
+import Icons from '../Icons.astro';
+import { semViuva } from '~/lib/texto';
+import { AREAS } from '~/config/clube';
+---
+<section class="bf-secao conteudo" aria-labelledby="conteudo-titulo" data-secao="4-conteudo">
+  <div class="ta-container conteudo__grid">
+    <div class="conteudo__lado">
+      <span class="bf-olho">Conteúdo completo</span>
+      <h2 class="bf-titulo" id="conteudo-titulo">Escolha seu próximo <em>passo.</em></h2>
+      <p class="bf-texto">Tudo o que está dentro do Clube, organizado por tema. Toque em cada área para ver os cursos e materiais.</p>
+      <span class="conteudo__regua" aria-hidden="true"></span>
+    </div>
+    <div class="conteudo__lista">
+      {AREAS.map((a, i) => (
+        <details class="area" open={i === 0}>
+          <summary>
+            <span class="area__icone"><Icons name={a.icone} size={22} /></span>
+            <div class="area__txt"><h3>{a.titulo}</h3><span>{semViuva(a.texto)}</span></div>
+            {/* Texto explícito no botão: o público (40+, 50+) nem sempre reconhece o "+" como "abrir" */}
+            <span class="area__acao" aria-hidden="true"><span class="area__ver-mais">Clique aqui para ver mais</span><span class="area__ver-menos">Ver menos</span><i class="area__mais"></i></span>
+          </summary>
+          <ul class="area__itens">
+            {a.itens.map(([tipo, nome, detalhe]) => (
+              <li>
+                <span class:list={['area__tipo', { 'area__tipo--live': tipo === 'Live' }]}>{tipo}</span>
+                <span class="area__nome">{nome} <span class="area__det">·&nbsp;{semViuva(detalhe)}</span></span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .conteudo { background: #0d0e0c; }
+  .conteudo__grid { display: grid; gap: 36px; }
+  .conteudo__lado .bf-texto { margin-top: 18px; }
+  .conteudo__regua { display: block; width: 64px; height: 3px; margin-top: 28px; background: var(--accent); }
+  .conteudo__lista { display: grid; gap: 12px; }
+  .area { border: 1px solid #3b3424; border-radius: 18px; background: #181915; transition: border-color .2s, background .2s; }
+  .area[open] { border-color: rgba(242, 169, 0, .65); background: #1d1d17; }
+  /* Celular: ícone | texto, com o botão "ver mais" embaixo do texto. Computador: botão à direita */
+  .area summary { display: grid; grid-template-columns: 46px 1fr; grid-template-areas: 'icone txt' '. acao'; align-items: center; column-gap: 16px; row-gap: 10px; padding: 18px; cursor: pointer; list-style: none; -webkit-tap-highlight-color: transparent; }
+  .area summary::-webkit-details-marker { display: none; }
+  .area__icone { grid-area: icone; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; background: var(--accent); color: var(--bf-ink); }
+  .area__txt { grid-area: txt; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .area__txt h3 { font: 700 17px/1.2 var(--font-sans); color: var(--bf-cream); }
+  .area__txt > span { font: 400 13.5px/1.4 var(--font-sans); color: #a9a69a; }
+  .area__acao { grid-area: acao; justify-self: start; display: inline-flex; align-items: center; gap: 8px; color: var(--accent); font: 600 14px/1 var(--font-sans); white-space: nowrap; }
+  .area summary:hover .area__acao { text-decoration: underline; text-underline-offset: 4px; }
+  .area__ver-menos { display: none; }
+  .area[open] .area__ver-mais { display: none; }
+  .area[open] .area__ver-menos { display: inline; }
+  /* Setinha para baixo que vira para cima ao abrir */
+  .area__mais { flex: none; width: 7px; height: 7px; margin-top: -4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .25s, margin .25s; }
+  .area[open] .area__mais { margin-top: 3px; transform: rotate(-135deg); }
+  .area__itens { margin: 0; padding: 0 18px 14px; list-style: none; }
+  .area__itens li { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 13px 0; border-top: 1px solid rgba(255, 255, 255, .09); }
+  .area__tipo { font: 800 10.5px/1 var(--font-sans); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .area__tipo--live { color: #3ddc7a; }
+  .area__nome { font: 600 15px/1.45 var(--font-sans); color: var(--bf-cream); }
+  .area__det { font-weight: 400; color: #b3afa2; }
+  @media (min-width: 900px) {
+    .conteudo__grid { grid-template-columns: 340px 1fr; gap: 72px; }
+    .conteudo__lado { position: sticky; top: 112px; align-self: start; }
+    .area summary { grid-template-columns: 46px 1fr auto; grid-template-areas: 'icone txt acao'; column-gap: 18px; padding: 22px 24px; }
+    .area__itens { padding: 0 24px 16px 88px; }
+    .area__itens li { flex-direction: row; align-items: baseline; gap: 12px; }
+    .area__tipo { flex: 0 0 72px; }
+  }
+</style>

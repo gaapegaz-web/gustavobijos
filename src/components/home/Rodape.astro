@@ -1,0 +1,50 @@
+---
+/** Rodapé fixo do site (não é o da campanha): marca, navegação, marcas, redes e suporte. */
+import Icons from '../Icons.astro';
+import { MARCAS, PERFIS, SITE, visiveis } from '~/config/site';
+import { ENV } from '~/lib/env';
+const suporte = ENV.WHATSAPP_SUPORTE_URL;
+---
+<footer class="rodape">
+  <div class="ta-container rodape__grid">
+    <div class="rodape__marca">
+      <a href="/">Gustavo&nbsp;<em>Bijos</em></a>
+      <p class="ta-small">Apicultor, professor e criador do {SITE.clube}.</p>
+      {suporte && <a class="ta-btn ta-btn--outline" href={suporte} data-track-click="Contact" data-track-params='{"content_name":"rodape"}'><Icons name="whatsapp" size={18} />Falar com a equipe</a>}
+    </div>
+    <nav aria-label="Navegação">
+      <p class="rodape__titulo">Navegação</p>
+      <a href="/#sobre">Sobre</a><a href={SITE.clubeUrl}>Clube Tecnoapis</a><a href="/#trajetoria">Trajetória</a><a href="/#perguntas">Perguntas</a>
+    </nav>
+    <div>
+      <p class="rodape__titulo">Marcas</p>
+      {visiveis(MARCAS).map((m) => (m.url ? <a href={m.url} {...(m.externo ? { target: '_blank', rel: 'noopener' } : {})}>{m.nome}</a> : <span>{m.nome}</span>))}
+    </div>
+    {PERFIS.length > 0 && (
+      <div>
+        <p class="rodape__titulo">Redes</p>
+        {PERFIS.map((p) => <a href={p.url} target="_blank" rel="noopener" data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}>{p.rede} {p.usuario}</a>)}
+      </div>
+    )}
+  </div>
+  <div class="ta-container rodape__fim">
+    <p class="ta-small">© {new Date().getFullYear()} {SITE.professor}. Este site não é afiliado ao Facebook, Instagram ou Meta.</p>
+  </div>
+</footer>
+
+<style>
+  .rodape { border-top: 1px solid var(--border); padding-block: var(--space-16) var(--space-8); }
+  .rodape__grid { display: grid; gap: var(--space-8); }
+  .rodape__marca { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+  .rodape__grid .rodape__marca > a:first-child { font: 500 26px/1 var(--font-display); color: var(--ink); text-decoration: none; }
+  .rodape__marca em { font-style: normal; color: var(--accent-ink); }
+  .rodape__titulo { font: 600 12px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); margin-bottom: var(--space-4); }
+  .rodape__grid > div:not(.rodape__marca), .rodape nav { display: flex; flex-direction: column; gap: var(--space-3); }
+  .rodape__grid a:not(.ta-btn), .rodape__grid span { font: 400 14.5px/1.3 var(--font-sans); color: var(--ink-muted); text-decoration: none; }
+  .rodape__grid a:not(.ta-btn):hover { color: var(--ink); }
+  /* Área de toque mínima no celular */
+  .rodape__grid a:not(.ta-btn) { display: inline-flex; align-items: center; min-height: 36px; }
+  .rodape__grid > div:not(.rodape__marca), .rodape nav { gap: var(--space-1); }
+  .rodape__fim { margin-top: var(--space-12); padding-top: var(--space-6); border-top: 1px solid var(--border); }
+  @media (min-width: 820px) { .rodape__grid { grid-template-columns: 2fr 1fr 1fr 1fr; } }
+</style>

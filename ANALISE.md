@@ -10,7 +10,6 @@ Dois fluxos independentes saem da página. Os dois ficam no `public/js/ta-v4.js`
 | Evento | Tipo | Quando dispara | Onde |
 |---|---|---|---|
 | PageView | padrão | toda página | todas |
-| ViewContent | padrão | página carregou | /black |
 | AbriuFormulario | personalizado | clique em "Garantir minha vaga" | /black (`content_name`: topo_cta, hero_cta, trava_cta) |
 | Lead | padrão | a página /obrigado carrega (servidor E navegador, mesmo event_id, disparado uma única vez por lead) | /obrigado |
 | Schedule | padrão | clique em "Entrar no grupo" | /obrigado |
@@ -48,7 +47,7 @@ Hubla). Tudo abaixo já funciona em QUALQUER página nova, sem configuração ex
   em toda página HTML e grava em cookie first-party por 90 dias (`ta_utm`). Não importa a rota —
   funciona em `/`, `/black` ou qualquer página futura.
 - **Pixel + CAPI:** basta a página usar o layout `~/layouts/Tecnoapis.astro`, que já carrega
-  `ta-v4.js` (Pixel) e expõe `data-track-view`/`data-track-click` para eventos declarativos.
+  `ta-v4.js` (Pixel) e expõe `data-track-click` para eventos declarativos.
 - **Checkout da Hubla com UTM:** use o componente `~/components/BotaoCheckout.astro` em vez de um
   `<a>` cru. Ele:
   1. Lê as UTMs do cookie + da querystring da própria página (cookie tem prioridade por último:

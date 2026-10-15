@@ -1,0 +1,10 @@
+---
+/**
+ * Botão verde da /black: abre o pop-up do formulário (o script fica em Captacao.astro).
+ * `alvo` identifica o clique no /admin; `nome` vai como content_name no evento AbriuFormulario.
+ */
+import Icons from '../Icons.astro';
+interface Props { alvo: string; nome: string; texto?: string; pulso?: boolean; icone?: number; class?: string }
+const { alvo, nome, texto = 'Entrar no grupo', pulso = true, icone = 22, class: classe } = Astro.props;
+---
+<button type="button" class:list={['ta-btn cta-verde', { 'ta-btn--lg cta-pulse': pulso }, classe]} data-abrir-form data-alvo={alvo} data-track-click="AbriuFormulario" data-track-params={JSON.stringify({ content_name: nome })}><Icons name="whatsapp" size={icone} />{texto}</button>

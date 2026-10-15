@@ -10,48 +10,23 @@
 .ta-btn--primary:hover{filter:brightness(1.06)}
 .ta-btn--outline{background:transparent;color:var(--ink);border-color:var(--border)}
 .ta-btn--outline:hover{background:var(--surface)}
-.ta-btn--ghost{background:transparent;color:var(--accent-ink);padding:0 var(--space-2)}
 .ta-btn--lg{min-height:58px;padding:0 var(--space-8);font-size:16px;border-radius:var(--radius-md)}
-.ta-btn--tab{min-height:30px;padding:0 14px;font-size:12px;font-weight:500}
 @media (max-width:640px){.ta-btn--lg{width:100%}}
 
 /* Selos */
 .ta-badge{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:var(--radius-full);font:500 12.5px/1 var(--font-sans);color:var(--ink)}
 .ta-badge--soft{background:var(--accent-soft);color:var(--accent-ink)}
-.ta-badge--honey{border:1px solid var(--honey)}
-.ta-badge--success{border:1px solid var(--success)}
-.ta-count{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:var(--radius-full);background:var(--danger);color:#fff;font:600 10px/1 var(--font-sans)}
 
 /* Título em camadas (usado pela página da Black): tudo vira um bloco serifado */
-.ta-eyebrow{font:500 13.5px/1.3 var(--font-sans);color:var(--accent-ink)}
-.ta-line{font:500 clamp(22px,5vw,30px)/1.1 var(--font-display);color:var(--ink);letter-spacing:-.01em}
-.ta-impact{font-family:var(--font-display);font-weight:500;color:var(--ink);line-height:1.04;letter-spacing:-.01em}
-.ta-spaced{font:400 15px/1.4 var(--font-sans);color:var(--ink-muted);margin-top:var(--space-2)}
 
 /* Cabeçalho de seção */
-.ta-section-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap}
-.ta-section-head h2{margin:0;font:600 16px/1.35 var(--font-sans);color:var(--ink)}
-.ta-section-head a{font:400 13.5px/1 var(--font-sans);color:var(--accent-ink);text-decoration:none}
-.ta-section-head a:hover{text-decoration:underline}
 
 /* Card de curso (pôster) */
-.ta-course{width:var(--card-course);aspect-ratio:2/3;max-width:100%;box-sizing:border-box;padding:18px 16px 0;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-md);display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden;text-decoration:none}
-.ta-course .ta-line{margin-top:var(--space-1);font-size:16px}
-.ta-course .ta-impact{font-size:28px}
-.ta-course hr{width:100%;border:0;border-top:1px solid var(--border);margin:var(--space-3) 0}
-.ta-course__photo{flex:1;width:82%;padding:0;box-sizing:border-box;display:flex}
-.ta-course__photo img,.ta-course__photo span{flex:1;min-height:0;width:100%;object-fit:cover;display:flex;align-items:center;justify-content:center;background:var(--surface);color:var(--ink-muted);font:400 11px var(--font-sans);border-radius:var(--radius-sm) var(--radius-sm) 0 0}
 
 /* Card de módulo (thumbnail 2:1) */
-.ta-module{display:flex;flex-direction:column;gap:var(--space-3);text-decoration:none;color:inherit;max-width:336px}
-.ta-module img{width:100%;aspect-ratio:2/1;object-fit:cover;border-radius:var(--radius-md);display:block}
-.ta-module h3{margin:0;font:500 14px/1.35 var(--font-sans);color:var(--ink)}
-.ta-module p{margin:var(--space-1) 0 0;font:400 13.5px/1.55 var(--font-sans);color:var(--ink-muted)}
 
 /* Card de preço */
 .ta-price{max-width:440px;box-sizing:border-box;padding:var(--space-8) var(--space-6);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);display:flex;flex-direction:column;gap:var(--space-4)}
-.ta-price__from{font:400 14px var(--font-sans);color:var(--ink-muted)}
-.ta-price__from s{color:var(--danger)}
 .ta-price__value{font-family:var(--font-display);font-weight:500;font-size:48px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .ta-price__value small{font-size:18px;color:var(--ink-muted);font-family:var(--font-sans);font-weight:400}
 .ta-price ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-2);font:400 14.5px/1.5 var(--font-sans);color:var(--ink)}

@@ -25,7 +25,10 @@
   }
 
   /* ---------------- 1) Meta ---------------- */
-  var PADRAO = { PageView: 1, ViewContent: 1, Lead: 1, Contact: 1, Schedule: 1, InitiateCheckout: 1, AddToCart: 1, Purchase: 1, CompleteRegistration: 1 };
+  // Eventos padrão da Meta que passam por track() (os demais vão como trackCustom). SERVIDOR: os que o /api/event
+  // aceita (src/pages/api/event.ts); clique só de analytics (CliqueBio etc.) não gera POST que o servidor descartaria.
+  var PADRAO = { PageView: 1, Contact: 1, Schedule: 1, InitiateCheckout: 1, AddToCart: 1 };
+  var SERVIDOR = { PageView: 1, InitiateCheckout: 1, AddToCart: 1, Contact: 1, Schedule: 1, AbriuFormulario: 1 };
   if (pixelId) {
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
     // Advanced matching: só na /obrigado, com dados já em hash vindos do servidor
@@ -45,23 +48,17 @@
     }, 50);
   }
 
-  /** taTrack('ViewContent', {content_name: 'x'}) -> Pixel + CAPI com o mesmo event_id */
-  window.taTrack = function (name, params, eventId, opts) {
-    opts = opts || {};
-    eventId = eventId || uuid();
+  /** track('Contact', {content_name: 'x'}) -> Pixel + CAPI com o mesmo event_id */
+  function track(name, params) {
+    var eventId = uuid();
     if (window.fbq) fbq(PADRAO[name] ? 'track' : 'trackCustom', name, params || {}, { eventID: eventId });
-    if (opts.server !== false) aguardarFbp(function () { beacon('/api/event', { name: name, eventId: eventId, params: params || {}, url: location.href }); });
-    return eventId;
-  };
+    if (SERVIDOR[name]) aguardarFbp(function () { beacon('/api/event', { name: name, eventId: eventId, params: params || {}, url: location.href }); });
+  }
 
   var pvId = uuid();
   if (window.fbq) fbq('track', 'PageView', {}, { eventID: pvId });
   aguardarFbp(function () { beacon('/api/event', { name: 'PageView', eventId: pvId, params: {}, url: location.href }); });
 
-  document.querySelectorAll('[data-track-view]').forEach(function (el) {
-    var p = {}; try { p = JSON.parse(el.getAttribute('data-track-params') || '{}'); } catch (e) {}
-    window.taTrack(el.getAttribute('data-track-view'), p);
-  });
   document.addEventListener('click', function (ev) {
     var el = ev.target && ev.target.closest && ev.target.closest('[data-track-click]');
     if (!el) return;
@@ -71,11 +68,11 @@
       try { if (localStorage.getItem('ta_once_' + uma)) return; localStorage.setItem('ta_once_' + uma, '1'); } catch (e) {}
     }
     var p = {}; try { p = JSON.parse(el.getAttribute('data-track-params') || '{}'); } catch (e) {}
-    window.taTrack(el.getAttribute('data-track-click'), p);
+    track(el.getAttribute('data-track-click'), p);
   }, true);
 
   // Lead: dispara só na /obrigado, com o mesmo event_id que o servidor já mandou pela CAPI nesta mesma carga
-  if (cfg.leadEventId && window.fbq) fbq('track', 'Lead', cfg.leadParams || {}, { eventID: cfg.leadEventId });
+  if (cfg.leadEventId && window.fbq) fbq('track', 'Lead', {}, { eventID: cfg.leadEventId });
 
   /* ---------------- 2) Comportamento ---------------- */
   var vid = cookie('ta_vid') || uuid();

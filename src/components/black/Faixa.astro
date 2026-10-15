@@ -1,0 +1,25 @@
+---
+/** Faixa amarela logo abaixo do herói: frases curtas que correm em loop (param com "reduzir movimento"). */
+const FRASES = ['Do primeiro núcleo à venda do mel', 'Aulas gravadas no apiário', 'Live nova toda segunda', 'Comunidade de apicultores'];
+---
+<div class="faixa" role="region" aria-label="Destaques do Clube Tecnoapis">
+  <div class="faixa__trilho">
+    {/* 4 cópias: a primeira metade sempre cobre telas largas, e o loop volta ao início sem salto */}
+    {[0, 1, 2, 3].map((copia) => (
+      <ul class="faixa__lista" aria-hidden={copia ? 'true' : undefined}>
+        {FRASES.map((f) => <li>{f}<span class="faixa__estrela" aria-hidden="true">✦</span></li>)}
+      </ul>
+    ))}
+  </div>
+</div>
+
+<style>
+  .faixa { overflow: hidden; background: var(--accent); color: #17130b; }
+  .faixa__trilho { display: flex; width: max-content; animation: faixa-anda 64s linear infinite; }
+  .faixa__lista { display: flex; margin: 0; padding: 0; list-style: none; }
+  .faixa__lista li { display: flex; align-items: center; gap: 28px; padding-right: 28px; min-height: 56px; white-space: nowrap; font: 800 12.5px/1 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; }
+  .faixa__estrela { font-size: 18px; }
+  @keyframes faixa-anda { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .faixa__trilho { animation: none; } }
+  @media (min-width: 900px) { .faixa__lista li { min-height: 62px; gap: 40px; padding-right: 40px; font-size: 13px; } }
+</style>

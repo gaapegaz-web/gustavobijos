@@ -1,0 +1,41 @@
+---
+/** Marcas e projetos do Gustavo em cards (referência: "Marcas e Produtos" do ericorocha.com.br). */
+import Icons from '../Icons.astro';
+import { MARCAS, visiveis } from '~/config/site';
+interface Props { preview?: boolean }
+const { preview = false } = Astro.props;
+const marcas = visiveis(MARCAS, preview);
+---
+<section class="ta-section ta-section--surface" id="marcas" data-secao="3-marcas">
+  <div class="ta-container">
+    <div class="ta-intro">
+      <span class="ta-pill">Marcas e projetos</span>
+      <h2 class="display-l">O que o Gustavo construiu</h2>
+      <p class="ta-lead">Ensino, certificação, consultoria e eventos, com o mesmo objetivo: uma apicultura mais técnica.</p>
+    </div>
+    <div class="marcas">
+      {marcas.map((m) => {
+        const Tag = m.url ? 'a' : 'div';
+        return (
+          <Tag class:list={['marca', { pendente: !m.confirmado }]} href={m.url} {...(m.externo ? { target: '_blank', rel: 'noopener' } : {})} data-track-click={m.url ? 'CliqueMarca' : undefined} data-track-params={m.url ? JSON.stringify({ content_name: m.id }) : undefined}>
+            <span class="marca__tipo">{m.tipo}</span>
+            <h3>{m.nome}</h3>
+            <p>{m.descricao}</p>
+            {m.url && <span class="marca__link">{m.externo ? 'Visitar site' : 'Conhecer'} <Icons name="arrow" size={16} /></span>}
+          </Tag>
+        );
+      })}
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Colunas se ajustam à quantidade de marcas (até 3 por linha) */
+  .marcas { margin-top: var(--space-12); display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+  .marca { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); color: inherit; text-decoration: none; transition: border-color .15s; }
+  a.marca:hover { border-color: var(--accent); }
+  .marca__tipo { font: 600 11.5px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+  .marca h3 { font: 500 24px/1.15 var(--font-display); color: var(--ink); letter-spacing: -.01em; }
+  .marca p { font: 400 15px/1.55 var(--font-sans); color: var(--ink-muted); flex: 1; }
+  .marca__link { display: inline-flex; align-items: center; gap: 6px; font: 600 14px/1 var(--font-sans); color: var(--ink); }
+</style>

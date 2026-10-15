@@ -1,0 +1,24 @@
+---
+/** Perguntas frequentes. O mesmo conteúdo vira FAQPage no JSON-LD da home (só as confirmadas). */
+import { FAQ_PROFESSOR, visiveis } from '~/config/site';
+interface Props { preview?: boolean }
+const { preview = false } = Astro.props;
+---
+<section class="ta-section ta-section--light" data-theme="light" id="perguntas" data-secao="6-perguntas">
+  <div class="ta-container perguntas">
+    <div class="ta-intro">
+      <span class="ta-pill">Perguntas frequentes</span>
+      <h2 class="display-l">Sobre o Gustavo</h2>
+    </div>
+    <div class="ta-faq">
+      {visiveis(FAQ_PROFESSOR, preview).map((f, i) => (
+        <details class:list={{ pendente: !f.confirmado }} open={i === 0}><summary>{f.p}</summary><p>{f.r}</p></details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .perguntas { display: grid; gap: var(--space-8); }
+  @media (min-width: 900px) { .perguntas { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); gap: var(--space-16); } }
+</style>

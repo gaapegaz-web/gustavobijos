@@ -1,0 +1,19 @@
+---
+/** Página de erro 404 no padrão do site (fixa, leva para a home). */
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
+import Rodape from '~/components/home/Rodape.astro';
+Astro.response.status = 404;
+---
+<Tecnoapis title="Página não encontrada | Gustavo Bijos" noindex>
+  <Menu />
+  <main class="ta-section">
+    <div class="ta-container ta-intro">
+      <span class="ta-pill">Erro 404</span>
+      <h1 class="display-l">Essa página não existe (ou saiu do ar).</h1>
+      <p class="ta-lead">O endereço pode ter mudado. Volte para o início para conhecer o Gustavo e o Clube Tecnoapis.</p>
+      <a class="ta-btn ta-btn--primary ta-btn--lg" href="/">Ir para o início</a>
+    </div>
+  </main>
+  <Rodape />
+</Tecnoapis>

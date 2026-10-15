@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db, findLeadByContact, insertEvento, eventoExiste } from '~/lib/db';
-import { enviarCapi, novoEventId, separarNome } from '~/lib/capi';
+import { enviarCapi, separarNome } from '~/lib/capi';
 import { normalizarWhatsapp } from '~/lib/phone';
 import { ENV } from '~/lib/env';
 import { CAMPANHA } from '~/config/black';

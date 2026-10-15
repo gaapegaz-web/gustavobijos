@@ -3,7 +3,7 @@ import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import Icons from '~/components/Icons.astro';
 import { ENV } from '~/lib/env';
 import { CAMPANHA } from '~/config/black';
-import { fmtDataHora, fmtDiaSemana } from '~/lib/phases';
+import { fmtDataHora, fmtDiaSemana } from '~/lib/texto';
 import { db, insertEvento, type Lead } from '~/lib/db';
 import { enviarCapi, novoEventId, separarNome } from '~/lib/capi';
 import { createHash } from 'node:crypto';
@@ -54,7 +54,7 @@ const am: Record<string, string> | undefined = lead ? {
   country: sha('br'),
 } : undefined;
 ---
-<Tecnoapis title="Inscrição confirmada: entre no grupo" noindex leadEventId={leadEventId} am={am}>
+<Tecnoapis title="Inscrição confirmada: entre no grupo" noindex nofollow leadEventId={leadEventId} am={am}>
   <main class="ob" data-secao="obrigado">
     <div class="ob__in">
       <img class="ob__logo" src="/img/black-friday-logo.webp" alt="Black Friday Tecnoapis" width="353" height="160" />
@@ -105,11 +105,5 @@ const am: Record<string, string> | undefined = lead ? {
   .ob__passo span { font: 400 14.5px/1.35 var(--font-sans); color: var(--ink-muted); }
 
   .ob__btn { margin-top: 6px; width: 100%; gap: var(--space-2); background: #25d366; color: #06210f; animation-name: cta-pulse-verde; }
-  @keyframes cta-pulse-verde {
-    0% { box-shadow: 0 0 0 0 rgba(37,211,102,.6); transform: scale(1); }
-    50% { transform: scale(1.025); }
-    70% { box-shadow: 0 0 0 16px rgba(37,211,102,0); }
-    100% { box-shadow: 0 0 0 0 rgba(37,211,102,0); transform: scale(1); }
-  }
   .ob__nota { font: 400 13.5px/1.4 var(--font-sans); color: var(--ink-muted); }
 </style>

@@ -1,9 +1,7 @@
 import type { APIRoute } from 'astro';
-import { insertLead, insertEvento, db } from '~/lib/db';
+import { insertLead, db } from '~/lib/db';
 import { normalizarWhatsapp } from '~/lib/phone';
-import { lerUtmsDoCookie, lerUtmsDaUrl } from '~/lib/tracking';
-import { ipDoRequest } from '~/lib/tracking';
-import { lerFb } from '~/lib/tracking';
+import { ipDoRequest, lerFb, lerUtmsDaUrl, lerUtmsDoCookie } from '~/lib/tracking';
 
 export const prerender = false;
 
@@ -19,6 +17,8 @@ const emailOk = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
  *    para não inflar Lead com o número da esposa/vizinho testado no mesmo celular.
  */
 export const POST: APIRoute = async ({ request, cookies, clientAddress, url }) => {
+  // Sem JS, o erro volta para a página do formulário (ex.: /black), não para a home
+  const voltar = (() => { try { const r = new URL(request.headers.get('referer') || '', url); return r.host === url.host && !r.pathname.startsWith('/api') ? r.pathname : '/'; } catch { return '/'; } })();
   const ct = request.headers.get('content-type') || '';
   const quereJson = ct.includes('application/json') || (request.headers.get('accept') || '').includes('application/json');
 
@@ -26,18 +26,18 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress, url }) =
   try {
     if (ct.includes('application/json')) dados = await request.json();
     else { const fd = await request.formData(); fd.forEach((v, k) => (dados[k] = String(v))); }
-  } catch { return resposta({ ok: false, erro: 'Dados inválidos' }, 400, quereJson); }
+  } catch { return resposta({ ok: false, erro: 'Dados inválidos' }, 400, quereJson, voltar); }
 
   // Honeypot anti-bot
   if (dados.site) return resposta({ ok: true, redirect: '/obrigado' }, 200, quereJson);
 
   const nome = (dados.nome || '').trim().slice(0, 120);
   const email = (dados.email || '').trim().toLowerCase().slice(0, 200) || null;
-  if (nome.length < 2) return resposta({ ok: false, erro: 'Digite o seu nome', campo: 'nome' }, 422, quereJson);
+  if (nome.length < 2) return resposta({ ok: false, erro: 'Digite o seu nome', campo: 'nome' }, 422, quereJson, voltar);
   const tel = normalizarWhatsapp(dados.whatsapp || '');
-  if (!tel.ok) return resposta({ ok: false, erro: tel.erro, campo: 'whatsapp' }, 422, quereJson);
-  if (email && !emailOk(email)) return resposta({ ok: false, erro: 'E-mail inválido', campo: 'email' }, 422, quereJson);
-  if (dados.consentimento === '0' || dados.consentimento === 'false') return resposta({ ok: false, erro: 'Precisamos do seu consentimento para enviar o link', campo: 'consentimento' }, 422, quereJson);
+  if (!tel.ok) return resposta({ ok: false, erro: tel.erro, campo: 'whatsapp' }, 422, quereJson, voltar);
+  if (email && !emailOk(email)) return resposta({ ok: false, erro: 'E-mail inválido', campo: 'email' }, 422, quereJson, voltar);
+  if (dados.consentimento === '0' || dados.consentimento === 'false') return resposta({ ok: false, erro: 'Precisamos do seu consentimento para enviar o link', campo: 'consentimento' }, 422, quereJson, voltar);
 
   const sessaoId = cookies.get('ta_sid')?.value?.slice(0, 64) || null;
   const visitanteId = cookies.get('ta_vid')?.value?.slice(0, 64) || null;
@@ -93,9 +93,9 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress, url }) =
   return resposta({ ok: true, redirect: '/obrigado' }, 200, quereJson);
 };
 
-function resposta(body: Record<string, unknown>, status: number, json: boolean) {
+function resposta(body: Record<string, unknown>, status: number, json: boolean, voltar = '/') {
   if (json) return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
   if (body.ok && body.redirect) return new Response(null, { status: 303, headers: { location: String(body.redirect) } });
   const q = new URLSearchParams({ erro: String(body.erro || 'Erro'), campo: String(body.campo || '') });
-  return new Response(null, { status: 303, headers: { location: `/?${q}#form` } });
+  return new Response(null, { status: 303, headers: { location: `${voltar}?${q}#form` } });
 }

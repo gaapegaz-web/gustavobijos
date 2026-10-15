@@ -1,0 +1,47 @@
+---
+/** Perguntas sobre o evento (data e hora vêm de black.ts). */
+interface Props { quandoLongo: string; liveJaPassou: boolean }
+const { quandoLongo, liveJaPassou } = Astro.props;
+const PERGUNTAS = [
+  { p: 'Quando acontece o evento?', r: liveJaPassou ? `Aconteceu ${quandoLongo}. A gravação está disponível no grupo.` : `${quandoLongo[0].toUpperCase()}${quandoLongo.slice(1)} (horário de Brasília). É ao vivo e online.` },
+  { p: 'Preciso pagar para participar?', r: 'Não. O evento é gratuito. A oferta da Black Friday do Clube é apresentada durante a transmissão.' },
+  { p: 'Como recebo o link?', r: 'Toque em “Entrar no grupo” e deixe seu nome e WhatsApp. Você entra no grupo, e o link do evento chega por lá.' },
+  { p: 'O que tem dentro do Clube?', r: '25 cursos, mais de 130 horas de aula, 115 lives gravadas, uma live nova toda segunda-feira, grupo de membros e materiais em PDF.' },
+  { p: 'Onde vejo o preço da Black Friday?', r: 'A oferta é revelada ao vivo, no evento. Esteja no grupo para não perder a abertura.' },
+];
+---
+<section class="bf-secao duvidas" id="duvidas" data-secao="7-duvidas">
+  <div class="ta-container duvidas__grid">
+    <div>
+      <span class="bf-olho">Perguntas frequentes</span>
+      <h2 class="bf-titulo">Antes de entrar, tire suas <em>dúvidas.</em></h2>
+    </div>
+    <div class="duvidas__lista">
+      {PERGUNTAS.map((x) => (
+        <details>
+          <summary>{x.p}<span class="duvidas__mais" aria-hidden="true"></span></summary>
+          <p>{x.r}</p>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .duvidas { background: #11120f; }
+  .duvidas__grid { display: grid; gap: 32px; }
+  .duvidas__lista details { border-bottom: 1px solid rgba(255, 255, 255, .16); }
+  .duvidas__lista details:first-child { border-top: 1px solid rgba(255, 255, 255, .16); }
+  .duvidas__lista summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding-block: 16px; cursor: pointer; list-style: none; font: 700 16.5px/1.35 var(--font-sans); color: var(--bf-cream); }
+  .duvidas__lista summary::-webkit-details-marker { display: none; }
+  .duvidas__lista summary:hover { color: var(--accent); }
+  .duvidas__mais { position: relative; flex: none; width: 16px; height: 16px; }
+  .duvidas__mais::before, .duvidas__mais::after { content: ''; position: absolute; left: 0; top: 7px; width: 16px; height: 2px; background: var(--accent); transition: transform .25s; }
+  .duvidas__mais::after { transform: rotate(90deg); }
+  .duvidas__lista details[open] .duvidas__mais::after { transform: rotate(0); }
+  .duvidas__lista p { padding: 0 40px 20px 0; font: 400 15px/1.6 var(--font-sans); color: #bdb9ad; }
+  @media (min-width: 900px) {
+    .duvidas__grid { grid-template-columns: .85fr 1.15fr; gap: 88px; }
+    .duvidas__lista summary { font-size: 17.5px; }
+  }
+</style>

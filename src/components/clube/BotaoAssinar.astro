@@ -1,0 +1,16 @@
+---
+/**
+ * Botão de compra da Assinatura Anual. Com HUBLA_CHECKOUT_CLUBE_URL no .env, usa o BotaoCheckout (regra do projeto:
+ * UTMs + InitiateCheckout). Sem ele, cai no WhatsApp da equipe com mensagem pronta, para o botão nunca ficar quebrado.
+ */
+import BotaoCheckout from '../BotaoCheckout.astro';
+import { ENV } from '~/lib/env';
+interface Props { local: string; class?: string }
+const { local, class: className = 'ta-btn ta-btn--primary ta-btn--lg' } = Astro.props;
+const checkout = ENV.HUBLA_CHECKOUT_CLUBE_URL;
+const whats = ENV.WHATSAPP_SUPORTE_URL;
+const whatsHref = whats ? `${whats}?text=${encodeURIComponent('Olá! Quero assinar o Clube Tecnoapis.')}` : '#assinatura';
+---
+{checkout
+  ? <BotaoCheckout checkoutUrl={checkout} contentName={`assinatura-anual:${local}`} class={className}><slot /></BotaoCheckout>
+  : <a class={className} href={whatsHref} target="_blank" rel="noopener" data-track-click="Contact" data-track-params={JSON.stringify({ content_name: `assinar-whatsapp:${local}` })}><slot /></a>}

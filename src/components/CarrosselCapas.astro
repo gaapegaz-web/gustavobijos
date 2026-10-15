@@ -1,0 +1,94 @@
+---
+/** Carrossel infinito com as capas dos cursos: anda sozinho e dá para arrastar. Ocupa a largura toda da tela. */
+import { CAPAS } from '~/config/clube';
+---
+<div class="capas" role="region" aria-label="Capas dos cursos do Clube Tecnoapis" data-capas>
+  <div class="capas__trilho" data-trilho>
+    {[0, 1].map((copia) => (
+      <ul class="capas__lista" aria-hidden={copia ? 'true' : undefined}>
+        {CAPAS.map(([arquivo, nome]) => (
+          <li><img src={`/img/cursos/${arquivo}.webp`} alt={copia ? '' : nome} width="400" height="560" loading="lazy" decoding="async" draggable="false" /></li>
+        ))}
+      </ul>
+    ))}
+  </div>
+</div>
+
+<script>
+  // Velocidade em px/s. A lista aparece duas vezes: quando a primeira sai inteira, o trilho volta ao início sem salto.
+  const VELOCIDADE = 40;
+  document.querySelectorAll<HTMLElement>('[data-capas]').forEach((caixa) => {
+    const trilho = caixa.querySelector<HTMLElement>('[data-trilho]')!;
+    const lista = trilho.firstElementChild as HTMLElement;
+    const parado = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let largura = 0, x = 0, inercia = 0, visivel = false, antes = 0;
+    let arrastando = false, inicioX = 0, inicioPos = 0, ultX = 0, ultT = 0;
+
+    const medir = () => { largura = lista.offsetWidth + parseFloat(getComputedStyle(trilho).columnGap || '0'); };
+    const pintar = () => { if (largura) x = ((x % largura) + largura) % largura; trilho.style.transform = `translate3d(${-x}px,0,0)`; };
+    const quadro = (t: number) => {
+      const dt = Math.min(t - (antes || t), 50) / 1000;
+      antes = t;
+      if (!arrastando) {
+        x += (parado ? 0 : VELOCIDADE * dt) + inercia * dt;
+        inercia *= Math.pow(0.04, dt); // a inércia do arrasto some em ~1s
+        if (Math.abs(inercia) < 5) inercia = 0;
+        pintar();
+      }
+      if (visivel) requestAnimationFrame(quadro); else antes = 0;
+    };
+
+    new IntersectionObserver(([e]) => {
+      const era = visivel;
+      visivel = e.isIntersecting;
+      if (visivel && !era) requestAnimationFrame(quadro);
+    }).observe(caixa);
+    new ResizeObserver(medir).observe(lista);
+    medir();
+
+    caixa.addEventListener('pointerdown', (e) => {
+      arrastando = true; inercia = 0;
+      inicioX = ultX = e.clientX; inicioPos = x; ultT = e.timeStamp;
+      caixa.setPointerCapture(e.pointerId);
+      caixa.classList.add('capas--arrastando');
+    });
+    caixa.addEventListener('pointermove', (e) => {
+      if (!arrastando) return;
+      const dt = e.timeStamp - ultT;
+      if (dt > 0) inercia = (-(e.clientX - ultX) / dt) * 1000;
+      ultX = e.clientX; ultT = e.timeStamp;
+      x = inicioPos - (e.clientX - inicioX);
+      pintar();
+    });
+    const soltar = () => {
+      if (!arrastando) return;
+      arrastando = false;
+      inercia = Math.max(-2500, Math.min(2500, inercia));
+      caixa.classList.remove('capas--arrastando');
+    };
+    caixa.addEventListener('pointerup', soltar);
+    caixa.addEventListener('pointercancel', soltar);
+  });
+</script>
+
+<style>
+  /* Sangra até a borda da tela; o degradê nas laterais dá a ideia de que a fila não acaba */
+  .capas {
+    --capa: clamp(132px, 36vw, 200px);
+    --fade: min(12%, 120px);
+    margin-top: var(--space-8);
+    overflow: hidden;
+    touch-action: pan-y;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+  }
+  .capas--arrastando { cursor: grabbing; }
+  .capas__trilho { display: flex; column-gap: 12px; width: max-content; will-change: transform; }
+  .capas__lista { display: flex; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .capas__lista li { flex: 0 0 var(--capa); }
+  .capas__lista img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 7; border-radius: var(--radius-md); border: 1px solid var(--border); background: #161616; pointer-events: none; }
+  @media (min-width: 900px) { .capas { margin-top: var(--space-12); } .capas__trilho, .capas__lista { gap: 16px; } }
+</style>

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { db } from '~/lib/db';
-import { lerUtmsDoCookie } from '~/lib/tracking';
+import { lerUtmsDoCookie, ipDoRequest, ehRobo } from '~/lib/tracking';
 
 export const prerender = false;
 
@@ -16,7 +16,7 @@ const int = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.
 type Ev = { tipo: string; alvo?: string; valor?: number; t?: number };
 type Body = { vid?: string; sid?: string; pagina?: string; sessao?: { referrer?: string; largura?: number; altura?: number; dispositivo?: string; fbclid?: boolean }; eventos?: Ev[] };
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, clientAddress }) => {
   let b: Body;
   try { b = await request.json(); } catch { return new Response(null, { status: 400 }); }
   const vid = String(b.vid || ''), sid = String(b.sid || '');
@@ -27,14 +27,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const d = db();
   const utms = lerUtmsDoCookie(cookies);
   const s = b.sessao || {};
+  const ua = txt(request.headers.get('user-agent'), 300);
+  const robo = ehRobo(ua, int(s.largura), int(s.altura));
   const disp = ['celular', 'tablet', 'computador'].includes(String(s.dispositivo)) ? String(s.dispositivo) : null;
 
   d.transaction(() => {
-    d.prepare(`INSERT OR IGNORE INTO sessoes (id, visitante_id, primeira_pagina, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, tem_fbclid, dispositivo, largura, altura, user_agent)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    d.prepare(`INSERT OR IGNORE INTO sessoes (id, visitante_id, primeira_pagina, referrer, utm_source, utm_medium, utm_campaign, utm_content, utm_term, tem_fbclid, dispositivo, largura, altura, user_agent, ip, robo)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       sid, vid, pagina, txt(s.referrer || utms.referrer, 300), utms.utm_source ?? null, utms.utm_medium ?? null, utms.utm_campaign ?? null, utms.utm_content ?? null, utms.utm_term ?? null,
-      s.fbclid || utms.fbclid ? 1 : 0, disp, int(s.largura), int(s.altura), txt(request.headers.get('user-agent'), 300),
+      s.fbclid || utms.fbclid ? 1 : 0, disp, int(s.largura), int(s.altura), ua, ipDoRequest(request, clientAddress), robo ? 1 : 0,
     );
+    if (robo) return; // robô: só a linha da sessão (para contar no painel), sem o comportamento
 
     const ins = d.prepare('INSERT INTO comportamento (sessao_id, pagina, tipo, alvo, valor, t_ms) VALUES (?, ?, ?, ?, ?, ?)');
     let paginas = 0, ativo = 0, scroll = 0, abriu = 0, iniciou = 0, grupo = 0, checkout = 0;

@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS sessoes (
   dispositivo TEXT,                  -- celular | tablet | computador
   largura INTEGER, altura INTEGER,
   user_agent TEXT,
+  ip TEXT,                           -- junta a mesma pessoa quando o cookie muda (aba anônima, cookie apagado)
+  robo INTEGER NOT NULL DEFAULT 0,   -- 1 = robô/teste automático (ver ehRobo em lib/tracking.ts); fica fora do painel
   paginas INTEGER NOT NULL DEFAULT 0,
   tempo_ativo_s INTEGER NOT NULL DEFAULT 0,   -- segundos com a aba visível e a pessoa interagindo
   scroll_max INTEGER NOT NULL DEFAULT 0,      -- maior % rolado em qualquer página da sessão
@@ -105,7 +107,7 @@ SELECT date(created_at, '-3 hours') AS dia,
   sum(clicou_grupo) AS clicou_grupo,
   sum(clicou_checkout) AS clicou_checkout,
   round(avg(tempo_ativo_s), 1) AS tempo_ativo_medio_s
-FROM sessoes GROUP BY dia ORDER BY dia DESC;
+FROM sessoes WHERE robo = 0 GROUP BY dia ORDER BY dia DESC;
 
 CREATE VIEW IF NOT EXISTS v_funil_origem AS
 SELECT coalesce(utm_source, CASE WHEN referrer IS NOT NULL THEN 'referencia' ELSE '(direto)' END) AS origem,

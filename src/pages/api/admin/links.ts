@@ -1,25 +1,13 @@
 import type { APIRoute } from 'astro';
 import { db } from '~/lib/db';
-import { ENV } from '~/lib/env';
 
 export const prerender = false;
 
-/**
- * CRUD simples de links curtos (/r/<slug>), só para o /admin. A mesma basic auth do
- * middleware já protege /admin/*, mas essa rota fica fora de /admin/ (é /api/admin/),
- * então confere a senha de novo aqui.
- */
-function autorizado(request: Request) {
-  const auth = request.headers.get('authorization') || '';
-  const [user, pass] = Buffer.from(auth.replace(/^Basic\s+/i, ''), 'base64').toString().split(':');
-  return !!ENV.ADMIN_PASS && user === ENV.ADMIN_USER && pass === ENV.ADMIN_PASS;
-}
+/** CRUD simples de links curtos (/r/<slug>), só para o /admin. A basic auth é do middleware (protege /admin e /api/admin). */
 
 const SLUG_OK = /^[a-z0-9][a-z0-9-]{1,39}$/;
 
 export const POST: APIRoute = async ({ request }) => {
-  if (!autorizado(request)) return new Response('Acesso restrito', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Tecnoapis Admin"' } });
-
   let body: Record<string, string> = {};
   try { body = await request.json(); } catch { return json({ ok: false, erro: 'Dados inválidos' }, 400); }
 
@@ -55,8 +43,7 @@ export const POST: APIRoute = async ({ request }) => {
   return json({ ok: true, slug });
 };
 
-export const DELETE: APIRoute = async ({ request, url }) => {
-  if (!autorizado(request)) return new Response('Acesso restrito', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Tecnoapis Admin"' } });
+export const DELETE: APIRoute = async ({ url }) => {
   const slug = (url.searchParams.get('slug') || '').trim().toLowerCase();
   if (!slug) return json({ ok: false, erro: 'Falta o slug' }, 400);
   db().prepare('DELETE FROM links WHERE slug = ?').run(slug);

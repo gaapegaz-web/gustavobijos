@@ -1,0 +1,32 @@
+---
+/** Linha do tempo com os marcos e prêmios (referência: "Prêmios e Conquistas" do ericorocha.com.br). */
+import { TRAJETORIA, visiveis } from '~/config/site';
+interface Props { preview?: boolean }
+const { preview = false } = Astro.props;
+---
+<section class="ta-section" id="trajetoria" data-secao="5-trajetoria">
+  <div class="ta-container">
+    <div class="ta-intro">
+      <span class="ta-pill">Trajetória</span>
+      <h2 class="display-l">Uma vida dedicada às abelhas</h2>
+    </div>
+    <ol class="linha">
+      {visiveis(TRAJETORIA, preview).map((m) => (
+        <li class:list={{ pendente: !m.confirmado }}>
+          <span class="linha__ano">{m.ano}</span>
+          <div><h3>{m.titulo}</h3><p>{m.texto}</p></div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .linha { list-style: none; margin: var(--space-12) 0 0; padding: 0; display: grid; gap: 0; }
+  .linha li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-4); padding: var(--space-6) 0; border-top: 1px solid var(--border); }
+  .linha li:last-child { border-bottom: 1px solid var(--border); }
+  .linha__ano { font: 500 28px/1 var(--font-display); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .linha h3 { font: 600 17px/1.3 var(--font-sans); color: var(--ink); margin-bottom: var(--space-1); }
+  .linha p { font: 400 15px/1.55 var(--font-sans); color: var(--ink-muted); }
+  @media (min-width: 820px) { .linha li { grid-template-columns: 160px minmax(0, 1fr); padding: var(--space-8) 0; } .linha__ano { font-size: 40px; } }
+</style>

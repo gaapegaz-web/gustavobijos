@@ -1,0 +1,63 @@
+---
+/** O que entra na Black (sem preço nem bônus específicos: a oferta é revelada no evento) e o botão do meio da página. */
+import BotaoGrupo from './BotaoGrupo.astro';
+interface Props { nota: string }
+const { nota } = Astro.props;
+const ITENS = [
+  { titulo: 'Todos os cursos', texto: '25 cursos e 130 horas: multiplicação, rainhas, manejo, produtos e APISMONEY.' },
+  { titulo: 'Lives toda segunda', texto: 'Ao vivo com o Gustavo, com tira-dúvidas, mais 115 lives gravadas no acervo.' },
+  { titulo: 'Comunidade do Clube', texto: 'Grupo de membros, carteirinha digital e descontos nas lojas parceiras.' },
+  { titulo: 'Bônus para quem chega primeiro', texto: 'Os primeiros compradores levam bônus que não voltam depois.' },
+];
+---
+<section class="bf-secao nablack" data-secao="5-na-black">
+  <span class="nablack__anel" aria-hidden="true"></span>
+  <div class="ta-container">
+    <span class="bf-olho">Na Black Friday</span>
+    <h2 class="bf-titulo nablack__titulo">Tudo o que entra <em>na Black.</em></h2>
+    <p class="bf-texto nablack__lead">O Clube Tecnoapis completo, do primeiro núcleo à venda do mel.</p>
+    <ol class="nablack__grid">
+      {ITENS.map((x, i) => (
+        <li>
+          <span class="nablack__n">{String(i + 1).padStart(2, '0')}</span>
+          <h3>{x.titulo}</h3>
+          <p>{x.texto}</p>
+        </li>
+      ))}
+    </ol>
+    <div class="nablack__painel">
+      <div>
+        <p class="nablack__chamada">A oferta é revelada no evento.</p>
+        <p class="nablack__nota">Esteja no grupo para não perder. {nota}</p>
+      </div>
+      <BotaoGrupo alvo="form:meio" nome="trava_cta" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .nablack { overflow: hidden; background: radial-gradient(ellipse at 100% 0%, rgba(242, 169, 0, .10), transparent 50%), var(--bf-brown); }
+  .nablack__anel { position: absolute; top: -120px; right: -170px; width: 420px; height: 420px; border: 1px solid rgba(242, 169, 0, .14); border-radius: 50%; box-shadow: 0 0 0 70px rgba(242, 169, 0, .025), 0 0 0 140px rgba(242, 169, 0, .018); pointer-events: none; }
+  .nablack .ta-container { position: relative; }
+  .nablack__titulo { max-width: 16ch; }
+  .nablack__lead { margin-top: 18px; }
+  .nablack__grid { display: grid; gap: 12px; margin: 40px 0 0; padding: 0; list-style: none; }
+  /* Celular: número ao lado do texto, para os 4 cartões não ocuparem a tela toda */
+  .nablack__grid li { display: grid; grid-template-columns: 52px 1fr; column-gap: 14px; padding: 20px; border: 1px solid #5a4828; border-radius: 18px; background: #2a241a; }
+  .nablack__n { grid-row: span 2; font: 600 38px/1 var(--font-display); color: var(--accent); }
+  .nablack__grid h3 { font: 700 17px/1.3 var(--font-sans); color: var(--bf-cream); }
+  .nablack__grid p { margin-top: 6px; font: 400 14.5px/1.55 var(--font-sans); color: #c7bca8; }
+  .nablack__grid li:last-child { border-color: var(--accent); background: linear-gradient(150deg, #3a2a0e, #2a2015); }
+  .nablack__painel { display: grid; gap: 22px; margin-top: 32px; padding: 26px 22px; border: 1px solid var(--accent); border-radius: 20px; background: linear-gradient(120deg, #33240c, #261c10); }
+  .nablack__chamada { font: 600 clamp(24px, 6vw, 30px)/1.12 var(--font-display); letter-spacing: -.02em; color: var(--bf-cream); }
+  .nablack__nota { margin-top: 8px; font: 400 14.5px/1.5 var(--font-sans); color: #d6c095; }
+  @media (min-width: 640px) { .nablack__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1000px) {
+    .nablack__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 52px; }
+    .nablack__grid li { display: block; padding: 28px; min-height: 250px; }
+    .nablack__n { font-size: 44px; }
+    .nablack__grid h3 { margin-top: 18px; }
+    .nablack__painel { grid-template-columns: 1fr auto; align-items: center; gap: 32px; margin-top: 40px; padding: 32px 36px; }
+    .nablack__painel :global(.ta-btn) { min-width: 300px; }
+  }
+</style>

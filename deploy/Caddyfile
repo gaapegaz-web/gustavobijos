@@ -1,4 +1,9 @@
 # /etc/caddy/Caddyfile
+# http://www -> https raiz em um salto só (sem passar por https://www)
+http://www.gustavobijos.com.br {
+    redir https://gustavobijos.com.br{uri} permanent
+}
+
 gustavobijos.com.br, www.gustavobijos.com.br {
     # www -> raiz
     @www host www.gustavobijos.com.br
@@ -6,8 +11,12 @@ gustavobijos.com.br, www.gustavobijos.com.br {
 
     encode zstd gzip
 
-    # estáticos com cache longo
-    @static path /js/* /img/* /_astro/* /favicon.svg /robots.txt
+    # /_astro/* tem hash no nome: pode ficar 1 ano no cache
+    @imutavel path /_astro/*
+    header @imutavel Cache-Control "public, max-age=31536000, immutable"
+
+    # demais estáticos: 7 dias (imagens trocam de nome com ?v=)
+    @static path /js/* /img/* /favicon.ico /robots.txt
     header @static Cache-Control "public, max-age=604800"
 
     header {
