@@ -1,8 +1,10 @@
 ---
-/** "O Clube Tecnoapis": proposta em faixa creme e os números do Clube em cartões (números de clube.ts). */
-import { NUMEROS } from '~/config/clube';
-const DESCRICAO: Record<string, string> = { cursos: 'cursos completos', 'de conteúdo': 'de aulas gravadas', 'lives gravadas': 'lives gravadas no acervo' };
-const cartoes = [...NUMEROS.map((x) => ({ n: x.n, l: DESCRICAO[x.l] ?? x.l })), { n: 'Ao vivo', l: 'live nova toda segunda-feira' }];
+/**
+ * "O Clube Tecnoapis": proposta em faixa creme e os números do Clube em cartões com foto (NumerosClube.astro).
+ * Miniaturas do "Prática real" em public/img/clube/clube-mini-*.webp.
+ */
+import NumerosClube from '../NumerosClube.astro';
+const MINIS = ['clube-mini-nucleos', 'clube-mini-quadros', 'clube-mini-propolis'];
 ---
 <section class="bf-secao bf-claro clube" id="clube" data-secao="2-clube">
   <div class="ta-container clube__grid">
@@ -11,37 +13,28 @@ const cartoes = [...NUMEROS.map((x) => ({ n: x.n, l: DESCRICAO[x.l] ?? x.l })), 
       <h2 class="bf-titulo">Conhecimento que sai da tela e entra no <em>apiário.</em></h2>
       <p class="bf-texto clube__texto">Do manejo das colmeias à gestão do negócio, o Clube reúne aulas gravadas no campo, encontros ao vivo e materiais práticos para quem quer evoluir na apicultura.</p>
       <div class="clube__destaque">
-        <span class="bf-hex clube__hex" aria-hidden="true"></span>
+        <span class="clube__minis" aria-hidden="true">
+          {MINIS.map((m) => <img src={`/img/clube/${m}.webp`} alt="" width="56" height="56" loading="lazy" decoding="async" />)}
+        </span>
         <p><strong>Prática real.</strong><span>Teoria e prática gravadas no apiário, para aplicar no seu dia a dia.</span></p>
       </div>
     </div>
-    <ul class="clube__numeros" aria-label="O Clube em números">
-      {cartoes.map((c) => <li><i class="bf-hex" aria-hidden="true"></i><strong>{c.n}</strong><span>{c.l}</span></li>)}
-    </ul>
+    <NumerosClube colunas={2} />
   </div>
 </section>
 
 <style>
   .clube__grid { display: grid; gap: 48px; align-items: center; }
   .clube__texto { margin-top: 20px; }
-  .clube__destaque { display: flex; align-items: center; gap: 18px; margin-top: 28px; padding: 20px 22px; border: 1px solid #d6c9b1; border-radius: 20px; background: #ebe2cf; }
-  .clube__hex { flex: none; width: 30px; height: 33px; background: var(--accent); }
+  .clube__destaque { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; margin-top: 28px; padding: 18px 20px; border: 1px solid #d6c9b1; border-radius: 20px; background: #ebe2cf; }
+  .clube__minis { display: flex; flex: none; }
+  .clube__minis img { width: 44px; height: 44px; border: 2px solid #ebe2cf; border-radius: 50%; object-fit: cover; }
+  .clube__minis img + img { margin-left: -14px; }
   .clube__destaque p { display: flex; flex-direction: column; gap: 4px; font: 400 14.5px/1.45 var(--font-sans); color: #5b564a; }
-  .clube__destaque strong { font: 700 26px/1 var(--font-display); letter-spacing: -.01em; color: var(--bf-ink); }
-  .clube__numeros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
-  .clube__numeros li { display: flex; flex-direction: column; justify-content: space-between; gap: 22px; min-height: 150px; padding: 18px; border: 1px solid #d7cab3; border-radius: 20px; background: #e9e0cf; }
-  .clube__numeros li:nth-child(2) { background: #e4d6bb; }
-  .clube__numeros li:nth-child(3) { background: #efe5d2; }
-  .clube__numeros li:nth-child(4) { background: var(--bf-ink); border-color: var(--bf-ink); color: var(--bf-cream); }
-  .clube__numeros i { width: 18px; height: 20px; background: #d59207; }
-  .clube__numeros strong { font: 700 clamp(38px, 10vw, 56px)/1 var(--font-display); letter-spacing: -.01em; }
-  .clube__numeros li:nth-child(4) strong { font-size: clamp(30px, 8vw, 44px); color: var(--accent); }
-  .clube__numeros span { margin-top: -14px; font: 600 13px/1.3 var(--font-sans); color: #5b554a; }
-  .clube__numeros li:nth-child(4) span { color: var(--bf-texto-2); }
+  .clube__destaque strong { font: 700 24px/1 var(--font-display); letter-spacing: -.01em; color: var(--bf-ink); }
   @media (min-width: 900px) {
     .clube__grid { grid-template-columns: 1fr 1fr; gap: 72px; }
-    .clube__numeros { gap: 14px; }
-    .clube__numeros li { min-height: 190px; padding: 24px; }
-    .clube__numeros span { font-size: 14px; }
+    .clube__destaque { flex-direction: row; align-items: center; gap: 16px; }
+    .clube__minis img { width: 52px; height: 52px; }
   }
 </style>

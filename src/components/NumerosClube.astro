@@ -1,0 +1,56 @@
+---
+/**
+ * Números do Clube em faixas com foto escura de fundo (números de clube.ts). Usado na /black, na home e na /tecnoapis.
+ * Layout da faixa de números do ericorocha.com.br: centralizado, ícone em cor de acento, número grande, legenda em maiúsculas.
+ * No celular as faixas ficam empilhadas; no computador, lado a lado (`colunas`).
+ * Fotos recortadas das capas dos cursos (public/img/clube/, 420x420). Ao trocar uma foto, use nome novo (cache de 7 dias).
+ */
+import Icons from './Icons.astro';
+import { NUMEROS } from '~/config/clube';
+interface Props { colunas?: 2 | 4; class?: string }
+const { colunas = 4, class: classe } = Astro.props;
+const DESCRICAO: Record<string, string> = { cursos: 'cursos completos', 'de conteúdo': 'de aulas gravadas', 'lives gravadas': 'lives gravadas no acervo' };
+const EXTRAS = [
+  { icone: 'award', foto: { src: '/img/clube/clube-aula-apiario.webp', alt: 'Aula prática no apiário com alunos de macacão' } },
+  { icone: 'clock', foto: { src: '/img/clube/clube-manejo-colmeia.webp', alt: 'Mão de luva manejando quadros dentro da colmeia' } },
+  { icone: 'youtube', foto: { src: '/img/clube/clube-lives-acervo.webp', alt: 'Gustavo Bijos ao microfone durante uma live' } },
+] as const;
+const faixas = [
+  ...NUMEROS.map((x, i) => ({ n: x.n, l: DESCRICAO[x.l] ?? x.l, ...EXTRAS[i] })),
+  { n: 'Segunda', l: 'live nova toda semana', icone: undefined, foto: { src: '/img/clube/clube-live-segunda.webp', alt: 'Gustavo Bijos ao vivo, fazendo sinal de positivo' }, aoVivo: true },
+];
+---
+<ul class:list={['nclube', `nclube--${colunas}`, classe]} aria-label="O Clube em números">
+  {faixas.map((c) => (
+    <li class:list={{ 'nclube__vivo': c.aoVivo }}>
+      <img src={c.foto.src} alt={c.foto.alt} width="420" height="420" loading="lazy" decoding="async" />
+      {c.aoVivo ? <em class="nclube__selo"><i aria-hidden="true"></i>Ao vivo</em> : c.icone && <span class="nclube__icone"><Icons name={c.icone} size={28} /></span>}
+      <strong>{c.n}</strong>
+      <span class="nclube__legenda">{c.l}</span>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .nclube { display: grid; grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; text-align: center; border-radius: var(--radius-lg); overflow: hidden; }
+  .nclube li { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 176px; padding: 28px 20px; background: #0a0a0a; color: #fff; }
+  .nclube img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; filter: grayscale(.35); }
+  /* Foto bem escura; faixas alternam o tom, como na referência */
+  .nclube li::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(10, 10, 10, .84); }
+  .nclube li:nth-child(even)::before { background: rgba(22, 18, 10, .76); }
+  .nclube__icone { display: inline-flex; color: #f2a900; }
+  .nclube strong { font: 700 clamp(44px, 12vw, 56px)/1 var(--font-display); letter-spacing: -.01em; color: #fff; }
+  .nclube__legenda { font: 600 12.5px/1.4 var(--font-sans); letter-spacing: .14em; text-transform: uppercase; color: #d8d0c0; max-width: 18ch; }
+  .nclube__vivo strong { color: #f2a900; }
+  .nclube__selo { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid rgba(255, 255, 255, .25); border-radius: 999px; background: rgba(10, 10, 10, .6); font: 700 11px/1 var(--font-sans); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: #fff; }
+  .nclube__selo i { width: 8px; height: 8px; border-radius: 50%; background: #e5322d; animation: nclube-pisca 1.6s ease-in-out infinite; }
+  @keyframes nclube-pisca { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .nclube__selo i { animation: none; } }
+  @media (min-width: 900px) {
+    .nclube--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .nclube--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .nclube li { min-height: 240px; }
+    .nclube--2 li:nth-child(n)::before { background: rgba(10, 10, 10, .84); }
+    .nclube--2 li:nth-child(2)::before, .nclube--2 li:nth-child(3)::before { background: rgba(22, 18, 10, .76); }
+  }
+</style>
