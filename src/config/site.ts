@@ -43,6 +43,7 @@ export const BIO = {
     { texto: 'Em 2017 criou o primeiro curso online de apicultura do Brasil. Desse trabalho nasceu o Clube Tecnoapis, que hoje reúne 25 cursos, mais de 130 horas de aula e uma live nova toda segunda-feira.', confirmado: true },
     { texto: 'Já foi instrutor do SENAR e do SEBRAE e hoje leva a apicultura técnica para congressos no Brasil e no Paraguai.', confirmado: true },
     { texto: 'Também criou o APIS+, certificação de boas práticas apícolas, e a NB Consultoria Veterinária, que presta consultoria em qualquer lugar do país.', confirmado: true },
+    { texto: 'Em 2026, o APIS+ ganhou ouro na categoria Inovação da FILAPI, em Mar del Plata, Argentina.', confirmado: true },
   ] satisfies Fato[],
 };
 
@@ -58,10 +59,11 @@ export const PERFIS_GUSTAVO = PERFIS.filter((p) => p.de === 'gustavo').map((p) =
 export const PERFIS_CLUBE = PERFIS.filter((p) => p.de === 'clube').map((p) => p.url);
 
 /** `empresa: true` = negócio do Gustavo: vira Organization no JSON-LD, com ele como fundador. */
-export type Marca = { id: string; nome: string; tipo: string; descricao: string; url?: string; externo?: boolean; empresa?: boolean; confirmado: boolean };
+/** `premio`: vira `award` da Organization no JSON-LD. */
+export type Marca = { id: string; nome: string; tipo: string; descricao: string; url?: string; externo?: boolean; empresa?: boolean; premio?: string; confirmado: boolean };
 export const MARCAS: Marca[] = [
   { id: 'clube', nome: 'Clube Tecnoapis', tipo: 'Escola online', descricao: '25 cursos de apicultura, 115 lives gravadas e uma live nova toda segunda. Multiplicação, rainhas, manejo e gestão do apiário.', url: SITE.clubeUrl.startsWith('/#') ? undefined : SITE.clubeUrl, confirmado: true },
-  { id: 'apis-mais', nome: 'APIS+ Certificação', tipo: 'Certificação', descricao: 'Certificação voluntária de boas práticas apícolas e proteção de polinizadores.', url: 'https://apismais.com.br', externo: true, empresa: true, confirmado: true },
+  { id: 'apis-mais', nome: 'APIS+ Certificação', tipo: 'Certificação', descricao: 'Certificação voluntária de boas práticas apícolas e proteção de polinizadores. Ouro em Inovação na FILAPI 2026.', url: 'https://apismais.com.br', externo: true, empresa: true, premio: 'Ouro na categoria Inovação, FILAPI 2026 (Mar del Plata, Argentina)', confirmado: true },
   { id: 'nb', nome: 'NB Consultoria Veterinária', tipo: 'Consultoria', descricao: 'A empresa de consultoria do Gustavo. Atende em qualquer lugar do Brasil.', empresa: true, confirmado: true },
   { id: 'palestras', nome: 'Palestras e cursos', tipo: 'Presencial', descricao: 'Já foi instrutor do SENAR e do SEBRAE. Palestrante em congressos de apicultura no Brasil e no Paraguai.', confirmado: true },
   { id: 'expo', nome: 'Expo Tecnoapis', tipo: 'Evento', descricao: 'Evento de inovação, tecnologia e novos negócios na apicultura. Próximas edições a definir.', confirmado: true },
@@ -72,6 +74,7 @@ export type Marco = { ano: string; titulo: string; texto: string; confirmado: bo
 export const TRAJETORIA: Marco[] = [
   { ano: '2017', titulo: 'Primeiro curso online do Brasil', texto: 'Cria o primeiro curso online de apicultura do país, que dá origem ao Clube Tecnoapis.', confirmado: true },
   { ano: '2023', titulo: 'Lives semanais', texto: 'Começa a live toda segunda-feira. Hoje são 115 gravadas, mais de 100 horas.', confirmado: true },
+  { ano: '2026', titulo: 'Ouro na FILAPI', texto: 'O selo APIS+ vence a categoria Inovação da FILAPI 2026, em Mar del Plata, Argentina.', confirmado: true },
 ];
 
 export type Pergunta = { p: string; r: string; confirmado: boolean };
@@ -83,7 +86,7 @@ export const FAQ_PROFESSOR: Pergunta[] = [
   { p: 'O que é o Clube Tecnoapis?', r: 'É a escola online de apicultura do Gustavo: 25 cursos, mais de 130 horas de aula, 115 lives gravadas e uma live nova toda segunda-feira, além de grupo de membros e materiais em PDF.', confirmado: true },
   { p: 'O que o Gustavo ensina?', r: 'Multiplicação de colmeias e produção de núcleos, produção de rainhas (Miller e Doolittle), leitura de enxame, alimentação, sanidade, produção de própolis e geleia real, e gestão do apiário com o APISMONEY.', confirmado: true },
   { p: 'Onde ele atua?', r: 'Mora em Campo Grande, Mato Grosso do Sul, e atende todo o Brasil: faz consultoria e palestras onde for preciso e dá aulas online pelo Clube Tecnoapis.', confirmado: true },
-  { p: 'O que é o APIS+?', r: 'Uma certificação voluntária de boas práticas apícolas e proteção de polinizadores, criada pelo Gustavo.', confirmado: true },
+  { p: 'O que é o APIS+?', r: 'Uma certificação voluntária de boas práticas apícolas e proteção de polinizadores, criada pelo Gustavo. Em 2026, ganhou ouro na categoria Inovação da FILAPI, em Mar del Plata, Argentina.', confirmado: true },
   { p: 'Quais cargos ele já ocupou no setor?', r: 'Foi presidente da ASA, da FEAMS e da ALESPANA, coordenador da Câmara Setorial da Apicultura do MS e diretor-presidente do COFENAL. Hoje é professor e consultor em apicultura.', confirmado: true },
 ];
 
@@ -92,7 +95,6 @@ export const visiveis = <T extends { confirmado: boolean }>(itens: T[], preview 
 
 /*
  * A CONFIRMAR / A COLOCAR DEPOIS (para usar, mova de volta para a lista certa):
- * FILAPI: confirmado pelo Gustavo, entra quando chegarem as fotos. Trajetória fica sem os anos de 2000 e 2001 (pedido dele).
- * Ao entrar, também acrescentar "Ouro em Inovação na FILAPI 2026" à descrição do APIS+ em MARCAS.
- * { ano: '2026', titulo: 'Ouro na FILAPI', texto: 'O selo APIS+ vence a categoria Inovação da FILAPI 2026, em Mar del Plata, Argentina.', confirmado: false },
+ * Trajetória fica sem os anos de 2000 e 2001 (pedido do Gustavo).
+ * FILAPI (ouro em Inovação, 2026): entrou em 16/10/2026 na bio, no APIS+ (MARCAS, com `premio`), no FAQ e na TRAJETORIA, sem foto.
  */

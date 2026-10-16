@@ -65,7 +65,7 @@ const grafo = {
       knowsAbout: TEMAS,
       ...(sameAsGustavo.length ? { sameAs: sameAsGustavo } : {}),
     },
-    ...empresas.map((m) => ({ '@type': 'Organization', '@id': `${site}#${m.id}`, name: m.nome, description: m.descricao, founder: { '@id': `${site}#gustavo` }, ...(m.url && m.externo ? { url: m.url } : {}) })),
+    ...empresas.map((m) => ({ '@type': 'Organization', '@id': `${site}#${m.id}`, name: m.nome, description: m.descricao, founder: { '@id': `${site}#gustavo` }, ...(m.url && m.externo ? { url: m.url } : {}), ...(m.premio ? { award: m.premio } : {}) })),
     { '@type': 'WebSite', '@id': `${site}#site`, url: site, name: SITE.apelido, alternateName: `${SITE.professor} | ${SITE.clube}`, inLanguage: 'pt-BR', publisher: { '@id': `${site}#gustavo` } },
     { '@type': pageType, '@id': `${canonical}#pagina`, url: canonical, name: title, description, inLanguage: 'pt-BR', isPartOf: { '@id': `${site}#site` }, primaryImageOfPage: { '@type': 'ImageObject', url: ogImageUrl, width: ogImageLargura, height: ogImageAltura }, ...(pageType === 'ProfilePage' ? { mainEntity: { '@id': `${site}#gustavo` } } : {}) },
     ...jsonLd,
