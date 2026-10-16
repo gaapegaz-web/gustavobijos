@@ -52,8 +52,7 @@ const icone = (rede: string) => (rede.toLowerCase() === 'youtube' ? 'youtube' : 
       </div>
       {PERFIS.length > 0 && (
         <div class="menu__redes">
-          <span>Siga o Gustavo:</span>
-          {PERFIS.map((p) => <a href={p.url} target="_blank" rel="noopener" aria-label={`${p.rede} ${p.usuario}`} data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}><Icons name={icone(p.rede)} size={22} /></a>)}
+          {PERFIS.map((p) => <a href={p.url} target="_blank" rel="noopener" aria-label={`${p.rede} ${p.usuario}`} data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}><Icons name={icone(p.rede)} size={18} /></a>)}
         </div>
       )}
     </div>
@@ -129,8 +128,8 @@ const icone = (rede: string) => (rede.toLowerCase() === 'youtube' ? 'youtube' : 
   .menu__lista a[aria-current='page'] > span:first-child { color: var(--accent-ink); }
   .menu__painel-ctas { display: flex; flex-direction: column; gap: var(--space-3); }
   .menu__painel-ctas .ta-btn { width: 100%; }
-  .menu__redes { display: flex; align-items: center; gap: var(--space-3); color: var(--ink-muted); font: 400 15px/1 var(--font-sans); }
-  .menu__redes a { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: var(--on-accent); }
+  .menu__redes { display: flex; align-items: center; gap: var(--space-3); }
+  .menu__redes a { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: var(--on-accent); }
   :global(html.menu-travado) { overflow: hidden; }
 
   @media (min-width: 900px) {
