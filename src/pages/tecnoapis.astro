@@ -6,25 +6,22 @@
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import Menu from '~/components/home/Menu.astro';
 import Rodape from '~/components/home/Rodape.astro';
+import CarrosselCapas from '~/components/CarrosselCapas.astro';
 import ClubeConteudo from '~/components/ClubeConteudo.astro';
 import Sobre from '~/components/home/Sobre.astro';
 import Perguntas from '~/components/home/Perguntas.astro';
 import AjudaWhatsapp from '~/components/AjudaWhatsapp.astro';
 import BotaoAssinar from '~/components/clube/BotaoAssinar.astro';
 import Icons from '~/components/Icons.astro';
-import { AREAS, BIO_CLUBE, FAQ_CLUBE, INCLUSO_CLUBE, NIVEIS_CLUBE, OFERTA_CLUBE, RESULTADOS_CLUBE } from '~/config/clube';
+import { AREAS, BIO_CLUBE, FAQ_CLUBE, INCLUSO_CLUBE, NIVEIS_CLUBE, NUMEROS, OFERTA_CLUBE, RESULTADOS_CLUBE } from '~/config/clube';
 import { BIO, SITE } from '~/config/site';
-import { acharImagem, srcsetImagem } from '~/lib/imagens';
 import { brl } from '~/lib/texto';
 
 export const prerender = false;
 
-// Herói: mesma foto vertical da Black (public/img/gustavo-hero.*). Sem ela, silhueta provisória no mesmo lugar.
-const fotoReal = acharImagem('gustavo-hero');
-const fotoHero = fotoReal ?? '/img/gustavo-hero-vazio.svg';
-const fotoLarga = fotoReal && acharImagem('gustavo-hero-largo');
-const srcsetHero = fotoReal && srcsetImagem('gustavo-hero', [720], 1080);
-const srcsetLarga = fotoLarga && srcsetImagem('gustavo-hero-largo', [1280], 1920);
+// Herói (pedido do Gabriel em 16/10/2026): a página abre falando do Clube, não do professor. Título, o que é o Clube,
+// carrossel de capas e botão, tudo na primeira tela. O Gustavo aparece mais abaixo ("Quem é Gustavo Bijos?").
+const [cursos, horas] = NUMEROS;
 const url = `${SITE.dominio}/tecnoapis`;
 const ld = [
   {
@@ -50,19 +47,16 @@ const ld = [
   <Menu transparente />
   <main>
 
-    <section data-secao="1-hero" class:list={['cl-hero', { 'cl-hero--sem-foto': !fotoReal }]}>
-      <div class="cl-hero__fundo" aria-hidden="true">
-        <picture>
-          {fotoLarga && <source media="(min-width: 900px)" srcset={srcsetLarga} sizes="100vw" width="1920" height="1280" />}
-          <img src={fotoHero} srcset={srcsetHero} sizes="100vw" alt="" width="1080" height="1920" fetchpriority="high" />
-        </picture>
-      </div>
+    <section data-secao="1-hero" class="cl-hero">
       <div class="ta-container cl-hero__body">
         {/* A tag entra no H1 para ele conter "curso de apicultura online" (a busca principal da página) */}
         <h1 class="cl-hero__h1"><span class="cl-hero__tag">Curso de apicultura online</span> <span class="cl-hero__titulo">Todo o conhecimento para <em>viver da apicultura</em>.</span></h1>
-        <p class="cl-hero__sub">Aumente a sua produção, tenha resultado financeiro e domine os manejos corretos.</p>
+        <p class="cl-hero__sub">O {SITE.clube} reúne {cursos.n} {cursos.l} e {horas.n} de aulas gravadas no apiário, com uma live nova toda segunda.</p>
+      </div>
+      <CarrosselCapas topo class="cl-hero__capas" sizes="(min-width: 900px) 210px, 36vw" />
+      <div class="ta-container cl-hero__acao">
         <BotaoAssinar local="topo" class="ta-btn ta-btn--primary ta-btn--lg cta-pulse">Quero assinar o Clube</BotaoAssinar>
-        <p class="ta-small">1 ano de acesso · 7 dias de garantia · {BIO.anos} anos de apicultura</p>
+        <p class="ta-small">1 ano de acesso · {OFERTA_CLUBE.garantiaDias} dias de garantia · até {OFERTA_CLUBE.parcelas}x no cartão</p>
       </div>
     </section>
 
@@ -79,7 +73,7 @@ const ld = [
       </div>
     </section>
 
-    <ClubeConteudo titulo="Estes são os <em>cursos</em> da plataforma" lead="Teoria e prática gravadas no apiário, do primeiro núcleo à venda do mel." />
+    <ClubeConteudo titulo="O que tem no <em>Clube Tecnoapis</em>" lead="Teoria e prática gravadas no apiário, do primeiro núcleo à venda do mel." capas={false} />
 
     <section class="ta-section ta-section--light" data-theme="light" data-secao="4-live">
       <div class="ta-container live">
@@ -153,26 +147,28 @@ const ld = [
 </Tecnoapis>
 
 <style>
-  /* Herói no molde da Black: foto do Gustavo de fundo, texto e botão centralizados embaixo, tudo na primeira tela */
-  .cl-hero { position: relative; display: flex; align-items: flex-end; min-height: 100svh; overflow: hidden; background: #0a0a0a; }
-  .cl-hero__fundo { position: absolute; inset: 0; z-index: 0; }
-  .cl-hero__fundo picture { display: contents; }
-  .cl-hero__fundo img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
-  .cl-hero__fundo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,10,10,.15) 0%, rgba(10,10,10,.1) 35%, rgba(10,10,10,.82) 62%, #0a0a0a 88%); }
-  @media (min-width: 900px) { .cl-hero--sem-foto .cl-hero__fundo img { object-position: center 30%; } }
-  .cl-hero__body { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding-bottom: var(--space-10); }
-  .cl-hero__h1 { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
-  .cl-hero__tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent, #111); font: 700 10.5px/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
-  .cl-hero__titulo { display: block; max-width: 18ch; font-family: var(--font-display); font-size: clamp(28px, 7vw, 46px); line-height: 1.08; font-weight: 700; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
+  /* Herói do Clube: tudo na primeira tela, do título ao botão. Fundo escuro com brilho de mel e favo; o carrossel de capas
+     ocupa o espaço que sobra (a largura da capa sai da altura da tela). Medido em 375x553, 360x640, 390x664 e 412x780. */
+  .cl-hero { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 100svh; padding: 76px 0 var(--space-5); overflow: hidden; background:
+    radial-gradient(90% 55% at 50% 0%, rgba(242,169,0,.22), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='48' viewBox='0 0 56 48'%3E%3Cpath d='M14 1h28l14 23-14 23H14L0 24z' fill='none' stroke='%23f2a900' stroke-opacity='.07' stroke-width='1.5'/%3E%3C/svg%3E") 0 0 / 56px 48px,
+    #0a0a0a; }
+  .cl-hero__body { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); }
+  .cl-hero__h1 { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+  .cl-hero__tag { display: inline-flex; align-items: center; height: 24px; padding: 0 11px; border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent, #111); font: 700 11px/1 var(--font-sans); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+  .cl-hero__titulo { display: block; max-width: 22ch; font-family: var(--font-display); font-size: clamp(27px, 7.4vw, 50px); line-height: 1.08; font-weight: 700; letter-spacing: -.01em; color: var(--ink); text-wrap: balance; }
   .cl-hero__titulo em { font-style: normal; font-weight: 700; color: var(--accent); }
-  .cl-hero__sub { max-width: 46ch; font: 400 15.5px/1.55 var(--font-sans); color: rgba(255,255,255,.78); text-wrap: balance; }
-  .cl-hero__body :global(.ta-btn) { margin-top: var(--space-2); width: 100%; max-width: 420px; }
-  .cl-hero__body .ta-small { text-align: center; }
+  .cl-hero__sub { max-width: 40ch; font: 400 15px/1.5 var(--font-sans); color: rgba(255,255,255,.8); text-wrap: balance; }
+  .cl-hero { --capas-largura: clamp(92px, calc((100svh - 420px) / 1.4), 170px); --capas-margem: var(--space-5); }
+  .cl-hero :global(.cl-hero__capas) { margin-bottom: var(--space-5); }
+  .cl-hero__acao { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+  .cl-hero__acao :global(.ta-btn) { width: 100%; max-width: 420px; }
+  .cl-hero__acao .ta-small { text-align: center; }
   @media (min-width: 900px) {
-    .cl-hero { min-height: min(100svh, 860px); }
-    .cl-hero__body { padding-bottom: var(--space-16); }
-    .cl-hero__sub { font-size: 17px; }
-    .cl-hero__fundo::after { background: linear-gradient(180deg, rgba(10,10,10,.1) 0%, rgba(10,10,10,.25) 40%, rgba(10,10,10,.85) 70%, #0a0a0a 95%); }
+    .cl-hero { min-height: min(100svh, 920px); padding-top: 96px; --capas-largura: clamp(130px, calc((100svh - 500px) / 1.4), 210px); --capas-margem: var(--space-8); }
+    .cl-hero__body { gap: var(--space-4); }
+    .cl-hero__sub { font-size: 17.5px; max-width: 52ch; }
+    .cl-hero :global(.cl-hero__capas) { margin-bottom: var(--space-8); }
   }
   .ta-section h2 em, .cl-fim h2 em { font-style: normal; color: var(--accent-ink); }
   .niveis { margin-top: var(--space-8); display: grid; gap: var(--space-4); }

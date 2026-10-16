@@ -1,11 +1,13 @@
 ---
 /** "O que tem no Clube Tecnoapis": os números em destaque e o carrossel com as capas dos cursos.
+ *  `capas={false}`: sem o carrossel (a /tecnoapis já mostra as capas no topo).
  *  Os números são os cartões com foto de NumerosClube.astro (os mesmos da /black).
  *  A lista completa por área (AREAS) não aparece mais aqui: ocupava muito espaço. Ela segue no llms.txt e no JSON-LD da /tecnoapis. */
 import CarrosselCapas from './CarrosselCapas.astro';
 import NumerosClube from './NumerosClube.astro';
-interface Props { titulo?: string; lead?: string }
+interface Props { titulo?: string; lead?: string; capas?: boolean }
 const {
+  capas = true,
   titulo = 'O que tem no <em>Clube Tecnoapis</em>',
   lead = 'Teoria e prática gravadas no apiário, do primeiro núcleo à venda do mel.',
 } = Astro.props;
@@ -21,7 +23,7 @@ const {
     <NumerosClube class="clube__numeros" />
   </div>
 
-  <CarrosselCapas />
+  {capas && <CarrosselCapas />}
 </section>
 
 <style>
