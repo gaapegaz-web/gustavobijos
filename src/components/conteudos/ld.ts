@@ -1,5 +1,5 @@
 /** Dados estruturados de um conteúdo: Article (autor = Gustavo), VideoObject quando tem vídeo e a trilha (BreadcrumbList). */
-import { nomeTema } from '~/config/conteudos';
+import { nomeNivel, nomeTema } from '~/config/conteudos';
 import { SITE } from '~/config/site';
 import { capaEnviada, capaYoutube, imagemSocial, youtubeId, type Conteudo } from '~/lib/conteudos';
 
@@ -18,7 +18,8 @@ export function ldConteudo(c: Conteudo) {
       mainEntityOfPage: { '@id': `${url}#pagina` }, image: imagem, inLanguage: 'pt-BR',
       datePublished: publicado, dateModified: c.atualizado_em,
       author: { '@id': `${site}#gustavo` }, publisher: { '@id': `${site}#gustavo` },
-      ...(c.tema ? { articleSection: nomeTema(c.tema) } : {}),
+      ...(c.tema ? { articleSection: nomeTema(c.tema), about: nomeTema(c.tema) } : {}),
+      ...(c.nivel ? { educationalLevel: nomeNivel(c.nivel) } : {}),
       ...(video ? { video: { '@id': `${url}#video` } } : {}),
     },
     ...(video ? [{

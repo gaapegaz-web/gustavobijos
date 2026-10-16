@@ -1,25 +1,61 @@
 ---
 /**
- * /conteudos: todos os conteúdos publicados, do mais novo ao mais antigo. O filtro por tema roda no navegador
- * (sem JavaScript, mostra tudo) para não criar uma URL por tema. Sem nada publicado, fica fora do Google.
+ * /conteudos: todos os conteúdos publicados, do mais novo ao mais antigo, com busca e filtros (tema, nível, formato).
+ * O filtro funciona sem JavaScript (links e formulário com ?q=&tema=&nivel=&formato=, filtrados no servidor);
+ * com JavaScript, filtra na hora sem recarregar e mantém o endereço atualizado para compartilhar.
+ * Cada opção mostra quantos conteúdos sobram ao escolhê-la; a que daria zero fica apagada (sem beco sem saída).
+ * O canonical é sempre /conteudos (endereços com filtro não viram páginas novas no Google). Sem nada publicado, fica fora do Google.
  */
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import Menu from '~/components/home/Menu.astro';
 import Rodape from '~/components/home/Rodape.astro';
 import CardConteudo from '~/components/conteudos/CardConteudo.astro';
-import { TEMAS_CONTEUDO } from '~/config/conteudos';
+import { NIVEIS_CONTEUDO, TEMAS_CONTEUDO, nomeNivel, nomeTema } from '~/config/conteudos';
 import { BIO, SITE } from '~/config/site';
-import { publicados } from '~/lib/conteudos';
+import { ENV } from '~/lib/env';
+import { normalizar, publicados, textoBusca, youtubeId, type Conteudo } from '~/lib/conteudos';
 
 export const prerender = false;
 
 const itens = publicados();
-const temas = TEMAS_CONTEUDO.filter((t) => itens.some((c) => c.tema === t.slug));
 const url = `${SITE.dominio}/conteudos`;
 const ld = [{
   '@type': 'ItemList', '@id': `${url}#lista`, name: `Conteúdos de ${SITE.apelido}`,
   itemListElement: itens.map((c, i) => ({ '@type': 'ListItem', position: i + 1, url: `${url}/${c.slug}`, name: c.titulo })),
 }];
+
+type Campo = 'tema' | 'nivel' | 'formato';
+type Estado = { q: string } & Record<Campo, string>;
+const formato = (c: Conteudo) => (youtubeId(c.video_url) ? 'video' : 'texto');
+const valor = (c: Conteudo, f: Campo) => (f === 'formato' ? formato(c) : c[f] ?? '');
+
+// Grupos de filtro: só aparecem quando há pelo menos duas opções com conteúdo
+const GRUPOS = ([
+  { campo: 'tema', rotulo: 'Tema', opcoes: TEMAS_CONTEUDO.map((t) => ({ v: t.slug, l: t.nome })) },
+  { campo: 'nivel', rotulo: 'Nível', opcoes: NIVEIS_CONTEUDO.map((n) => ({ v: n.slug, l: n.nome })) },
+  { campo: 'formato', rotulo: 'Formato', opcoes: [{ v: 'video', l: 'Com vídeo' }, { v: 'texto', l: 'Só texto' }] },
+] as { campo: Campo; rotulo: string; opcoes: { v: string; l: string }[] }[])
+  .map((g) => ({ ...g, opcoes: g.opcoes.filter((o) => itens.some((c) => valor(c, g.campo) === o.v)) }))
+  .filter((g) => g.opcoes.length > 1);
+
+// Estado inicial vindo do endereço (só valores que existem)
+const p = Astro.url.searchParams;
+const est: Estado = { q: (p.get('q') ?? '').slice(0, 80), tema: '', nivel: '', formato: '' };
+for (const g of GRUPOS) { const v = p.get(g.campo) ?? ''; if (g.opcoes.some((o) => o.v === v)) est[g.campo] = v; }
+
+const busca = new Map(itens.map((c) => [c.id, textoBusca(c, nomeTema(c.tema), nomeNivel(c.nivel))]));
+const casa = (c: Conteudo, e: Estado) =>
+  GRUPOS.every((g) => !e[g.campo] || valor(c, g.campo) === e[g.campo]) &&
+  normalizar(e.q).split(' ').filter(Boolean).every((t) => busca.get(c.id)!.includes(t));
+const conta = (e: Estado) => itens.filter((c) => casa(c, e)).length;
+const link = (e: Estado) => {
+  const q = new URLSearchParams(Object.entries(e).filter(([, v]) => v));
+  const t = q.toString(); return t ? `/conteudos?${t}` : '/conteudos';
+};
+const total = conta(est);
+const filtrando = Boolean(est.q || GRUPOS.some((g) => est[g.campo]));
+const plural = (n: number) => (n === 1 ? '1 conteúdo' : `${n} conteúdos`);
+const suporte = ENV.WHATSAPP_SUPORTE_URL;
 ---
 <Tecnoapis
   title={`Conteúdos sobre apicultura | ${SITE.apelido}`}
@@ -30,55 +66,181 @@ const ld = [{
   <Menu />
   <main>
     <section class="ta-section lista__topo" data-secao="1-topo">
-      <div class="ta-container">
-        <div class="ta-intro">
-          <span class="ta-pill">Aprenda com o Gustavo</span>
-          <h1 class="display-l">Conteúdos sobre apicultura</h1>
-          <p class="ta-lead">O que o Gustavo aprendeu em {BIO.anos} anos de apicultura, explicado passo a passo.</p>
-        </div>
-        {temas.length > 1 && (
-          <div class="lista__filtro" role="group" aria-label="Filtrar por tema">
-            <button type="button" class="on" data-filtro="" aria-pressed="true">Todos</button>
-            {temas.map((t) => <button type="button" data-filtro={t.slug} aria-pressed="false">{t.nome}</button>)}
-          </div>
-        )}
+      <div class="ta-container ta-intro">
+        <span class="ta-pill">Aprenda com o Gustavo</span>
+        <h1 class="display-l">Conteúdos sobre apicultura</h1>
+        <p class="ta-lead">O que o Gustavo aprendeu em {BIO.anos} anos de apicultura, explicado passo a passo.</p>
       </div>
     </section>
 
     <section class="ta-section ta-section--light lista__sec" data-theme="light" data-secao="2-lista">
       <div class="ta-container">
+        {itens.length > 0 && (
+          <form class="filtro" role="search" action="/conteudos" method="get" data-filtro>
+            <label class="filtro__busca">
+              <span class="filtro__rotulo">O que você quer aprender?</span>
+              <span class="filtro__campo">
+                <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+                <input type="search" name="q" value={est.q} placeholder="Ex.: rainha, enxame" autocomplete="off" enterkeyhint="search" maxlength="80" />
+                <button type="button" class="filtro__apagar" aria-label="Apagar a busca" hidden={!est.q}>
+                  <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </span>
+            </label>
+            {GRUPOS.map((g) => <input type="hidden" name={g.campo} value={est[g.campo]} disabled={!est[g.campo]} />)}
+
+            {GRUPOS.map((g) => (
+              <div class="filtro__grupo" role="group" aria-labelledby={`filtro-${g.campo}`}>
+                <p class="filtro__rotulo" id={`filtro-${g.campo}`}>{g.rotulo}</p>
+                <div class="filtro__chips">
+                  {[{ v: '', l: 'Todos' }, ...g.opcoes].map((o) => {
+                    const alvo = { ...est, [g.campo]: o.v };
+                    const n = conta(alvo);
+                    const sel = est[g.campo] === o.v;
+                    return (
+                      <a href={link(alvo)} rel="nofollow" data-campo={g.campo} data-valor={o.v} aria-current={sel ? 'true' : undefined} aria-disabled={!n && !sel ? 'true' : undefined}>
+                        <svg class="filtro__check" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10" /></svg>
+                        <span>{o.l}</span><span class="filtro__n">{n}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </form>
+        )}
+
+        {itens.length > 0 && (
+          <div class="filtro__status">
+            <p aria-live="polite" data-total>{filtrando ? `${plural(total)} ${total === 1 ? 'encontrado' : 'encontrados'}` : plural(total)}</p>
+            <a href="/conteudos" class="filtro__limpar" data-limpar hidden={!filtrando}>Limpar filtros</a>
+          </div>
+        )}
+
         {itens.length
-          ? <div class="lista__grid">{itens.map((c) => <CardConteudo c={c} nivel="h2" />)}</div>
+          ? <div class="lista__grid">{itens.map((c) => <CardConteudo c={c} nivel="h2" oculto={!casa(c, est)} />)}</div>
           : <p class="ta-lead">Os primeiros conteúdos estão sendo preparados. Enquanto isso, conheça o <a href={SITE.clubeUrl}>{SITE.clube}</a>.</p>}
+
+        {itens.length > 0 && (
+          <div class="lista__vazio" data-vazio hidden={total > 0}>
+            <p class="lista__vazio-titulo">Nenhum conteúdo com esses filtros.</p>
+            <p>Tente outra palavra ou tire algum filtro.{suporte && <> Não achou o que procurava? <a href={suporte} data-track-click="Contact" data-track-params='{"content_name":"conteudos-vazio"}'>Fale com a equipe pelo WhatsApp</a>.</>}</p>
+            <a href="/conteudos" class="ta-btn ta-btn--primary" data-limpar>Ver todos os conteúdos</a>
+          </div>
+        )}
       </div>
     </section>
   </main>
   <Rodape />
 </Tecnoapis>
 
-<script is:inline>
-  (function () {
-    var bts = document.querySelectorAll('[data-filtro]');
-    bts.forEach(function (b) {
-      b.addEventListener('click', function () {
-        var t = b.getAttribute('data-filtro');
-        bts.forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-        document.querySelectorAll('.lista__grid [data-tema]').forEach(function (c) { c.hidden = !!t && c.getAttribute('data-tema') !== t; });
-      });
-    });
-  })();
+<script>
+  const raiz = document.querySelector<HTMLFormElement>('[data-filtro]');
+  if (raiz) {
+    const CAMPOS = ['tema', 'nivel', 'formato'] as const;
+    type Estado = Record<'q' | (typeof CAMPOS)[number], string>;
+    const cards = [...document.querySelectorAll<HTMLElement>('.lista__grid .cc')];
+    const chips = [...raiz.querySelectorAll<HTMLAnchorElement>('a[data-campo]')];
+    const input = raiz.querySelector<HTMLInputElement>('input[name="q"]')!;
+    const apagar = raiz.querySelector<HTMLButtonElement>('.filtro__apagar')!;
+    const totalEl = document.querySelector<HTMLElement>('[data-total]')!;
+    const vazio = document.querySelector<HTMLElement>('[data-vazio]')!;
+    const limpar = document.querySelector<HTMLElement>('.filtro__limpar')!;
+    const norm = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const sp = new URLSearchParams(location.search);
+    const est: Estado = { q: input.value, tema: '', nivel: '', formato: '' };
+    for (const f of CAMPOS) { const v = sp.get(f) ?? ''; if (chips.some((a) => a.dataset.campo === f && a.dataset.valor === v)) est[f] = v; }
+
+    const casa = (c: HTMLElement, e: Estado) =>
+      CAMPOS.every((f) => !e[f] || c.dataset[f] === e[f]) && norm(e.q).split(' ').filter(Boolean).every((t) => (c.dataset.busca ?? '').includes(t));
+    const link = (e: Estado) => { const q = new URLSearchParams(Object.entries(e).filter(([, v]) => v)); const t = q.toString(); return t ? `/conteudos?${t}` : '/conteudos'; };
+    const plural = (n: number) => (n === 1 ? '1 conteúdo' : `${n} conteúdos`);
+
+    function aplicar() {
+      let n = 0;
+      for (const c of cards) { const ok = casa(c, est); c.hidden = !ok; if (ok) n++; }
+      for (const a of chips) {
+        const f = a.dataset.campo as (typeof CAMPOS)[number];
+        const alvo = { ...est, [f]: a.dataset.valor ?? '' };
+        const k = cards.filter((c) => casa(c, alvo)).length;
+        const sel = est[f] === alvo[f];
+        a.href = link(alvo);
+        a.toggleAttribute('aria-current', sel); if (sel) a.setAttribute('aria-current', 'true');
+        a.toggleAttribute('aria-disabled', !k && !sel); if (!k && !sel) a.setAttribute('aria-disabled', 'true');
+        a.querySelector('.filtro__n')!.textContent = String(k);
+      }
+      const filtrando = Boolean(est.q.trim() || CAMPOS.some((f) => est[f]));
+      totalEl.textContent = filtrando ? `${plural(n)} ${n === 1 ? 'encontrado' : 'encontrados'}` : plural(n);
+      limpar.hidden = !filtrando;
+      vazio.hidden = n > 0;
+      apagar.hidden = !input.value;
+      history.replaceState(null, '', link({ ...est, q: est.q.trim() }));
+    }
+
+    chips.forEach((a) => a.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      if (a.getAttribute('aria-disabled') === 'true') return;
+      est[a.dataset.campo as (typeof CAMPOS)[number]] = a.dataset.valor ?? '';
+      aplicar();
+    }));
+    let espera: number | undefined;
+    input.addEventListener('input', () => { clearTimeout(espera); espera = window.setTimeout(() => { est.q = input.value; aplicar(); }, 150); });
+    raiz.addEventListener('submit', (ev) => { ev.preventDefault(); est.q = input.value; aplicar(); input.blur(); });
+    apagar.addEventListener('click', () => { input.value = ''; est.q = ''; aplicar(); input.focus(); });
+    document.querySelectorAll<HTMLElement>('[data-limpar]').forEach((b) => b.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      input.value = ''; est.q = ''; for (const f of CAMPOS) est[f] = '';
+      aplicar();
+    }));
+  }
 </script>
 
 <style>
   .lista__topo { padding-block: var(--space-12) var(--space-10); }
-  .lista__filtro { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-8); }
-  .lista__filtro button { min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); border: 1px solid var(--border); background: transparent; color: var(--ink); font: 500 15px/1 var(--font-sans); cursor: pointer; }
-  .lista__filtro button:hover { border-color: var(--accent); }
-  .lista__filtro button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
-  .lista__sec { padding-block: var(--space-12) var(--space-16); }
+  .lista__sec { padding-block: var(--space-8) var(--space-16); }
+  .lista__sec a:not(.ta-btn):not([data-campo]):not(.cc__link) { color: #7a5200; }
+
+  /* Painel de filtro: busca grande + grupos de opções com contagem */
+  .filtro { display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-5); border-radius: var(--radius-lg); background: var(--surface); }
+  .filtro__rotulo { margin: 0 0 var(--space-2); font: 700 13px/1.2 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); }
+  .filtro__busca { display: block; }
+  .filtro__busca .filtro__rotulo { font: 700 17px/1.3 var(--font-sans); letter-spacing: 0; text-transform: none; color: var(--ink); }
+  .filtro__campo { position: relative; display: flex; align-items: center; }
+  .filtro__campo > svg { position: absolute; left: 16px; color: var(--ink-muted); pointer-events: none; }
+  .filtro__campo input { width: 100%; min-height: 56px; padding: 0 52px 0 50px; border: 1.5px solid var(--border); border-radius: var(--radius-md); background: #fff; color: var(--ink); font: 400 17px/1.2 var(--font-sans); -webkit-appearance: none; appearance: none; }
+  .filtro__campo input::placeholder { color: rgba(10,10,10,.45); }
+  .filtro__campo input::-webkit-search-cancel-button { display: none; }
+  .filtro__campo input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(242,169,0,.3); }
+  .filtro__apagar { position: absolute; right: 6px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--ink-muted); cursor: pointer; }
+  .filtro__apagar:hover { background: rgba(10,10,10,.06); color: var(--ink); }
+  .filtro__apagar[hidden] { display: none; }
+
+  .filtro__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .filtro__chips a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1.5px solid var(--border); border-radius: var(--radius-full); background: #fff; color: var(--ink); font: 500 15px/1 var(--font-sans); text-decoration: none; transition: border-color .15s, background .15s; -webkit-tap-highlight-color: transparent; }
+  .filtro__chips a:hover { border-color: var(--accent); }
+  .filtro__chips a:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+  .filtro__n { min-width: 22px; padding: 3px 7px; border-radius: var(--radius-full); background: var(--surface); color: var(--ink-muted); font: 600 12.5px/1 var(--font-sans); text-align: center; }
+  .filtro__check { display: none; }
+  .filtro__chips a[aria-current='true'] { border-color: var(--accent); background: var(--accent); font-weight: 600; }
+  .filtro__chips a[aria-current='true'] .filtro__check { display: block; }
+  .filtro__chips a[aria-current='true'] .filtro__n { background: rgba(10,10,10,.12); color: var(--ink); }
+  .filtro__chips a[aria-disabled='true'] { opacity: .4; cursor: not-allowed; }
+
+  .filtro__status { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 48px; margin: var(--space-5) 0 var(--space-4); }
+  .filtro__status p { margin: 0; font: 600 16px/1.3 var(--font-sans); color: var(--ink); }
+  .filtro__limpar { display: inline-flex; align-items: center; min-height: 44px; font: 600 15px/1 var(--font-sans); color: #7a5200; text-underline-offset: 3px; }
+  .filtro__limpar[hidden] { display: none; }
+
   .lista__grid { display: grid; gap: var(--space-5); }
-  .lista__grid :global([hidden]) { display: none; }
+  .lista__vazio { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); padding: var(--space-8) var(--space-5); border: 1.5px dashed var(--border); border-radius: var(--radius-lg); }
+  .lista__vazio[hidden] { display: none; }
+  .lista__vazio p { margin: 0; font: 400 16px/1.55 var(--font-sans); color: var(--ink-muted); max-width: 52ch; }
+  .lista__vazio .lista__vazio-titulo { font: 700 20px/1.3 var(--font-display); color: var(--ink); }
+
   @media (min-width: 640px) { .lista__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 900px) {
+    .filtro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5) var(--space-8); padding: var(--space-6) var(--space-8); }
+    .filtro__busca { grid-column: 1 / -1; }
+  }
   @media (min-width: 1000px) { .lista__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  .lista__sec a { color: #7a5200; }
 </style>

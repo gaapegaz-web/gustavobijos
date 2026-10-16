@@ -6,7 +6,7 @@
  * Mudança que aparece no site (publicar, editar publicado, despublicar, excluir) avisa o Bing pelo IndexNow.
  */
 import Admin from '~/layouts/Admin.astro';
-import { TEMAS_CONTEUDO } from '~/config/conteudos';
+import { NIVEIS_CONTEUDO, TEMAS_CONTEUDO } from '~/config/conteudos';
 import { SITE } from '~/config/site';
 import { db } from '~/lib/db';
 import { SLUG_OK, TITULO_MAX, porId, slugify, tituloGoogle, youtubeId, type Conteudo } from '~/lib/conteudos';
@@ -20,8 +20,8 @@ const id = novo ? 0 : Number(Astro.params.id);
 const atual = novo ? undefined : porId(id);
 if (!novo && !atual) return Astro.redirect('/admin/conteudos');
 
-type Campos = Pick<Conteudo, 'titulo' | 'slug' | 'resumo' | 'tema' | 'video_url' | 'corpo' | 'capa' | 'capa_alt'>;
-let v: Campos = atual ?? { titulo: '', slug: '', resumo: '', tema: '', video_url: '', corpo: '', capa: '', capa_alt: '' };
+type Campos = Pick<Conteudo, 'titulo' | 'slug' | 'resumo' | 'tema' | 'nivel' | 'video_url' | 'corpo' | 'capa' | 'capa_alt'>;
+let v: Campos = atual ?? { titulo: '', slug: '', resumo: '', tema: '', nivel: '', video_url: '', corpo: '', capa: '', capa_alt: '' };
 let erro = '';
 
 if (request.method === 'POST') {
@@ -37,10 +37,11 @@ if (request.method === 'POST') {
     return Astro.redirect('/admin/conteudos?ok=excluido');
   }
   const txt = (k: string, max: number) => String(f.get(k) ?? '').replace(/\r\n/g, '\n').trim().slice(0, max);
-  v = { titulo: txt('titulo', 160), slug: txt('slug', 80).toLowerCase(), resumo: txt('resumo', 320), tema: txt('tema', 40), video_url: txt('video_url', 300), corpo: txt('corpo', 200_000), capa: txt('capa', 200), capa_alt: txt('capa_alt', 200) };
+  v = { titulo: txt('titulo', 160), slug: txt('slug', 80).toLowerCase(), resumo: txt('resumo', 320), tema: txt('tema', 40), nivel: txt('nivel', 20), video_url: txt('video_url', 300), corpo: txt('corpo', 200_000), capa: txt('capa', 200), capa_alt: txt('capa_alt', 200) };
   if (v.capa && !/^\/uploads\/conteudos\/[a-z0-9-]+$/.test(v.capa)) v.capa = '';
   if (!v.slug) v.slug = slugify(v.titulo);
   if (!TEMAS_CONTEUDO.some((t) => t.slug === v.tema)) v.tema = '';
+  if (!NIVEIS_CONTEUDO.some((n) => n.slug === v.nivel)) v.nivel = '';
   const status = acao === 'publicar' ? 'publicado' : acao === 'despublicar' ? 'rascunho' : (atual?.status ?? 'rascunho');
 
   if (!v.titulo) erro = 'Escreva o título.';
@@ -53,13 +54,13 @@ if (request.method === 'POST') {
     // A home e /conteudos listam os publicados; slug trocado em publicado deixa o endereço antigo em 404
     const noSite = status === 'publicado' || atual?.status === 'publicado';
     if (noSite) avisarIndexNow([`/conteudos/${v.slug}`, ...(atual?.status === 'publicado' && atual.slug !== v.slug ? [`/conteudos/${atual.slug}`] : []), '/conteudos', '/']);
-    const dados = { ...v, tema: v.tema || null, video_url: v.video_url || null, capa: v.capa || null, capa_alt: v.capa ? v.capa_alt || null : null, status };
+    const dados = { ...v, tema: v.tema || null, nivel: v.nivel || null, video_url: v.video_url || null, capa: v.capa || null, capa_alt: v.capa ? v.capa_alt || null : null, status };
     if (novo) {
-      const r = db().prepare(`INSERT INTO conteudos (titulo, slug, resumo, tema, video_url, corpo, capa, capa_alt, status, publicado_em)
-        VALUES (@titulo, @slug, @resumo, @tema, @video_url, @corpo, @capa, @capa_alt, @status, CASE WHEN @status = 'publicado' THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') END)`).run(dados);
+      const r = db().prepare(`INSERT INTO conteudos (titulo, slug, resumo, tema, nivel, video_url, corpo, capa, capa_alt, status, publicado_em)
+        VALUES (@titulo, @slug, @resumo, @tema, @nivel, @video_url, @corpo, @capa, @capa_alt, @status, CASE WHEN @status = 'publicado' THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') END)`).run(dados);
       return Astro.redirect(`/admin/conteudos/${r.lastInsertRowid}?ok=${acao}`);
     }
-    db().prepare(`UPDATE conteudos SET titulo = @titulo, slug = @slug, resumo = @resumo, tema = @tema, video_url = @video_url, corpo = @corpo, capa = @capa, capa_alt = @capa_alt, status = @status,
+    db().prepare(`UPDATE conteudos SET titulo = @titulo, slug = @slug, resumo = @resumo, tema = @tema, nivel = @nivel, video_url = @video_url, corpo = @corpo, capa = @capa, capa_alt = @capa_alt, status = @status,
       publicado_em = CASE WHEN @status = 'publicado' THEN coalesce(publicado_em, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ELSE publicado_em END,
       atualizado_em = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = @id`).run({ ...dados, id });
     return Astro.redirect(`/admin/conteudos/${id}?ok=${acao}`);
@@ -135,6 +136,9 @@ const dominio = SITE.dominio.replace(/^https?:\/\//, '');
         </label>
         <label>Tema
           <select name="tema"><option value="">Sem tema</option>{TEMAS_CONTEUDO.map((t) => <option value={t.slug} selected={v.tema === t.slug}>{t.nome}</option>)}</select>
+        </label>
+        <label>Nível <span class="mut">(filtro do /conteudos)</span>
+          <select name="nivel"><option value="">Sem nível</option>{NIVEIS_CONTEUDO.map((n) => <option value={n.slug} selected={v.nivel === n.slug}>{n.nome}: {n.dica.toLowerCase()}</option>)}</select>
         </label>
         <label>Vídeo do YouTube <span class="mut">(opcional)</span>
           <input name="video_url" value={v.video_url ?? ''} placeholder="https://youtu.be/..." inputmode="url" autocomplete="off" />

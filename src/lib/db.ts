@@ -31,6 +31,7 @@ function migrar(d: Database.Database) {
   if (!cols('leads').has('meta_lead')) d.exec('ALTER TABLE leads ADD COLUMN meta_lead INTEGER NOT NULL DEFAULT 1'); // 0 = não contou como Lead na Meta (mesmo aparelho)
   if (!cols('leads').has('lead_enviado_em')) d.exec('ALTER TABLE leads ADD COLUMN lead_enviado_em TEXT'); // marca quando o evento Lead já foi disparado (evita duplicar em reload de /obrigado)
   if (!cols('links').has('utm_term')) d.exec('ALTER TABLE links ADD COLUMN utm_term TEXT'); // granularidade de anúncio/criativo do Meta Ads
+  if (!cols('conteudos').has('nivel')) d.exec('ALTER TABLE conteudos ADD COLUMN nivel TEXT'); // nível do conteúdo (filtro do /conteudos)
   if (!cols('leads').has('ultima_pagina_checkout')) d.exec('ALTER TABLE leads ADD COLUMN ultima_pagina_checkout TEXT'); // última página de onde a pessoa clicou em BotaoCheckout (para o sourceUrl do Purchase/InitiateCheckout no webhook da Hubla)
   if (!cols('sessoes').has('ip')) d.exec('ALTER TABLE sessoes ADD COLUMN ip TEXT');
   if (!cols('sessoes').has('robo')) {

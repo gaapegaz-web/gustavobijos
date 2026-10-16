@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS conteudos (
   titulo TEXT NOT NULL,
   resumo TEXT NOT NULL DEFAULT '',       -- vira a descrição no Google e o texto do card
   tema TEXT,                             -- slug de TEMAS_CONTEUDO (src/config/conteudos.ts)
+  nivel TEXT,                            -- slug de NIVEIS_CONTEUDO: iniciante, intermediario, avancado (filtro do /conteudos)
   video_url TEXT,                        -- link do YouTube (opcional; sem ele a página é só texto)
   capa TEXT,                             -- imagem de capa: caminho-base em /uploads (ver lib/upload.ts); sem ela, miniatura do YouTube ou capa desenhada
   capa_alt TEXT,                         -- descrição da capa (acessibilidade e Google Imagens)

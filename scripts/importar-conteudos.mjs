@@ -11,6 +11,7 @@
  *   slug: como-multiplicar-enxames        (opcional; sem ele, vem do título)
  *   resumo: Uma ou duas frases para o Google e o card.
  *   tema: multiplicacao                   (slug de src/config/conteudos.ts)
+ *   nivel: iniciante                      (opcional: iniciante, intermediario ou avancado)
  *   video: https://youtu.be/...           (opcional)
  *   origem: Cérebro 2                      (opcional; de onde veio o texto)
  *   ---
@@ -26,6 +27,7 @@ const alvos = args.filter((a) => !a.startsWith('--'));
 if (!alvos.length) { console.error('Uso: node scripts/importar-conteudos.mjs <pasta|arquivo.md...> [--simular]'); process.exit(1); }
 
 const TEMAS = ['comecando', 'multiplicacao', 'rainhas', 'manejo', 'produtos', 'gestao'];
+const NIVEIS = ['iniciante', 'intermediario', 'avancado'];
 const slugify = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/-+$/, '');
 
 const arquivos = alvos.flatMap((a) => (statSync(a).isDirectory() ? readdirSync(a).filter((f) => f.endsWith('.md')).sort().map((f) => join(a, f)) : [a]));
@@ -43,15 +45,16 @@ for (const arq of arquivos) {
   const slug = cab.slug || slugify(titulo || '');
   if (!titulo || !slug) { console.log(`PULADO  ${basename(arq)}: falta titulo`); pulados++; continue; }
   if (cab.tema && !TEMAS.includes(cab.tema)) console.log(`AVISO   ${basename(arq)}: tema "${cab.tema}" não existe; vai sem tema`);
-  const d = { slug, titulo, resumo: cab.resumo || '', tema: TEMAS.includes(cab.tema) ? cab.tema : null, video_url: cab.video || null, corpo, origem: cab.origem || basename(arq) };
+  if (cab.nivel && !NIVEIS.includes(cab.nivel)) console.log(`AVISO   ${basename(arq)}: nível "${cab.nivel}" não existe; vai sem nível`);
+  const d = { slug, titulo, resumo: cab.resumo || '', tema: TEMAS.includes(cab.tema) ? cab.tema : null, nivel: NIVEIS.includes(cab.nivel) ? cab.nivel : null, video_url: cab.video || null, corpo, origem: cab.origem || basename(arq) };
 
   const atual = db.prepare('SELECT id, status FROM conteudos WHERE slug = ?').get(slug);
   if (atual?.status === 'publicado') { console.log(`PULADO  /conteudos/${slug}: já publicado (edite pelo admin)`); pulados++; continue; }
   if (atual) {
-    if (!simular) db.prepare(`UPDATE conteudos SET titulo=@titulo, resumo=@resumo, tema=@tema, video_url=@video_url, corpo=@corpo, origem=@origem, atualizado_em=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=@id`).run({ ...d, id: atual.id });
+    if (!simular) db.prepare(`UPDATE conteudos SET titulo=@titulo, resumo=@resumo, tema=@tema, nivel=@nivel, video_url=@video_url, corpo=@corpo, origem=@origem, atualizado_em=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=@id`).run({ ...d, id: atual.id });
     console.log(`ATUALIZ /conteudos/${slug} (rascunho ${atual.id})`); atualizados++;
   } else {
-    if (!simular) db.prepare(`INSERT INTO conteudos (slug, titulo, resumo, tema, video_url, corpo, origem) VALUES (@slug, @titulo, @resumo, @tema, @video_url, @corpo, @origem)`).run(d);
+    if (!simular) db.prepare(`INSERT INTO conteudos (slug, titulo, resumo, tema, nivel, video_url, corpo, origem) VALUES (@slug, @titulo, @resumo, @tema, @nivel, @video_url, @corpo, @origem)`).run(d);
     console.log(`NOVO    /conteudos/${slug}`); novos++;
   }
 }

@@ -1,55 +1,67 @@
 ---
 /**
  * Card de um conteúdo (lista /conteudos, home e "Leia também"). Capa: a imagem enviada no admin;
- * sem ela, a miniatura do YouTube; sem vídeo, uma capa desenhada em CSS com o tema.
+ * sem ela, a miniatura do YouTube; sem vídeo, uma capa desenhada em CSS com o ícone e o nome do tema.
+ * Os data-* (tema, nível, formato e texto de busca) alimentam o filtro do /conteudos.
  */
-import { nomeTema } from '~/config/conteudos';
-import { capaEnviada, capaYoutube, minutosLeitura, youtubeId, type Conteudo } from '~/lib/conteudos';
+import Icons from '../Icons.astro';
+import { iconeTema, nomeNivel, nomeTema } from '~/config/conteudos';
+import { capaEnviada, capaYoutube, minutosLeitura, textoBusca, youtubeId, type Conteudo } from '~/lib/conteudos';
 import { semViuva } from '~/lib/texto';
-interface Props { c: Conteudo; nivel?: 'h2' | 'h3' }
-const { c, nivel = 'h3' } = Astro.props;
+interface Props { c: Conteudo; nivel?: 'h2' | 'h3'; oculto?: boolean }
+const { c, nivel: tag = 'h3', oculto = false } = Astro.props;
 const video = youtubeId(c.video_url);
 const tema = nomeTema(c.tema);
-const Titulo = nivel;
+const nivel = nomeNivel(c.nivel);
+const Titulo = tag;
 const capa = c.capa ? capaEnviada(c.capa) : null;
 ---
-<article class="cc" data-tema={c.tema ?? ''}>
+<article class="cc" data-tema={c.tema ?? ''} data-nivel={c.nivel ?? ''} data-formato={video ? 'video' : 'texto'} data-busca={textoBusca(c, tema, nivel)} hidden={oculto}>
   <a class="cc__link" href={`/conteudos/${c.slug}`} data-track-click="CliqueConteudo" data-track-params={JSON.stringify({ content_name: c.slug })}>
     <div class:list={['cc__capa', { 'cc__capa--texto': !video && !capa }]}>
       {capa
         ? <><img src={capa.src} srcset={capa.srcset} sizes="(min-width: 1000px) 360px, (min-width: 640px) 50vw, 100vw" alt="" width={capa.largura} height={capa.altura} loading="lazy" decoding="async" />{video && <span class="cc__play" aria-hidden="true"></span>}</>
         : video
           ? <><img src={capaYoutube(video)} alt="" width="480" height="360" loading="lazy" decoding="async" /><span class="cc__play" aria-hidden="true"></span></>
-          : <span class="cc__capa-tema">{tema || 'Apicultura'}</span>}
+          : <><span class="cc__icone" aria-hidden="true"><Icons name={iconeTema(c.tema)} size={30} /></span><span class="cc__capa-tema">{tema || 'Apicultura'}</span></>}
+      {(capa || video) && tema && <span class="cc__selo">{tema}</span>}
     </div>
     <div class="cc__txt">
-      <p class="cc__meta">{tema && <span>{tema}</span>}<span>{video ? 'Vídeo + texto' : `${minutosLeitura(c.corpo)} min de leitura`}</span></p>
       <Titulo class="cc__titulo">{semViuva(c.titulo)}</Titulo>
       {c.resumo && <p class="cc__resumo">{c.resumo}</p>}
+      <p class="cc__meta">
+        {nivel && <span class:list={['cc__nivel', `cc__nivel--${c.nivel}`]}>{nivel}</span>}
+        <span>{video ? 'Vídeo + texto' : `${minutosLeitura(c.corpo)} min de leitura`}</span>
+      </p>
     </div>
   </a>
 </article>
 
 <style>
   .cc { min-width: 0; }
-  .cc__link { display: flex; flex-direction: column; height: 100%; text-decoration: none; color: inherit; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: border-color .15s, transform .15s; }
+  .cc[hidden] { display: none; }
+  .cc__link { display: flex; flex-direction: column; height: 100%; text-decoration: none; color: inherit; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: border-color .15s, box-shadow .15s; }
   [data-theme="light"] .cc__link { background: var(--surface); border-color: transparent; }
-  .cc__link:hover { border-color: var(--accent); }
+  .cc__link:hover { border-color: var(--accent); box-shadow: 0 6px 24px rgba(0,0,0,.08); }
   .cc__link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   .cc__capa { position: relative; aspect-ratio: 16 / 9; background: #111; overflow: hidden; }
   .cc__capa img { width: 100%; height: 100%; object-fit: cover; }
   .cc__play { position: absolute; left: 50%; top: 50%; width: 56px; height: 40px; margin: -20px 0 0 -28px; border-radius: 10px; background: rgba(10,10,10,.82); }
   .cc__play::after { content: ''; position: absolute; left: 23px; top: 12px; border-style: solid; border-width: 8px 0 8px 13px; border-color: transparent transparent transparent #fff; }
-  /* Capa sem vídeo: mel sobre preto com favo ao fundo */
-  .cc__capa--texto { display: flex; align-items: flex-end; padding: var(--space-5); background:
-    radial-gradient(circle at 85% 15%, rgba(242,169,0,.55), transparent 55%),
+  .cc__selo { position: absolute; left: 12px; top: 12px; padding: 6px 10px; border-radius: var(--radius-full); background: rgba(10,10,10,.8); color: #fff; font: 600 12.5px/1 var(--font-sans); }
+  /* Capa sem vídeo: ícone do tema em mel sobre preto com favo ao fundo */
+  .cc__capa--texto { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: var(--space-3); padding: var(--space-5); background:
+    radial-gradient(circle at 85% 15%, rgba(242,169,0,.5), transparent 55%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='48' viewBox='0 0 56 48'%3E%3Cpath d='M14 1h28l14 23-14 23H14L0 24z' fill='none' stroke='%23f2a900' stroke-opacity='.18' stroke-width='1.5'/%3E%3C/svg%3E") 0 0 / 56px 48px,
     #0f0d08; }
-  .cc__capa-tema { font: 700 clamp(22px, 5vw, 28px)/1.1 var(--font-display); color: #fafafa; letter-spacing: -.01em; }
-  .cc__txt { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-5); }
-  .cc__meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 600 12.5px/1.3 var(--font-sans); color: var(--accent-ink); }
-  [data-theme="light"] .cc__meta { color: #7a5200; }
-  .cc__meta span + span { color: var(--ink-muted); font-weight: 500; }
+  .cc__icone { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #f2a900; color: #0a0a0a; }
+  .cc__capa-tema { font: 700 clamp(22px, 5vw, 26px)/1.1 var(--font-display); color: #fafafa; letter-spacing: -.01em; }
+  .cc__txt { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; padding: var(--space-5); }
   .cc__titulo { font: 600 19px/1.3 var(--font-sans); color: var(--ink); }
   .cc__resumo { font: 400 15.5px/1.55 var(--font-sans); color: var(--ink-muted); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .cc__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-top: auto; padding-top: var(--space-3); font: 500 13.5px/1.3 var(--font-sans); color: var(--ink-muted); }
+  .cc__nivel { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: var(--radius-full); background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+  .cc__nivel::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #1f9d55; }
+  .cc__nivel--intermediario::before { background: #e0a100; }
+  .cc__nivel--avancado::before { background: #d64545; }
 </style>

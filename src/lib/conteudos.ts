@@ -3,7 +3,7 @@ import { marked } from 'marked';
 import { db } from './db';
 
 export type Conteudo = {
-  id: number; slug: string; titulo: string; resumo: string; tema: string | null; video_url: string | null; capa: string | null; capa_alt: string | null;
+  id: number; slug: string; titulo: string; resumo: string; tema: string | null; nivel: string | null; video_url: string | null; capa: string | null; capa_alt: string | null;
   corpo: string; status: 'rascunho' | 'publicado'; origem: string | null; publicado_em: string | null;
   created_at: string; atualizado_em: string;
 };
@@ -90,3 +90,12 @@ export const minutosLeitura = (md: string) => Math.max(1, Math.round(md.split(/\
 
 const TZ = 'America/Sao_Paulo';
 export const fmtData = (iso?: string | null) => (iso ? new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso)) : '');
+
+/** Texto sem acento e em minúsculas, para a busca do /conteudos ("Alimentação" acha "alimentacao"). */
+export const normalizar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+/** O que a busca do /conteudos olha: título, resumo, tema, nível e os subtítulos (## ...) do texto. */
+export function textoBusca(c: Conteudo, tema: string, nivel: string) {
+  const subtitulos = [...c.corpo.matchAll(/^#{2,3}\s+(.+)$/gm)].map((m) => m[1]);
+  return normalizar([c.titulo, c.resumo, tema, nivel, ...subtitulos].join(' '));
+}
