@@ -7,15 +7,13 @@
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import Menu from '~/components/home/Menu.astro';
 import Hero from '~/components/home/Hero.astro';
-import Numeros from '~/components/home/Numeros.astro';
-import Marcas from '~/components/home/Marcas.astro';
 import ClubeConteudo from '~/components/ClubeConteudo.astro';
 import Sobre from '~/components/home/Sobre.astro';
 import Trajetoria from '~/components/home/Trajetoria.astro';
 import Perguntas from '~/components/home/Perguntas.astro';
 import Conteudos from '~/components/home/Conteudos.astro';
 import Rodape from '~/components/home/Rodape.astro';
-import { BIO, FAQ_PROFESSOR, MARCAS, SITE, visiveis } from '~/config/site';
+import { BIO, FAQ_PROFESSOR, SITE, visiveis } from '~/config/site';
 import { ENV } from '~/lib/env';
 
 export const prerender = false;
@@ -47,12 +45,9 @@ const faqLd = {
   <Menu />
   <main data-preview={preview ? '1' : undefined}>
     <Hero />
-    <Numeros />
     <ClubeConteudo titulo="Curso de apicultura online: <em>Clube Tecnoapis</em>" lead="Teoria e prática gravadas no apiário, do primeiro núcleo à venda do mel. Para quem está começando e para quem quer crescer." />
     <Sobre preview={preview} />
     <Trajetoria preview={preview} />
-    {/* Marcas só aparece com 3 ou mais confirmadas */}
-    {visiveis(MARCAS, preview).length >= 3 && <Marcas preview={preview} />}
     <Conteudos />
     <Perguntas preview={preview} />
   </main>
