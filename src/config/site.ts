@@ -57,13 +57,6 @@ export const PERFIS: { rede: string; url: string; usuario: string; de: 'gustavo'
 export const PERFIS_GUSTAVO = PERFIS.filter((p) => p.de === 'gustavo').map((p) => p.url);
 export const PERFIS_CLUBE = PERFIS.filter((p) => p.de === 'clube').map((p) => p.url);
 
-export const NUMEROS_PROFESSOR = [
-  { n: '27', sufixo: 'anos', l: 'de apicultura' },
-  { n: '25', sufixo: 'cursos', l: 'no Clube Tecnoapis' },
-  { n: '130', sufixo: 'h', l: 'de aulas gravadas' },
-  { n: '115', sufixo: 'lives', l: 'no acervo, uma nova por semana' },
-];
-
 /** `empresa: true` = negócio do Gustavo: vira Organization no JSON-LD, com ele como fundador. */
 export type Marca = { id: string; nome: string; tipo: string; descricao: string; url?: string; externo?: boolean; empresa?: boolean; confirmado: boolean };
 export const MARCAS: Marca[] = [
@@ -74,6 +67,7 @@ export const MARCAS: Marca[] = [
   { id: 'expo', nome: 'Expo Tecnoapis', tipo: 'Evento', descricao: 'Evento de inovação, tecnologia e novos negócios na apicultura. Próximas edições a definir.', confirmado: true },
 ];
 
+/** Não aparece mais na home (seção tirada em 16/10/2026 a pedido do Gabriel); segue no /llms.txt. */
 export type Marco = { ano: string; titulo: string; texto: string; confirmado: boolean };
 export const TRAJETORIA: Marco[] = [
   { ano: '2017', titulo: 'Primeiro curso online do Brasil', texto: 'Cria o primeiro curso online de apicultura do país, que dá origem ao Clube Tecnoapis.', confirmado: true },

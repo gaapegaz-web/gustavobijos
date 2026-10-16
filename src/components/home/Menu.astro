@@ -5,7 +5,6 @@ import { recentes } from '~/lib/conteudos';
 const LINKS = [
   { href: '/#sobre', l: 'Sobre' },
   { href: SITE.clubeUrl, l: 'Clube' },
-  { href: '/#trajetoria', l: 'Trajetória' },
   // Conteúdos só aparece com pelo menos um publicado
   ...(recentes(1).length ? [{ href: '/conteudos', l: 'Conteúdos' }] : []),
   { href: '/#perguntas', l: 'Perguntas' },
