@@ -1,6 +1,7 @@
 ---
 /**
- * "Quem é": foto fixa à esquerda e texto à direita (referência: bloco "Erico Rocha" do ericorocha.com.br).
+ * "Quem é": no layout do bloco "Erico Rocha" do ericorocha.com.br. Fundo escuro, foto horizontal em cima (no computador, à esquerda),
+ * nome em cor de acento, texto corrido e as redes em lista, cada uma com ícone redondo, nome da rede e usuário.
  * Sem props: a bio da home (BIO.sobre), cargos e redes. Com `paragrafos`, outro texto (ex.: BIO_CLUBE no /tecnoapis),
  * o primeiro em destaque, e o slot no lugar de cargos e redes.
  */
@@ -8,21 +9,21 @@ import Icons from '../Icons.astro';
 import { BIO, PERFIS, SITE, visiveis } from '~/config/site';
 import { acharImagem, srcsetImagem } from '~/lib/imagens';
 interface Props { preview?: boolean; paragrafos?: string[]; pill?: string; titulo?: string; secao?: string; id?: string }
-const { preview = false, paragrafos, pill = 'Quem é', titulo = SITE.professor, secao = '4-sobre', id = 'sobre' } = Astro.props;
+const { preview = false, paragrafos, pill, titulo = SITE.professor, secao = '4-sobre', id = 'sobre' } = Astro.props;
 const proprio = !paragrafos;
-const foto = acharImagem('gustavo');
+const foto = acharImagem('gustavo-apiario');
 const icone = (rede: string) => (['instagram', 'youtube', 'facebook'].includes(rede.toLowerCase()) ? rede.toLowerCase() : 'arrow') as 'instagram' | 'youtube' | 'facebook' | 'arrow';
 ---
-<section class="ta-section ta-section--light" data-theme="light" id={id} data-secao={secao}>
+<section class="ta-section" id={id} data-secao={secao}>
   <div class:list={['ta-container', 'sobre', { 'sobre--foto': foto }]}>
-    {foto && <figure class="sobre__foto"><img src={foto} srcset={srcsetImagem('gustavo', [480, 720], 960)} sizes="(min-width: 900px) 440px, 100vw" alt={`${SITE.professor} no apiário`} width="960" height="1200" loading="lazy" /></figure>}
+    {foto && <figure class="sobre__foto"><img src={foto} srcset={srcsetImagem('gustavo-apiario', [720], 1080)} sizes="(min-width: 900px) 520px, 100vw" alt={`${SITE.professor} segurando um núcleo de abelhas`} width="1080" height="720" loading="lazy" /></figure>}
     <div class="sobre__texto">
-      <span class="ta-pill">{pill}</span>
-      <h2 class="display-l">{titulo}</h2>
+      {pill && <span class="ta-pill">{pill}</span>}
+      <h2 class="display-l sobre__nome">{titulo}</h2>
       <div class="sobre__bio">
         {proprio
-          ? visiveis(BIO.sobre, preview).map((x) => <p class:list={['ta-body', { pendente: !x.confirmado }]}>{x.texto}</p>)
-          : paragrafos.map((t, i) => <p class:list={['ta-body', { 'sobre__destaque': i === 0 }]}>{t}</p>)}
+          ? visiveis(BIO.sobre, preview).map((x) => <p class:list={{ pendente: !x.confirmado }}>{x.texto}</p>)
+          : paragrafos.map((t, i) => <p class:list={{ 'sobre__destaque': i === 0 }}>{t}</p>)}
       </div>
       {proprio && <h3 class="ta-title">No setor apícola</h3>}
       {proprio && <ul class="ta-list">
@@ -32,8 +33,15 @@ const icone = (rede: string) => (['instagram', 'youtube', 'facebook'].includes(r
       <slot />
       {proprio && PERFIS.length > 0 && (
         <div class="sobre__redes">
-          <span class="ta-small">Acompanhe o Gustavo</span>
-          {PERFIS.map((p) => <a href={p.url} target="_blank" rel={p.de === 'gustavo' ? 'noopener me' : 'noopener'} data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}><Icons name={icone(p.rede)} size={20} /><span>{p.usuario}</span></a>)}
+          <p class="sobre__redes-titulo">Acompanhe o Gustavo<br />nas redes sociais:</p>
+          <ul>
+            {PERFIS.map((p) => (
+              <li><a href={p.url} target="_blank" rel={p.de === 'gustavo' ? 'noopener me' : 'noopener'} data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}>
+                <span class="sobre__icone"><Icons name={icone(p.rede)} size={22} /></span>
+                <span class="sobre__rede"><b>{p.rede}</b>{p.usuario}</span>
+              </a></li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
@@ -41,13 +49,23 @@ const icone = (rede: string) => (['instagram', 'youtube', 'facebook'].includes(r
 </section>
 
 <style>
-  .sobre { display: grid; gap: var(--space-12); }
+  .sobre { display: grid; gap: var(--space-8); }
+  .sobre__foto img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: var(--radius-lg); }
   .sobre__texto { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6); max-width: 680px; }
-  .sobre__bio p { color: var(--ink); opacity: .82; font-size: 17px; max-width: 68ch; }
-  .sobre__destaque { font-weight: 600; opacity: 1; }
-  .sobre__foto img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius-lg); }
-  .sobre__redes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-6); padding-top: var(--space-6); border-top: 1px solid var(--border); }
-  .sobre__redes a { display: inline-flex; align-items: center; min-height: 40px; gap: var(--space-2); font: 500 15px/1 var(--font-sans); color: var(--ink); text-decoration: none; }
-  .sobre__redes a:hover { color: var(--accent-ink); }
-  @media (min-width: 900px) { .sobre--foto { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-16); align-items: start; } .sobre__foto { position: sticky; top: 96px; } }
+  .sobre__nome { color: var(--accent-ink); }
+  .sobre__bio { display: flex; flex-direction: column; gap: var(--space-5); }
+  .sobre__bio p { margin: 0; font: 400 17px/1.6 var(--font-sans); color: var(--ink); max-width: 62ch; }
+  .sobre__bio .sobre__destaque { font-weight: 600; }
+  .sobre__redes { display: flex; flex-direction: column; gap: var(--space-4); padding-top: var(--space-2); }
+  .sobre__redes-titulo { margin: 0; font: 600 16px/1.4 var(--font-sans); color: var(--ink); }
+  .sobre__redes ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+  .sobre__redes a { display: inline-flex; align-items: center; gap: var(--space-3); min-height: 48px; text-decoration: none; }
+  .sobre__icone { display: grid; place-items: center; flex: 0 0 48px; height: 48px; border-radius: 50%; background: var(--accent); color: var(--on-accent); transition: transform .15s ease; }
+  .sobre__rede { display: flex; flex-direction: column; font: 500 15px/1.3 var(--font-sans); color: var(--ink); }
+  .sobre__rede b { font-weight: 600; color: var(--accent-ink); }
+  .sobre__redes a:hover .sobre__icone { transform: scale(1.06); }
+  @media (min-width: 900px) {
+    .sobre--foto { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-16); align-items: start; }
+    .sobre__foto { position: sticky; top: 96px; }
+  }
 </style>
