@@ -1,33 +1,142 @@
 ---
-/** Menu fixo da home: marca à esquerda, âncoras no meio (desktop), botão do Clube à direita (slot "cta" troca o botão). */
-import { SITE } from '~/config/site';
+/**
+ * Menu do site (home, /tecnoapis, /conteudos, artigos, privacidade, 404). Leva para páginas, não para âncoras.
+ * Computador: marca, links e o botão "Assine o Clube". Celular: marca e botão "Menu", que abre um painel com letra grande.
+ * `transparente`: fica por cima da foto do topo (home e /tecnoapis) e ganha fundo escuro ao rolar a página.
+ * O slot "cta" troca o botão do computador.
+ */
+import Icons from '../Icons.astro';
+import { PERFIS, SITE } from '~/config/site';
+import { ENV } from '~/lib/env';
 import { recentes } from '~/lib/conteudos';
+interface Props { transparente?: boolean }
+const { transparente = false } = Astro.props;
+const suporte = ENV.WHATSAPP_SUPORTE_URL;
+const atual = Astro.url.pathname.replace(/\/$/, '') || '/';
 const LINKS = [
-  { href: '/#sobre', l: 'Sobre' },
-  { href: SITE.clubeUrl, l: 'Clube' },
+  { href: '/', l: 'Início' },
+  { href: SITE.clubeUrl, l: SITE.clube },
   // Conteúdos só aparece com pelo menos um publicado
   ...(recentes(1).length ? [{ href: '/conteudos', l: 'Conteúdos' }] : []),
-  { href: '/#perguntas', l: 'Perguntas' },
 ];
+const ativo = (href: string) => (href === '/' ? atual === '/' : atual === href || atual.startsWith(`${href}/`));
+const assinar = `${SITE.clubeUrl}#assinatura`;
+const icone = (rede: string) => (rede.toLowerCase() === 'youtube' ? 'youtube' : 'instagram') as 'youtube' | 'instagram';
 ---
-<header class="menu">
+<header class:list={['menu', { 'menu--transparente': transparente }]} data-menu>
   <div class="ta-container menu__in">
     <a class="menu__marca" href="/" aria-label={`${SITE.apelido}, página inicial`}>Gustavo <em>Bijos</em></a>
-    <nav class="menu__links" aria-label="Seções">
-      {LINKS.map((x) => <a href={x.href}>{x.l}</a>)}
+    <nav class="menu__links" aria-label="Menu principal">
+      {LINKS.map((x) => <a href={x.href} aria-current={ativo(x.href) ? 'page' : undefined}>{x.l}</a>)}
+      {suporte && <a href={suporte} data-track-click="Contact" data-track-params='{"content_name":"menu"}'>Contato</a>}
     </nav>
-    <slot name="cta"><a class="ta-btn ta-btn--primary menu__cta" href={SITE.clubeUrl} data-track-click="CliqueClube" data-track-params='{"content_name":"menu"}'>Clube Tecnoapis</a></slot>
+    <div class="menu__acoes">
+      <slot name="cta"><a class="ta-btn ta-btn--primary menu__cta" href={assinar} data-track-click="CliqueClube" data-track-params='{"content_name":"menu"}'>Assine o Clube</a></slot>
+      <button class="menu__botao" type="button" aria-expanded="false" aria-controls="menu-painel">
+        <span class="menu__barras" aria-hidden="true"><i></i><i></i><i></i></span><span class="menu__rotulo">Menu</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="menu__painel" id="menu-painel" hidden>
+    <div class="ta-container menu__painel-in">
+      <nav aria-label="Menu principal">
+        <ul class="menu__lista">
+          {LINKS.map((x) => <li><a href={x.href} aria-current={ativo(x.href) ? 'page' : undefined}><span>{x.l}</span><span aria-hidden="true">›</span></a></li>)}
+          {suporte && <li><a href={suporte} data-track-click="Contact" data-track-params='{"content_name":"menu"}'><span>Contato</span><span aria-hidden="true">›</span></a></li>}
+        </ul>
+      </nav>
+      <div class="menu__painel-ctas">
+        <a class="ta-btn ta-btn--primary ta-btn--lg" href={assinar} data-track-click="CliqueClube" data-track-params='{"content_name":"menu"}'>Assine o {SITE.clube}</a>
+        {suporte && <a class="ta-btn ta-btn--outline ta-btn--lg" href={suporte} data-track-click="Contact" data-track-params='{"content_name":"menu"}'><Icons name="whatsapp" size={20} />Falar com a equipe</a>}
+      </div>
+      {PERFIS.length > 0 && (
+        <div class="menu__redes">
+          <span>Siga o Gustavo:</span>
+          {PERFIS.map((p) => <a href={p.url} target="_blank" rel="noopener" aria-label={`${p.rede} ${p.usuario}`} data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}><Icons name={icone(p.rede)} size={22} /></a>)}
+        </div>
+      )}
+    </div>
   </div>
 </header>
 
+<script>
+  const h = document.querySelector<HTMLElement>('[data-menu]');
+  const b = h?.querySelector<HTMLButtonElement>('.menu__botao');
+  const p = h?.querySelector<HTMLElement>('.menu__painel');
+  if (h && b && p) {
+    const rotulo = b.querySelector('.menu__rotulo');
+    const abrir = (sim: boolean) => {
+      b.setAttribute('aria-expanded', String(sim));
+      if (rotulo) rotulo.textContent = sim ? 'Fechar' : 'Menu';
+      p.hidden = !sim;
+      h.classList.toggle('menu--aberto', sim);
+      document.documentElement.classList.toggle('menu-travado', sim);
+    };
+    b.addEventListener('click', () => abrir(b.getAttribute('aria-expanded') !== 'true'));
+    p.addEventListener('click', (e) => { if ((e.target as Element).closest('a')) abrir(false); });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && !p.hidden) { abrir(false); b.focus(); } });
+    matchMedia('(min-width: 900px)').addEventListener('change', (m) => { if (m.matches) abrir(false); });
+    if (h.classList.contains('menu--transparente')) {
+      const rolou = () => h.classList.toggle('menu--rolou', scrollY > 24);
+      rolou();
+      addEventListener('scroll', rolou, { passive: true });
+    }
+  }
+</script>
+
 <style>
-  .menu { position: sticky; top: 0; z-index: 50; background: rgba(10,10,10,.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+  /* Fundo e desfoque ficam no ::before: backdrop-filter no próprio header prenderia o painel (position: fixed) dentro dele */
+  .menu { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--border); }
+  .menu::before { content: ''; position: absolute; inset: 0; z-index: -1; background: rgba(10,10,10,.92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: opacity .25s; }
+  /* Por cima da foto do topo: sem faixa preta até rolar a página */
+  .menu--transparente { position: fixed; left: 0; right: 0; background: linear-gradient(180deg, rgba(10,10,10,.8) 0%, rgba(10,10,10,.35) 70%, rgba(10,10,10,0) 100%); border-bottom: 0; transition: box-shadow .25s; }
+  .menu--transparente:not(.menu--rolou):not(.menu--aberto) :is(.menu__marca, .menu__links a, .menu__botao) { text-shadow: 0 1px 10px rgba(0,0,0,.55); }
+  .menu--transparente::before { opacity: 0; }
+  .menu--transparente.menu--rolou::before, .menu--transparente.menu--aberto::before { opacity: 1; }
+  .menu--transparente.menu--rolou, .menu--transparente.menu--aberto { box-shadow: 0 1px 0 var(--border); }
   .menu__in { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 64px; }
   .menu__marca { font: 700 22px/1 var(--font-display); color: var(--ink); text-decoration: none; letter-spacing: -.01em; white-space: nowrap; }
   .menu__marca em { font-style: normal; color: var(--accent-ink); }
-  .menu__links { display: none; gap: var(--space-8); }
-  .menu__links a { font: 500 14px/1 var(--font-sans); color: var(--ink-muted); text-decoration: none; }
+  .menu__links { display: none; align-items: center; gap: var(--space-8); }
+  .menu__links a { position: relative; padding-block: 8px; font: 500 15px/1 var(--font-sans); color: rgba(250,250,250,.78); text-decoration: none; white-space: nowrap; }
   .menu__links a:hover { color: var(--ink); }
-  .menu__cta, .menu__in :global(.menu__cta) { min-height: 40px; padding: 0 var(--space-4); font-size: 13.5px; }
-  @media (min-width: 900px) { .menu__links { display: flex; } .menu__in { min-height: 72px; } .menu__cta, .menu__in :global(.menu__cta) { min-height: 44px; padding: 0 var(--space-6); } }
+  .menu__links a[aria-current='page'] { color: var(--ink); }
+  .menu__links a[aria-current='page']::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px; background: var(--accent); }
+  .menu__acoes { display: flex; align-items: center; gap: var(--space-3); }
+  .menu__cta, .menu__acoes :global(.menu__cta) { display: none; }
+
+  /* Botão "Menu" do celular: ícone + palavra, área de toque de 48px */
+  .menu__botao { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; margin-right: -8px; padding: 0 8px; border: 0; background: none; color: var(--ink); font: 600 15px/1 var(--font-sans); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .menu__botao:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+  .menu__barras { position: relative; display: block; width: 22px; height: 16px; }
+  .menu__barras i { position: absolute; left: 0; width: 100%; height: 2px; border-radius: 2px; background: currentColor; transition: transform .2s, opacity .2s, top .2s; }
+  .menu__barras i:nth-child(1) { top: 0; }
+  .menu__barras i:nth-child(2) { top: 7px; }
+  .menu__barras i:nth-child(3) { top: 14px; }
+  .menu__botao[aria-expanded='true'] .menu__barras i:nth-child(1) { top: 7px; transform: rotate(45deg); }
+  .menu__botao[aria-expanded='true'] .menu__barras i:nth-child(2) { opacity: 0; }
+  .menu__botao[aria-expanded='true'] .menu__barras i:nth-child(3) { top: 7px; transform: rotate(-45deg); }
+
+  /* Painel do celular: tela cheia abaixo da barra, letra grande */
+  .menu__painel { position: fixed; top: 64px; left: 0; right: 0; bottom: 0; overflow-y: auto; background: #0a0a0a; border-top: 1px solid var(--border); }
+  .menu__painel[hidden] { display: none; }
+  .menu__painel-in { display: flex; flex-direction: column; gap: var(--space-8); padding-block: var(--space-4) var(--space-12); }
+  .menu__lista { list-style: none; margin: 0; padding: 0; }
+  .menu__lista li { border-bottom: 1px solid var(--border); }
+  .menu__lista a { display: flex; align-items: center; justify-content: space-between; min-height: 64px; font: 700 24px/1.2 var(--font-display); color: var(--ink); text-decoration: none; }
+  .menu__lista a > span:last-child { font: 400 28px/1 var(--font-sans); color: var(--ink-muted); }
+  .menu__lista a[aria-current='page'] > span:first-child { color: var(--accent-ink); }
+  .menu__painel-ctas { display: flex; flex-direction: column; gap: var(--space-3); }
+  .menu__painel-ctas .ta-btn { width: 100%; }
+  .menu__redes { display: flex; align-items: center; gap: var(--space-3); color: var(--ink-muted); font: 400 15px/1 var(--font-sans); }
+  .menu__redes a { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: var(--on-accent); }
+  :global(html.menu-travado) { overflow: hidden; }
+
+  @media (min-width: 900px) {
+    .menu__in { min-height: 76px; }
+    .menu__links { display: flex; }
+    .menu__botao, .menu__painel { display: none; }
+    .menu__cta, .menu__acoes :global(.menu__cta) { display: inline-flex; min-height: 44px; padding: 0 var(--space-6); font-size: 14px; }
+  }
 </style>

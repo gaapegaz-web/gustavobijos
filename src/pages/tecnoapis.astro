@@ -4,6 +4,7 @@
  * Copy: tecnoapis.com.br (dez/2024). Dados em src/config/clube.ts. Botões de compra: BotaoAssinar (topo, meio e fim).
  */
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
 import Rodape from '~/components/home/Rodape.astro';
 import ClubeConteudo from '~/components/ClubeConteudo.astro';
 import Sobre from '~/components/home/Sobre.astro';
@@ -46,6 +47,7 @@ const ld = [
   description="Curso de apicultura online do Gustavo Bijos: 25 cursos, live exclusiva toda segunda e contato direto com o professor. Assinatura anual com 7 dias de garantia."
   jsonLd={ld}
 >
+  <Menu transparente />
   <main>
 
     <section data-secao="1-hero" class:list={['cl-hero', { 'cl-hero--sem-foto': !fotoReal }]}>
