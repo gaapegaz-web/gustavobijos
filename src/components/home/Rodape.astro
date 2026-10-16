@@ -1,5 +1,8 @@
 ---
-/** Rodapé fixo do site (não é o da campanha): marca, navegação, marcas, redes e suporte. */
+/**
+ * Rodapé fixo do site (não é o da campanha), no layout do rodapé do ericorocha.com.br: fundo claro, marca, redes em
+ * botões redondos, contato com botão do WhatsApp, navegação e marcas. Cada bloco com título curto em cor de acento.
+ */
 import Icons from '../Icons.astro';
 import { MARCAS, PERFIS, SITE, visiveis } from '~/config/site';
 import { ENV } from '~/lib/env';
@@ -7,63 +10,66 @@ import { recentes } from '~/lib/conteudos';
 const suporte = ENV.WHATSAPP_SUPORTE_URL;
 const temConteudos = recentes(1).length > 0;
 ---
-<footer class="rodape">
+<footer class="rodape" data-theme="light">
   <div class="ta-container rodape__grid">
     <div class="rodape__marca">
-      <a href="/">Gustavo&nbsp;<em>Bijos</em></a>
-      <p class="ta-small">Apicultor, professor e criador do {SITE.clube}.</p>
-      {suporte && <a class="ta-btn ta-btn--outline" href={suporte} data-track-click="Contact" data-track-params='{"content_name":"rodape"}'><Icons name="whatsapp" size={18} />Falar com a equipe</a>}
-    </div>
-    <nav aria-label="Navegação">
-      <p class="rodape__titulo">Navegação</p>
-      <a href="/#sobre">Sobre</a><a href={SITE.clubeUrl}>Clube Tecnoapis</a><a href="/#trajetoria">Trajetória</a>{temConteudos && <a href="/conteudos">Conteúdos</a>}<a href="/#perguntas">Perguntas</a>
-    </nav>
-    <div>
-      <p class="rodape__titulo">Marcas</p>
-      {visiveis(MARCAS).map((m) => (m.url ? <a href={m.url} {...(m.externo ? { target: '_blank', rel: 'noopener' } : {})}>{m.nome}</a> : <span>{m.nome}</span>))}
-    </div>
-    {PERFIS.length > 0 && (
-      <div>
-        <p class="rodape__titulo">Redes</p>
+      <a class="rodape__logo" href="/">Gustavo&nbsp;<em>Bijos</em></a>
+      {PERFIS.length > 0 && <>
+        <p class="rodape__siga">Siga-nos:</p>
         <div class="rodape__redes">
           {PERFIS.map((p) => (
-            <a class:list={['rodape__rede', `rodape__rede--${p.rede.toLowerCase()}`]} href={p.url} target="_blank" rel="noopener" aria-label={`${p.rede} ${p.usuario}`} title={`${p.rede} ${p.usuario}`} data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}>
+            <a class="rodape__rede" href={p.url} target="_blank" rel="noopener" aria-label={`${p.rede} ${p.usuario}`} title={`${p.rede} ${p.usuario}`} data-track-click="CliqueRede" data-track-params={JSON.stringify({ content_name: p.rede })}>
               {p.rede === 'YouTube'
-                ? <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="#fff" /></svg>
-                : <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4.2" /><circle cx="17.4" cy="6.6" r=".6" fill="#fff" stroke="none" /></svg>}
+                ? <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4" fill="currentColor" /><path d="M10 9v6l5-3z" fill="var(--rodape-bg)" /></svg>
+                : <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4.2" /><circle cx="17.4" cy="6.6" r=".7" fill="currentColor" stroke="none" /></svg>}
             </a>
           ))}
         </div>
+      </>}
+    </div>
+    {suporte && (
+      <div class="rodape__bloco">
+        <p class="rodape__titulo">Contato</p>
+        <p class="rodape__texto">Dúvidas sobre o {SITE.clube}? Fale com a equipe pelo WhatsApp.</p>
+        <a class="rodape__botao" href={suporte} data-track-click="Contact" data-track-params='{"content_name":"rodape"}'><Icons name="whatsapp" size={18} />Chamar no WhatsApp</a>
       </div>
     )}
+    <nav class="rodape__bloco" aria-label="Navegação">
+      <p class="rodape__titulo">Navegação</p>
+      <a href="/#sobre">Quem é o Gustavo</a><a href={SITE.clubeUrl}>Clube Tecnoapis</a><a href="/#trajetoria">Trajetória</a>{temConteudos && <a href="/conteudos">Conteúdos</a>}<a href="/#perguntas">Perguntas</a>
+    </nav>
+    <div class="rodape__bloco">
+      <p class="rodape__titulo">Nossas marcas</p>
+      {visiveis(MARCAS).map((m) => (m.url ? <a href={m.url} {...(m.externo ? { target: '_blank', rel: 'noopener' } : {})}>{m.nome}</a> : <span>{m.nome}</span>))}
+    </div>
   </div>
   <div class="ta-container rodape__fim">
-    <p class="ta-small">© {new Date().getFullYear()} {SITE.professor}. Este site não é afiliado ao Facebook, Instagram ou Meta. <a href="/privacidade">Política de privacidade</a></p>
+    <p>© {new Date().getFullYear()} {SITE.professor}. Este site não é afiliado ao Facebook, Instagram ou Meta. <a href="/privacidade">Política de privacidade</a></p>
   </div>
 </footer>
 
 <style>
-  .rodape { border-top: 1px solid var(--border); padding-block: var(--space-16) var(--space-8); }
-  .rodape__grid { display: grid; gap: var(--space-8); }
-  .rodape__marca { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
-  .rodape__grid .rodape__marca > a:first-child { font: 700 26px/1 var(--font-display); color: var(--ink); text-decoration: none; }
-  .rodape__marca em { font-style: normal; color: var(--accent-ink); }
-  .rodape__titulo { font: 600 12px/1 var(--font-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); margin-bottom: var(--space-4); }
-  .rodape__grid > div:not(.rodape__marca), .rodape nav { display: flex; flex-direction: column; gap: var(--space-3); }
-  .rodape__grid a:not(.ta-btn), .rodape__grid span { font: 400 14.5px/1.3 var(--font-sans); color: var(--ink-muted); text-decoration: none; }
-  .rodape__grid a:not(.ta-btn):hover { color: var(--ink); }
-  /* Área de toque mínima no celular */
-  .rodape__grid a:not(.ta-btn) { display: inline-flex; align-items: center; min-height: 36px; }
-  .rodape__grid > div:not(.rodape__marca), .rodape nav { gap: var(--space-1); }
-  /* Redes: botões nas cores oficiais de cada marca (área de toque de 48px) */
+  .rodape { --rodape-bg: #fdf5e1; background: var(--rodape-bg); color: var(--ink); border-top: 1px solid var(--border); padding-block: var(--space-12) var(--space-8); }
+  .rodape__grid { display: grid; gap: var(--space-10); }
+  .rodape__marca, .rodape__bloco { display: flex; flex-direction: column; align-items: flex-start; }
+  .rodape__logo { font: 700 28px/1 var(--font-display); color: var(--ink); text-decoration: none; }
+  .rodape__logo em { font-style: normal; color: var(--accent-ink); }
+  .rodape__siga { margin: var(--space-6) 0 var(--space-3); font: 400 15px/1.4 var(--font-sans); color: var(--ink-muted); }
+  /* Redes: botões redondos de 52px na cor de acento */
   .rodape__redes { display: flex; gap: var(--space-3); }
-  .rodape__grid a.rodape__rede { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; min-height: 48px; border-radius: 12px; transition: transform .15s, filter .15s; }
-  .rodape__grid a.rodape__rede:hover { transform: translateY(-2px); filter: brightness(1.08); }
-  .rodape__rede--instagram { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%); }
-  .rodape__rede--youtube { background: #ff0000; }
-  .rodape__grid a.rodape__rede:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .rodape__rede { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: var(--on-accent); transition: transform .15s, filter .15s; }
+  .rodape__rede:hover { transform: translateY(-2px); filter: brightness(1.06); }
+  .rodape__rede:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+  .rodape__titulo { margin: 0 0 var(--space-3); font: 700 15px/1.3 var(--font-sans); color: var(--accent-ink); }
+  .rodape__texto { margin: 0 0 var(--space-4); font: 400 15px/1.55 var(--font-sans); color: var(--ink-muted); max-width: 34ch; }
+  .rodape__botao { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); width: 100%; max-width: 320px; min-height: 52px; padding: 0 var(--space-5); border: 1.5px solid var(--accent-ink); border-radius: var(--radius-sm); background: #fff; color: var(--accent-ink); font: 600 15px/1 var(--font-sans); text-decoration: none; transition: background .15s, color .15s; }
+  .rodape__botao:hover { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  /* Links com área de toque mínima de 40px */
+  .rodape__bloco > a:not(.rodape__botao), .rodape__bloco > span { display: inline-flex; align-items: center; min-height: 40px; font: 400 15px/1.3 var(--font-sans); color: var(--ink-muted); text-decoration: none; }
+  .rodape__bloco > a:not(.rodape__botao):hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .rodape__fim { margin-top: var(--space-12); padding-top: var(--space-6); border-top: 1px solid var(--border); }
+  .rodape__fim p { margin: 0; font: 400 13.5px/1.5 var(--font-sans); color: var(--ink-muted); }
   .rodape__fim a { color: var(--ink-muted); text-underline-offset: 3px; }
   .rodape__fim a:hover { color: var(--ink); }
-  .rodape__fim { margin-top: var(--space-12); padding-top: var(--space-6); border-top: 1px solid var(--border); }
-  @media (min-width: 820px) { .rodape__grid { grid-template-columns: 2fr 1fr 1fr 1fr; } }
+  @media (min-width: 820px) { .rodape__grid { grid-template-columns: 1.3fr 1.3fr 1fr 1fr; gap: var(--space-8); } }
 </style>
