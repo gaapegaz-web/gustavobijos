@@ -127,3 +127,22 @@ FROM comportamento c WHERE c.tipo = 'secao_vista' GROUP BY c.pagina, c.alvo;
 CREATE VIEW IF NOT EXISTS v_cliques AS
 SELECT pagina, alvo, count(*) AS cliques, count(DISTINCT sessao_id) AS sessoes
 FROM comportamento WHERE tipo = 'clique' GROUP BY pagina, alvo ORDER BY cliques DESC;
+
+-- Conteúdos (/conteudos): artigos com ou sem vídeo do YouTube, editados no /admin/conteudos
+CREATE TABLE IF NOT EXISTS conteudos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL UNIQUE,             -- endereço: /conteudos/<slug>
+  titulo TEXT NOT NULL,
+  resumo TEXT NOT NULL DEFAULT '',       -- vira a descrição no Google e o texto do card
+  tema TEXT,                             -- slug de TEMAS_CONTEUDO (src/config/conteudos.ts)
+  video_url TEXT,                        -- link do YouTube (opcional; sem ele a página é só texto)
+  capa TEXT,                             -- imagem de capa: caminho-base em /uploads (ver lib/upload.ts); sem ela, miniatura do YouTube ou capa desenhada
+  capa_alt TEXT,                         -- descrição da capa (acessibilidade e Google Imagens)
+  corpo TEXT NOT NULL DEFAULT '',        -- Markdown
+  status TEXT NOT NULL DEFAULT 'rascunho' CHECK (status IN ('rascunho', 'publicado')),
+  origem TEXT,                           -- arquivo do cérebro de onde veio (importação)
+  publicado_em TEXT,                     -- primeira publicação; não muda ao editar
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  atualizado_em TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_conteudos_publicados ON conteudos(status, publicado_em);

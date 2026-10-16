@@ -6,7 +6,7 @@ const { centro = false } = Astro.props;
 <header class:list={['topo', { 'topo--centro': centro }]}>
   <div class="ta-container topo__in">
     <div class="topo__info">
-      <img class="topo__logo" src="/img/black-friday-logo.webp" alt="Black Friday Tecnoapis" width="353" height="160" />
+      <img class="topo__logo" src="/img/black-friday-logo.webp" srcset="/img/black-friday-logo-270.webp 270w, /img/black-friday-logo.webp 353w" sizes="97px" alt="Black Friday Tecnoapis" width="353" height="160" />
       <slot />
     </div>
     <slot name="nav" />

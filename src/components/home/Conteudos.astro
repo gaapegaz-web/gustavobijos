@@ -1,0 +1,29 @@
+---
+/** "Aprenda com o Gustavo": os conteúdos mais recentes e o botão para a lista. Sem nada publicado, a seção não aparece. */
+import CardConteudo from '../conteudos/CardConteudo.astro';
+import { recentes } from '~/lib/conteudos';
+const itens = recentes(4);
+---
+{itens.length > 0 && (
+  <section class="ta-section ta-section--surface" id="conteudos" data-secao="6-conteudos">
+    <div class="ta-container">
+      <div class="hc__topo">
+        <div class="ta-intro">
+          <span class="ta-pill">Conteúdos</span>
+          <h2 class="display-l">Aprenda com o Gustavo</h2>
+          <p class="ta-lead">Artigos e vídeos gratuitos sobre o dia a dia do apiário.</p>
+        </div>
+        <a class="ta-btn ta-btn--outline hc__todos" href="/conteudos">Ver todos os conteúdos</a>
+      </div>
+      <div class:list={['hc__grid', { 'hc__grid--4': itens.length === 4 }]}>{itens.map((c) => <CardConteudo c={c} />)}</div>
+    </div>
+  </section>
+)}
+
+<style>
+  .hc__topo { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-6); margin-bottom: var(--space-8); }
+  .hc__grid { display: grid; gap: var(--space-5); }
+  @media (min-width: 640px) { .hc__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1000px) { .hc__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hc__grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-width: 639px) { .hc__todos { width: 100%; } }
+</style>

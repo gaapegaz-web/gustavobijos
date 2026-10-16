@@ -3,6 +3,8 @@ const e = (k: string, d = '') => (process.env[k] ?? import.meta.env?.[k] ?? d) a
 
 export const ENV = {
   get DB_PATH() { return e('DB_PATH', '/srv/tecnoapis/data/app.db'); },
+  /** Imagens enviadas pelo /admin (capas e fotos dos conteúdos), servidas em /uploads/*. Fora do app: sobrevivem ao deploy. */
+  get UPLOADS_DIR() { return e('UPLOADS_DIR', '/srv/tecnoapis/uploads'); },
   get META_PIXEL_ID() { return e('META_PIXEL_ID'); },
   get META_CAPI_TOKEN() { return e('META_CAPI_TOKEN'); },
   get META_TEST_EVENT_CODE() { return e('META_TEST_EVENT_CODE'); },
@@ -16,4 +18,6 @@ export const ENV = {
   get ADMIN_PASS() { return e('ADMIN_PASS'); },
   /** Redirect temporário da raiz para uma campanha (ex.: /black). Vazio = a home aparece. */
   get REDIRECT_RAIZ() { return e('REDIRECT_RAIZ', ''); },
+  /** Chave do IndexNow (avisa o Bing quando um conteúdo muda). Vazio = desligado. */
+  get INDEXNOW_KEY() { return e('INDEXNOW_KEY', ''); },
 };

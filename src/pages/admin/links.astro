@@ -1,0 +1,473 @@
+---
+/**
+ * Montador de links com UTM, em 3 passos com prévia ao vivo:
+ * 1) para onde leva, 2) onde vai divulgar (modelos que já preenchem origem e mídia), 3) campanha e nome.
+ * Gera o link curto (/r/<slug>, conta cliques) e/ou a URL completa. Anúncio da Meta usa os parâmetros dinâmicos do próprio Meta Ads.
+ * Os valores viram minúsculos e sem acento, para "Instagram" e "instagram" não virarem duas origens no painel.
+ */
+import Admin from '~/layouts/Admin.astro';
+import { db } from '~/lib/db';
+import { SITE } from '~/config/site';
+import { PAGINAS } from '~/config/paginas';
+import { publicados } from '~/lib/conteudos';
+import { nomePagina } from '~/lib/painel';
+
+export const prerender = false;
+
+const d = db();
+const links = d.prepare('SELECT * FROM links ORDER BY created_at DESC').all() as any[];
+const dominio = SITE.dominio;
+const host = dominio.replace(/^https?:\/\//, '');
+const artigos = publicados().map((c) => ({ path: `/conteudos/${c.slug}`, titulo: c.titulo }));
+const destinos = [
+  ...PAGINAS.map((p) => ({ path: p.path, titulo: p.titulo, campanha: !!p.campanha })),
+  { path: '/conteudos', titulo: 'Lista de conteúdos', campanha: false },
+];
+// Sugestões: o que já foi usado nos links e nas visitas (ignora valor que apareceu só em teste)
+const usados = (col: string) => [...new Set([
+  ...links.map((l) => l[col]).filter(Boolean),
+  ...(d.prepare(`SELECT ${col} v FROM sessoes WHERE ${col} IS NOT NULL AND robo = 0 GROUP BY v HAVING count(*) >= 5 ORDER BY count(*) DESC LIMIT 15`).all() as any[]).map((r) => r.v),
+])] as string[];
+const campanhas = usados('utm_campaign');
+const fontes = usados('utm_source');
+const midias = usados('utm_medium');
+const totalCliques = links.reduce((a, l) => a + (l.cliques ?? 0), 0);
+const maxCliques = Math.max(1, ...links.map((l) => l.cliques ?? 0));
+
+const I = {
+  instagram: '<rect width="20" height="20" x="2" y="2" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><path d="M17.5 6.5h.01"/>',
+  whatsapp: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  youtube: '<path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/>',
+  email: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  meta: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+  outro: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  copiar: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  lixo: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2"/>',
+  modelo: '<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>',
+  ok: '<path d="M20 6 9 17l-5-5"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+};
+const svg = (k: keyof typeof I, t = 18) => `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[k]}</svg>`;
+
+/** Modelos de divulgação: origem e mídia no mesmo padrão dos links que já existem (instagram/bio, whatsapp/grupo...). */
+const MODELOS = [
+  { id: 'ig-bio', grupo: 'Instagram', nome: 'Bio do Instagram', icone: 'instagram', source: 'instagram', medium: 'bio', slug: 'bio' },
+  { id: 'ig-stories', grupo: 'Instagram', nome: 'Stories', icone: 'instagram', source: 'instagram', medium: 'stories', slug: 'stories' },
+  { id: 'ig-post', grupo: 'Instagram', nome: 'Post ou Reels', icone: 'instagram', source: 'instagram', medium: 'post', slug: 'post' },
+  { id: 'zap-grupo', grupo: 'WhatsApp', nome: 'Grupo de WhatsApp', icone: 'whatsapp', source: 'whatsapp', medium: 'grupo', slug: 'zap' },
+  { id: 'zap-status', grupo: 'WhatsApp', nome: 'Status ou lista', icone: 'whatsapp', source: 'whatsapp', medium: 'status', slug: 'status' },
+  { id: 'yt-desc', grupo: 'YouTube', nome: 'Descrição do vídeo', icone: 'youtube', source: 'youtube', medium: 'descricao', slug: 'yt' },
+  { id: 'yt-live', grupo: 'YouTube', nome: 'Live', icone: 'youtube', source: 'youtube', medium: 'live', slug: 'live' },
+  { id: 'email', grupo: 'Outros', nome: 'E-mail', icone: 'email', source: 'email', medium: 'email', slug: 'email' },
+  { id: 'meta', grupo: 'Outros', nome: 'Anúncio Meta Ads', icone: 'meta', source: 'meta', medium: 'cpc', slug: '' },
+  { id: 'outro', grupo: 'Outros', nome: 'Outro lugar', icone: 'outro', source: '', medium: '', slug: '' },
+] as const;
+---
+<Admin titulo="Links e UTM" ativo="links" sub="Monte o link em 3 passos. A prévia do lado mostra o resultado na hora.">
+
+  <div class="montador">
+    <form class="card passos" id="form" autocomplete="off" onsubmit="return false">
+      <fieldset class="passo">
+        <legend><span class="passo__n">1</span>Para onde o link leva?</legend>
+        <div class="opcoes destinos">
+          {destinos.map((x, i) => (
+            <label class="opcao">
+              <input type="radio" name="destino" value={x.path} checked={i === 0} />
+              <span class="opcao__tit">{x.titulo}{x.campanha && <span class="tag acc">campanha</span>}</span>
+              <span class="opcao__sub">{host}{x.path === '/' ? '' : x.path}</span>
+            </label>
+          ))}
+          {artigos.length > 0 && (
+            <label class="opcao">
+              <input type="radio" name="destino" value="__artigo" />
+              <span class="opcao__tit">Um artigo</span>
+              <span class="opcao__sub">{artigos.length} publicados</span>
+            </label>
+          )}
+          <label class="opcao">
+            <input type="radio" name="destino" value="__outra" />
+            <span class="opcao__tit">Outra página</span>
+            <span class="opcao__sub">digite o endereço</span>
+          </label>
+        </div>
+        <div class="extra" id="extra-artigo" hidden>
+          <select name="artigo" aria-label="Artigo">{artigos.map((a) => <option value={a.path}>{a.titulo}</option>)}</select>
+        </div>
+        <div class="extra" id="extra-outra" hidden>
+          <div class="prefixo"><span>{host}</span><input name="outra" placeholder="/caminho-da-pagina" aria-label="Endereço da página" /></div>
+        </div>
+      </fieldset>
+
+      <fieldset class="passo">
+        <legend><span class="passo__n">2</span>Onde você vai divulgar?</legend>
+        <div class="opcoes modelos">
+          {MODELOS.map((m) => (
+            <label class={`opcao modelo modelo--${m.icone}`}>
+              <input type="radio" name="modelo" value={m.id} data-source={m.source} data-medium={m.medium} data-slug={m.slug} />
+              <span class="modelo__ico"><Fragment set:html={svg(m.icone as keyof typeof I, 17)} /></span>
+              <span class="opcao__tit">{m.nome}</span>
+              <span class="opcao__sub">{m.source ? `${m.source} · ${m.medium}` : 'você escolhe'}</span>
+            </label>
+          ))}
+        </div>
+        <div class="campos2">
+          <label class="campo-v"><span class="campo-v__r">Origem <small>utm_source</small></span><input name="utm_source" list="dl-fontes" placeholder="instagram, whatsapp..." /></label>
+          <label class="campo-v"><span class="campo-v__r">Mídia <small>utm_medium</small></span><input name="utm_medium" list="dl-midias" placeholder="bio, grupo, stories..." /></label>
+        </div>
+        <div class="aviso warn meta-aviso" id="meta-aviso" hidden>
+          <Fragment set:html={svg('meta', 16)} />
+          <div>Para anúncio, o link curto não serve: o Meta Ads só troca os nomes automáticos na URL do próprio anúncio. Use a <b>URL do site</b> e os <b>Parâmetros de URL</b> da prévia. A campanha, o conjunto e o anúncio entram sozinhos com os nomes que estão no Gerenciador.</div>
+        </div>
+      </fieldset>
+
+      <fieldset class="passo">
+        <legend><span class="passo__n">3</span>Dê um nome</legend>
+        <div class="campos2">
+          <label class="campo-v"><span class="campo-v__r">Campanha <small>utm_campaign</small></span><input name="utm_campaign" list="dl-campanhas" placeholder={campanhas[0] ?? 'black26'} /><span class="dica">Use o mesmo nome em todos os links da mesma ação.</span></label>
+          <label class="campo-v" id="campo-slug"><span class="campo-v__r">Nome do link curto</span>
+            <span class="prefixo"><span>/r/</span><input name="slug" placeholder="bio" maxlength="40" /></span>
+            <span class="dica" id="dica-slug">Fica {host}/r/… Sugerido pelo modelo; pode trocar.</span>
+          </label>
+        </div>
+        <label class="campo-v"><span class="campo-v__r">Descrição <small>só para você lembrar</small></span><input name="descricao" placeholder="ex: stories do dia 1/11" maxlength="200" /></label>
+        <details class="mais" id="mais">
+          <summary>Mais detalhes <span class="mut">(opcional)</span></summary>
+          <div class="campos2">
+            <label class="campo-v"><span class="campo-v__r">Conteúdo <small>utm_content</small></span><input name="utm_content" placeholder="variação, grupo, número da live..." /></label>
+            <label class="campo-v"><span class="campo-v__r">Anúncio <small>utm_term</small></span><input name="utm_term" placeholder="nome do criativo" /></label>
+          </div>
+        </details>
+      </fieldset>
+    </form>
+
+    <aside class="previa" aria-live="polite">
+      <div class="card previa__card">
+        <p class="previa__rot">Prévia</p>
+
+        <div id="pv-curto">
+          <div class="pv-curto"><Fragment set:html={svg('link', 16)} /><span>{host}/r/<b id="pv-slug">…</b></span></div>
+          <button type="button" class="btn grande" id="btn-criar">Criar link curto e copiar</button>
+          <p class="previa__nota">Conta os cliques. Ideal para bio, grupo, e-mail e descrição de vídeo.</p>
+        </div>
+
+        <div class="pv-bloco">
+          <div class="pv-bloco__h"><span id="pv-url-rot">URL completa</span><button type="button" class="copiar" data-alvo="pv-url"><Fragment set:html={svg('copiar', 14)} />Copiar</button></div>
+          <div class="pv-url" id="pv-url"></div>
+        </div>
+        <div class="pv-bloco" id="pv-params-bloco" hidden>
+          <div class="pv-bloco__h"><span>Parâmetros de URL <small class="mut">(campo do anúncio)</small></span><button type="button" class="copiar" data-alvo="pv-params"><Fragment set:html={svg('copiar', 14)} />Copiar</button></div>
+          <div class="pv-url" id="pv-params"></div>
+        </div>
+
+        <ul class="check" id="check">
+          <li data-k="destino">Destino escolhido</li>
+          <li data-k="source">Origem preenchida</li>
+          <li data-k="campaign">Campanha preenchida <span class="mut">(recomendado)</span></li>
+          <li data-k="slug">Nome do link livre</li>
+        </ul>
+        <div class="pv-msg" id="pv-msg" role="status"></div>
+      </div>
+    </aside>
+  </div>
+
+  <datalist id="dl-campanhas">{campanhas.map((v) => <option value={v} />)}</datalist>
+  <datalist id="dl-fontes">{fontes.map((v) => <option value={v} />)}</datalist>
+  <datalist id="dl-midias">{midias.map((v) => <option value={v} />)}</datalist>
+
+  <section class="card p0">
+    <div class="card__h lista-h">
+      <div><h3>Seus links curtos</h3><span class="mut" style="font-size:12.5px">{links.length} links · {totalCliques} cliques</span></div>
+      {links.length > 3 && <label class="busca"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" id="busca-links" placeholder="Buscar link" aria-label="Buscar link" /></label>}
+    </div>
+    <div class="tbl"><table class="links"><thead><tr><th>Link</th><th>Leva para</th><th>Origem</th><th>Campanha</th><th class="n">Cliques</th><th></th></tr></thead><tbody>
+      {links.length ? links.map((l: any) => (
+        <tr data-row-slug={l.slug} data-busca={[l.slug, l.destino, l.utm_source, l.utm_medium, l.utm_campaign, l.utm_content, l.descricao].filter(Boolean).join(' ').toLowerCase()}>
+          <td>
+            <div class="lk"><code>/r/{l.slug}</code><button type="button" class="ico-btn" data-copiar={`${dominio}/r/${l.slug}`} title="Copiar link curto" aria-label={`Copiar ${host}/r/${l.slug}`}><Fragment set:html={svg('copiar', 14)} /></button></div>
+            {l.descricao && <span class="sub">{l.descricao}</span>}
+          </td>
+          <td><span class="tag">{nomePagina(l.destino)}</span></td>
+          <td>{l.utm_source}{l.utm_medium && <span class="mut"> · {l.utm_medium}</span>}{l.utm_content && <span class="sub">{l.utm_content}</span>}</td>
+          <td class="dim">{l.utm_campaign || '—'}</td>
+          <td class="n"><span class="mini"><i style={`width:${Math.round(((l.cliques ?? 0) / maxCliques) * 100)}%`}></i></span><b>{l.cliques ?? 0}</b></td>
+          <td class="n"><div class="acoes-linha">
+            <button type="button" class="ico-btn" data-modelo={JSON.stringify({ destino: l.destino, utm_source: l.utm_source, utm_medium: l.utm_medium, utm_campaign: l.utm_campaign, utm_content: l.utm_content, utm_term: l.utm_term })} title="Usar como modelo para um link novo"><Fragment set:html={svg('modelo', 14)} /><span>Modelo</span></button>
+            <button type="button" class="ico-btn perigo" data-del-slug={l.slug} title="Excluir" aria-label={`Excluir /r/${l.slug}`}><Fragment set:html={svg('lixo', 14)} /></button>
+          </div></td>
+        </tr>
+      )) : <tr><td colspan="6" class="tbl-vazio">Nenhum link curto ainda. Monte o primeiro aí em cima.</td></tr>}
+    </tbody></table></div>
+  </section>
+</Admin>
+
+<script define:vars={{ dominio, host, existentes: links.map((l) => l.slug), artigosPaths: artigos.map((a) => a.path) }}>
+  var form = document.getElementById('form');
+  var $ = function (id) { return document.getElementById(id); };
+  var campo = function (n) { return form.elements.namedItem(n); };
+  var META = { utm_source: 'meta', utm_medium: 'cpc', utm_campaign: '{{campaign.name}}', utm_content: '{{adset.name}}', utm_term: '{{ad.name}}' };
+  var slugEditado = false;
+
+  /** minúsculo, sem acento, espaço vira hífen; preserva os {{nomes}} dinâmicos do Meta Ads */
+  function limpar(v, slug) {
+    v = String(v || '').trim();
+    if (!slug && v.indexOf('{{') !== -1) return v;
+    v = v.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '-');
+    v = slug ? v.replace(/[^a-z0-9-]/g, '') : v.replace(/[^a-z0-9_\-.]/g, '');
+    return v.replace(/-{2,}/g, '-');
+  }
+  function radio(n) { var r = form.querySelector('input[name="' + n + '"]:checked'); return r ? r.value : ''; }
+  function destino() {
+    var v = radio('destino');
+    if (v === '__artigo') return campo('artigo').value;
+    if (v === '__outra') {
+      var o = campo('outra').value.trim();
+      if (!o) return '';
+      try { if (/^https?:/.test(o)) { var u = new URL(o); return u.pathname + u.search; } } catch (e) {}
+      return o.charAt(0) === '/' ? o : '/' + o;
+    }
+    return v;
+  }
+  function ehMeta() { return radio('modelo') === 'meta'; }
+  function utms() {
+    var o = {};
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (k) { var v = limpar(campo(k).value); if (v) o[k] = v; });
+    return o;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function query(u, html) {
+    return Object.keys(u).map(function (k) {
+      return html ? '<span class="pk">' + k + '</span>=<span class="pv">' + esc(u[k]) + '</span>' : k + '=' + (u[k].indexOf('{{') !== -1 ? u[k] : encodeURIComponent(u[k]));
+    }).join(html ? '<span class="pa">&amp;</span>' : '&');
+  }
+  function sugerirSlug() {
+    if (slugEditado) return;
+    var m = form.querySelector('input[name="modelo"]:checked');
+    var base = m && m.dataset.slug ? m.dataset.slug : limpar(campo('utm_medium').value || campo('utm_source').value, true);
+    var camp = limpar(campo('utm_campaign').value, true);
+    var s = base ? base + (camp && camp.indexOf('{{') === -1 ? '-' + camp : '') : '';
+    var n = 2, final = s;
+    while (final && existentes.indexOf(final) !== -1) final = s + '-' + n++;
+    campo('slug').value = final.slice(0, 40);
+  }
+
+  function atualizar() {
+    var dest = destino(), u = utms(), meta = ehMeta();
+    var slug = limpar(campo('slug').value, true);
+    $('extra-artigo').hidden = radio('destino') !== '__artigo';
+    $('extra-outra').hidden = radio('destino') !== '__outra';
+    $('meta-aviso').hidden = !meta;
+    $('pv-curto').hidden = meta;
+    $('campo-slug').hidden = meta;
+    $('pv-params-bloco').hidden = !meta;
+    $('pv-url-rot').textContent = meta ? 'URL do site (campo do anúncio)' : 'URL completa';
+
+    var q = query(u, true);
+    $('pv-url').innerHTML = '<span class="pd">' + esc(host + (dest === '/' ? '' : dest || '/…')) + '</span>' + (!meta && q ? '<span class="pa">?</span>' + q : '');
+    $('pv-params').innerHTML = q || '<span class="mut">—</span>';
+    $('pv-slug').textContent = slug || '…';
+
+    var livre = slug && /^[a-z0-9][a-z0-9-]{1,39}$/.test(slug) && existentes.indexOf(slug) === -1;
+    var estado = { destino: !!dest, source: !!u.utm_source, campaign: !!u.utm_campaign, slug: meta || livre };
+    form.dataset.ok = estado.destino && estado.source ? '1' : '';
+    document.querySelectorAll('#check li').forEach(function (li) {
+      li.className = estado[li.dataset.k] ? 'ok' : '';
+      li.hidden = meta && li.dataset.k === 'slug';
+    });
+    var liSlug = document.querySelector('#check li[data-k="slug"]');
+    liSlug.firstChild.textContent = !slug ? 'Nome do link' : existentes.indexOf(slug) !== -1 ? 'Esse nome já existe' : slug.length < 2 ? 'Nome muito curto' : 'Nome do link livre';
+    $('btn-criar').disabled = !(estado.destino && estado.source && livre);
+  }
+
+  function urlFinal() { var u = utms(), q = query(u, false); return dominio + destino() + (q && !ehMeta() ? (destino().indexOf('?') === -1 ? '?' : '&') + q : ''); }
+  function copiar(texto, btn) {
+    return navigator.clipboard.writeText(texto).then(function () {
+      if (!btn) return;
+      btn.classList.add('feito'); var t = btn.innerHTML; btn.innerHTML = btn.innerHTML.replace(/Copiar|Modelo/, 'Copiado!');
+      setTimeout(function () { btn.classList.remove('feito'); btn.innerHTML = t; }, 1400);
+    });
+  }
+  function msg(t, tipo) { var m = $('pv-msg'); m.textContent = t; m.className = 'pv-msg ' + (tipo || ''); }
+
+  // Modelo escolhido: preenche origem e mídia (e os nomes dinâmicos, se for anúncio)
+  form.querySelectorAll('input[name="modelo"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      var eraMeta = campo('utm_campaign').value.indexOf('{{') !== -1;
+      if (r.value === 'meta') { Object.keys(META).forEach(function (k) { campo(k).value = META[k]; }); $('mais').open = true; }
+      else {
+        if (eraMeta) ['utm_campaign', 'utm_content', 'utm_term'].forEach(function (k) { campo(k).value = ''; });
+        campo('utm_source').value = r.dataset.source; campo('utm_medium').value = r.dataset.medium;
+        if (r.value === 'outro') campo('utm_source').focus();
+      }
+      sugerirSlug(); atualizar();
+    });
+  });
+  form.addEventListener('input', function (e) {
+    var n = e.target.name;
+    if (n === 'slug') slugEditado = !!e.target.value;
+    if (n === 'utm_source' || n === 'utm_medium') { var m = form.querySelector('input[name="modelo"]:checked'); if (m && m.value !== 'outro' && (campo('utm_source').value !== m.dataset.source || campo('utm_medium').value !== m.dataset.medium)) form.querySelector('input[name="modelo"][value="outro"]').checked = true; }
+    if (n !== 'slug' && n !== 'descricao') sugerirSlug();
+    atualizar();
+  });
+  form.addEventListener('change', atualizar);
+  // Ao sair do campo, mostra o valor já limpo (minúsculo, sem acento)
+  form.addEventListener('focusout', function (e) {
+    var n = e.target.name;
+    if (/^utm_/.test(n)) e.target.value = limpar(e.target.value);
+    if (n === 'slug') e.target.value = limpar(e.target.value, true);
+    atualizar();
+  });
+
+  $('btn-criar').addEventListener('click', async function () {
+    var u = utms(), slug = limpar(campo('slug').value, true), btn = this;
+    btn.disabled = true; msg('');
+    try {
+      var res = await fetch('/api/admin/links', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(Object.assign({ slug: slug, destino: destino(), descricao: campo('descricao').value.trim() }, u)) });
+      var j = await res.json();
+      if (!j.ok) { msg(j.erro || 'Não deu para criar o link.', 'err'); btn.disabled = false; return; }
+      var curto = dominio + '/r/' + j.slug;
+      await copiar(curto).catch(function () {});
+      msg('Pronto! ' + curto.replace(/^https?:\/\//, '') + ' foi criado e copiado.', 'ok');
+      setTimeout(function () { location.reload(); }, 1600);
+    } catch (e) { msg('Falha ao falar com o servidor.', 'err'); btn.disabled = false; }
+  });
+  document.querySelectorAll('.copiar').forEach(function (b) {
+    b.addEventListener('click', function () { copiar(b.dataset.alvo === 'pv-params' ? query(utms(), false) : urlFinal(), b); });
+  });
+
+  // Lista: copiar, usar como modelo, excluir, buscar
+  document.querySelectorAll('[data-copiar]').forEach(function (b) { b.addEventListener('click', function () { copiar(b.dataset.copiar, b); }); });
+  document.querySelectorAll('[data-modelo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var m = JSON.parse(b.dataset.modelo);
+      var r = form.querySelector('input[name="destino"][value="' + m.destino + '"]');
+      if (r) r.checked = true;
+      else if (artigosPaths.indexOf(m.destino) !== -1) { form.querySelector('input[name="destino"][value="__artigo"]').checked = true; campo('artigo').value = m.destino; }
+      else { form.querySelector('input[name="destino"][value="__outra"]').checked = true; campo('outra').value = m.destino; }
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(function (k) { campo(k).value = m[k] || ''; });
+      var modelo = Array.from(form.querySelectorAll('input[name="modelo"]')).find(function (x) { return x.dataset.source === m.utm_source && x.dataset.medium === m.utm_medium; });
+      (modelo || form.querySelector('input[name="modelo"][value="outro"]')).checked = true;
+      if (m.utm_content || m.utm_term) $('mais').open = true;
+      slugEditado = false; campo('descricao').value = ''; sugerirSlug(); atualizar();
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      msg('Modelo carregado. Troque o que precisar e dê um nome novo.', '');
+    });
+  });
+  document.querySelectorAll('[data-del-slug]').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+      if (!confirm('Excluir /r/' + btn.dataset.delSlug + '? Quem clicar nele depois vai cair numa página de erro. Os cliques já registrados continuam no painel.')) return;
+      await fetch('/api/admin/links?slug=' + encodeURIComponent(btn.dataset.delSlug), { method: 'DELETE' });
+      btn.closest('tr').remove();
+    });
+  });
+  var busca = $('busca-links');
+  if (busca) busca.addEventListener('input', function () {
+    var t = busca.value.trim().toLowerCase();
+    document.querySelectorAll('tr[data-busca]').forEach(function (tr) { tr.hidden = t && tr.dataset.busca.indexOf(t) === -1; });
+  });
+
+  atualizar();
+</script>
+
+<style is:global>
+  .montador{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start;margin-bottom:28px}
+  @media (max-width:1100px){.montador{grid-template-columns:minmax(0,1fr)}}
+
+  /* Passos */
+  .passos{padding:0}
+  .passo{border:0;margin:0;padding:22px 24px;min-width:0}
+  .passo + .passo{border-top:1px solid var(--line)}
+  .passo legend{display:flex;align-items:center;gap:10px;float:left;width:100%;margin:0 0 14px;padding:0;font-size:15px;font-weight:650;letter-spacing:-.01em}
+  .passo legend + *{clear:both}
+  .passo__n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:#fff;font-size:12px;font-weight:700;flex:none}
+
+  /* Cartões de escolha (rádio) */
+  .opcoes{display:grid;gap:8px}
+  .destinos{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  .modelos{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .opcao{position:relative;display:flex;flex-direction:column;gap:2px;padding:11px 13px;border:1px solid var(--line-2);border-radius:10px;background:var(--card);cursor:pointer;transition:border-color .12s,box-shadow .12s,background .12s;min-width:0}
+  .opcao:hover{border-color:#c9c0b0;background:var(--card-2)}
+  .opcao input{position:absolute;opacity:0;pointer-events:none}
+  .opcao:has(input:checked){border-color:var(--acc);background:#fffaf0;box-shadow:0 0 0 3px var(--acc-soft)}
+  .opcao:has(input:focus-visible){outline:2px solid var(--acc-ink);outline-offset:2px}
+  .opcao__tit{display:flex;align-items:center;gap:6px;font-weight:600;font-size:13.5px;color:var(--ink);line-height:1.3}
+  .opcao__tit .tag{font-size:10.5px;padding:1px 6px}
+  .opcao__sub{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .modelo{padding-top:12px}
+  .modelo__ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;margin-bottom:6px;background:var(--track);color:var(--ink-2)}
+  .modelo--instagram .modelo__ico{background:#fbe7f0;color:#b3245f}
+  .modelo--whatsapp .modelo__ico{background:#e2f4e8;color:#1d8048}
+  .modelo--youtube .modelo__ico{background:#fde8e6;color:#c4382b}
+  .modelo--email .modelo__ico{background:#e6eefb;color:#2b5fad}
+  .modelo--meta .modelo__ico{background:#efe8fb;color:#6a3fb5}
+  .extra{margin-top:10px;max-width:520px}
+  .extra select{width:100%;max-width:100%;text-overflow:ellipsis}
+
+  /* Campos */
+  .campos2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;margin-top:14px}
+  @media (max-width:640px){.campos2{grid-template-columns:1fr}}
+  .campo-v{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--ink);margin-top:14px}
+  .campos2 .campo-v{margin-top:0}
+  .campo-v__r{display:block}
+  .campo-v small{font-weight:400;color:var(--mut);font-size:11.5px;margin-left:4px}
+  .campo-v[hidden]{display:none}
+  .passos input:not([type=radio]),.passos select{width:100%;min-height:40px;padding:8px 11px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--card);font-size:14px;font-weight:400}
+  .passos input:focus,.passos select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+  .prefixo{display:flex;align-items:center;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--card-2);overflow:hidden}
+  .prefixo:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+  .prefixo > span{padding:0 2px 0 11px;font:400 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mut);white-space:nowrap}
+  .passos .prefixo input{border:0;border-radius:0;box-shadow:none;background:var(--card);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;padding-left:4px}
+  .dica{font-weight:400;font-size:12px;color:var(--mut)}
+  .mais{margin-top:16px}
+  .mais summary{cursor:pointer;font-size:13.5px;font-weight:600;color:var(--ink-2);list-style:none;display:inline-flex;align-items:center;gap:6px}
+  .mais summary::-webkit-details-marker{display:none}
+  .mais summary::before{content:'';width:0;height:0;border:4px solid transparent;border-left:6px solid var(--mut);transition:transform .15s}
+  .mais[open] summary::before{transform:rotate(90deg)}
+  .mais .mut{font-weight:400}
+  .meta-aviso{margin:14px 0 0;font-size:13px}
+
+  /* Prévia */
+  .previa{position:sticky;top:24px}
+  @media (max-width:1100px){.previa{position:static}}
+  .previa__card{padding:20px;border-top:3px solid var(--acc)}
+  .previa__rot{margin:0 0 12px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+  .pv-curto{display:flex;align-items:center;gap:8px;padding:14px;border-radius:10px;background:var(--acc-soft);color:var(--acc-ink);font:500 14.5px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;margin-bottom:12px}
+  .pv-curto svg{flex:none}
+  .pv-curto span{color:var(--ink)} .pv-curto b{color:var(--acc-ink);font-weight:700}
+  .btn.grande{width:100%;min-height:44px;font-size:14.5px}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .previa__nota{margin:8px 0 0;font-size:12.5px;color:var(--mut);text-align:center}
+  .pv-bloco{margin-top:18px}
+  .pv-bloco__h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+  .pv-bloco__h small{font-weight:400}
+  .pv-url{padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card-2);font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;color:var(--ink-2);max-height:180px;overflow:auto}
+  .pv-url .pd{color:var(--ink);font-weight:600}
+  .pv-url .pk{color:var(--mut)}
+  .pv-url .pv{color:var(--acc-ink);font-weight:600}
+  .pv-url .pa{color:var(--line-2);margin:0 1px}
+  .copiar,.ico-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid var(--line-2);border-radius:7px;background:var(--card);color:var(--ink-2);font:500 12px/1 Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+  .copiar:hover,.ico-btn:hover{background:var(--card-2);color:var(--ink)}
+  .copiar.feito,.ico-btn.feito{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+  .check{list-style:none;margin:18px 0 0;padding:14px 0 0;border-top:1px solid var(--line);display:grid;gap:7px;font-size:13px;color:var(--mut)}
+  .check li{display:flex;align-items:center;gap:8px}
+  .check li[hidden]{display:none}
+  .check li::before{content:'';width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-2);flex:none;box-sizing:border-box}
+  .check li.ok{color:var(--ink)}
+  .check li.ok::before{border:0;background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/10px no-repeat}
+  .pv-msg{font-size:13px;margin-top:12px}
+  .pv-msg:empty{display:none}
+  .pv-msg.ok{color:var(--ok);font-weight:600} .pv-msg.err{color:var(--err)}
+
+  /* Lista */
+  .lista-h{align-items:center}
+  .lista-h h3{margin:0 0 2px}
+  .lista-h .busca{min-width:220px}
+  .links td{padding-top:11px;padding-bottom:11px}
+  .lk{display:flex;align-items:center;gap:8px}
+  .lk code{font-size:13px;color:var(--ink);font-weight:600}
+  .lk .ico-btn{padding:4px 6px;opacity:.7} tr:hover .lk .ico-btn{opacity:1}
+  .sub{display:block;font-size:12px;color:var(--mut);margin-top:2px;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+  .acoes-linha{display:flex;gap:6px;justify-content:flex-end}
+  .ico-btn.perigo:hover{color:var(--err);border-color:rgba(196,56,43,.35);background:var(--err-soft)}
+  tr[hidden]{display:none}
+</style>

@@ -1,0 +1,57 @@
+---
+/** Lista dos conteúdos (rascunhos e publicados). A basic auth do /admin vem do middleware. */
+import Admin from '~/layouts/Admin.astro';
+import { nomeTema } from '~/config/conteudos';
+import { db } from '~/lib/db';
+import { fmtData, youtubeId, type Conteudo } from '~/lib/conteudos';
+
+export const prerender = false;
+
+const filtro = Astro.url.searchParams.get('status');
+const busca = (Astro.url.searchParams.get('q') || '').trim();
+const where: string[] = []; const params: string[] = [];
+if (filtro === 'rascunho' || filtro === 'publicado') { where.push('status = ?'); params.push(filtro); }
+if (busca) { where.push('(titulo LIKE ? OR corpo LIKE ?)'); params.push(`%${busca}%`, `%${busca}%`); }
+const itens = db().prepare(`SELECT * FROM conteudos ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY status = 'publicado', atualizado_em DESC`).all(...params) as Conteudo[];
+const total = db().prepare(`SELECT count(*) n, coalesce(sum(status = 'publicado'), 0) pub FROM conteudos`).get() as { n: number; pub: number };
+const msg = Astro.url.searchParams.get('ok');
+const link = (s: string | null) => `?${new URLSearchParams({ ...(s ? { status: s } : {}), ...(busca ? { q: busca } : {}) })}`;
+---
+<Admin titulo="Conteúdos" ativo="conteudos" sub={`${total.pub} publicados · ${total.n - total.pub} rascunhos. Os publicados aparecem em /conteudos e na home.`}>
+  <a slot="acoes" class="btn" href="/admin/conteudos/novo">+ Novo conteúdo</a>
+  {msg === 'excluido' && <div class="aviso ok">Conteúdo excluído.</div>}
+
+  <div class="filtros">
+    <nav>{[[null, 'Todos'], ['rascunho', 'Rascunhos'], ['publicado', 'Publicados']].map(([v, l]) => <a href={link(v)} class={(filtro ?? null) === v ? 'on' : ''}>{l}</a>)}</nav>
+    <form method="get">{filtro && <input type="hidden" name="status" value={filtro} />}<input type="search" name="q" value={busca} placeholder="Buscar no título ou no texto" /></form>
+  </div>
+
+  <div class="card" style="padding:0">
+    {itens.length === 0
+      ? <p class="mut" style="padding:24px">Nenhum conteúdo {busca ? 'encontrado' : 'ainda'}. <a href="/admin/conteudos/novo">Criar o primeiro</a>.</p>
+      : <div class="tbl"><table>
+          <thead><tr><th>Título</th><th>Tema</th><th>Situação</th><th>Vídeo</th><th>Atualizado</th><th></th></tr></thead>
+          <tbody>{itens.map((c) => (
+            <tr>
+              <td><a href={`/admin/conteudos/${c.id}`} class="tit">{c.titulo}</a><div class="mut"><code>/conteudos/{c.slug}</code>{c.origem && <> · de <i>{c.origem}</i></>}</div></td>
+              <td>{nomeTema(c.tema) || <span class="mut">—</span>}</td>
+              <td>{c.status === 'publicado' ? <span class="chip ok"><i></i>Publicado</span> : <span class="chip warn"><i></i>Rascunho</span>}</td>
+              <td>{youtubeId(c.video_url) ? 'Sim' : <span class="mut">—</span>}</td>
+              <td style="white-space:nowrap">{fmtData(c.atualizado_em)}</td>
+              <td style="white-space:nowrap"><a href={`/admin/conteudos/${c.id}`}>Editar</a>{c.status === 'publicado' ? <> · <a href={`/conteudos/${c.slug}`} target="_blank" rel="noopener">Ver</a></> : <> · <a href={`/admin/conteudos/previa/${c.id}`} target="_blank" rel="noopener">Prévia</a></>}</td>
+            </tr>
+          ))}</tbody>
+        </table></div>}
+  </div>
+</Admin>
+
+<style>
+  .filtros{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .filtros nav{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:3px;box-shadow:var(--sombra)}
+  .filtros nav a{padding:6px 14px;border-radius:7px;color:var(--ink-2);font-size:13px;font-weight:500}
+  .filtros nav a:hover{text-decoration:none;color:var(--ink);background:var(--card-2)}
+  .filtros nav a.on{background:var(--ink);color:#fff;font-weight:600}
+  .filtros input{min-width:260px;min-height:38px;padding:0 12px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--card);color:var(--ink);font:inherit;box-shadow:var(--sombra)}
+  .filtros input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+  .tit{font-weight:600;font-size:14.5px;color:var(--ink)}
+</style>

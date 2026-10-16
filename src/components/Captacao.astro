@@ -8,7 +8,6 @@ import BotaoGrupo from './black/BotaoGrupo.astro';
 import Faixa from './black/Faixa.astro';
 import Clube from './black/Clube.astro';
 import Cursos from './black/Cursos.astro';
-import Conteudo from './black/Conteudo.astro';
 import NaBlack from './black/NaBlack.astro';
 import Gustavo from './black/Gustavo.astro';
 import Duvidas from './black/Duvidas.astro';
@@ -46,8 +45,9 @@ const urlPagina = new URL(Astro.url.pathname, CAMPANHA.dominio).toString();
 const eventoLd = {
   '@type': 'Event',
   '@id': `${urlPagina}#evento`,
-  name: CAMPANHA.live.titulo,
-  description: CAMPANHA.live.subtitulo,
+  // O Google não aceita promoção como evento: nome e descrição falam da live, não da oferta
+  name: `${CAMPANHA.live.titulo}: evento ao vivo`,
+  description: descricaoSeo,
   startDate: CAMPANHA.live.data,
   // Mesmo fuso do startDate (-03:00), em vez de UTC com Z
   endDate: new Date(live.getTime() + CAMPANHA.live.duracaoMin * 60_000 - 3 * 3_600_000).toISOString().replace(/\.\d{3}Z$/, '-03:00'),
@@ -107,7 +107,6 @@ const fotoHero = fotoReal ?? '/img/gustavo-hero-vazio.svg';
   <Faixa />
   <Clube />
   <Cursos />
-  <Conteudo />
   <NaBlack nota={notaEvento} />
   <Gustavo />
   <Duvidas quandoLongo={quandoLongo} liveJaPassou={liveJaPassou} />

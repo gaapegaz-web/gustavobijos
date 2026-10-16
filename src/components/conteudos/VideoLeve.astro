@@ -1,0 +1,39 @@
+---
+/**
+ * Vídeo do YouTube "leve": mostra só a capa e o botão de play; o player (cerca de 1 MB de script) só carrega no toque.
+ * Assim a página continua rápida no celular. youtube-nocookie: o YouTube não grava cookie antes do play.
+ */
+import { capaYoutube } from '~/lib/conteudos';
+interface Props { id: string; titulo: string }
+const { id, titulo } = Astro.props;
+---
+<div class="vl">
+  <button type="button" class="vl__btn" data-vl={id} aria-label={`Assistir ao vídeo: ${titulo}`} data-track-click="PlayVideo" data-track-params={JSON.stringify({ content_name: id })}>
+    <img src={capaYoutube(id)} alt="" width="480" height="360" fetchpriority="high" decoding="async" />
+    <span class="vl__play" aria-hidden="true"></span>
+  </button>
+</div>
+
+<script is:inline>
+  document.querySelectorAll('[data-vl]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + b.getAttribute('data-vl') + '?autoplay=1&rel=0&playsinline=1';
+      f.title = b.getAttribute('aria-label');
+      f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      f.allowFullscreen = true;
+      b.replaceWith(f);
+    }, { once: true });
+  });
+</script>
+
+<style>
+  .vl { position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); overflow: hidden; background: #000; }
+  .vl__btn { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+  .vl__btn img { width: 100%; height: 100%; object-fit: cover; }
+  .vl__btn:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .vl__play { position: absolute; left: 50%; top: 50%; width: 76px; height: 54px; margin: -27px 0 0 -38px; border-radius: 14px; background: #f2a900; box-shadow: 0 6px 24px rgba(0,0,0,.45); transition: transform .15s; }
+  .vl__play::after { content: ''; position: absolute; left: 31px; top: 16px; border-style: solid; border-width: 11px 0 11px 18px; border-color: transparent transparent transparent #0a0a0a; }
+  .vl__btn:hover .vl__play { transform: scale(1.06); }
+  .vl :global(iframe) { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+</style>

@@ -1,0 +1,84 @@
+---
+/**
+ * /conteudos: todos os conteúdos publicados, do mais novo ao mais antigo. O filtro por tema roda no navegador
+ * (sem JavaScript, mostra tudo) para não criar uma URL por tema. Sem nada publicado, fica fora do Google.
+ */
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
+import Rodape from '~/components/home/Rodape.astro';
+import CardConteudo from '~/components/conteudos/CardConteudo.astro';
+import { TEMAS_CONTEUDO } from '~/config/conteudos';
+import { BIO, SITE } from '~/config/site';
+import { publicados } from '~/lib/conteudos';
+
+export const prerender = false;
+
+const itens = publicados();
+const temas = TEMAS_CONTEUDO.filter((t) => itens.some((c) => c.tema === t.slug));
+const url = `${SITE.dominio}/conteudos`;
+const ld = [{
+  '@type': 'ItemList', '@id': `${url}#lista`, name: `Conteúdos de ${SITE.apelido}`,
+  itemListElement: itens.map((c, i) => ({ '@type': 'ListItem', position: i + 1, url: `${url}/${c.slug}`, name: c.titulo })),
+}];
+---
+<Tecnoapis
+  title={`Conteúdos sobre apicultura | ${SITE.apelido}`}
+  description={`Artigos e vídeos de ${SITE.apelido} sobre apicultura: multiplicação de enxames, rainhas, manejo, colheita de mel, própolis e gestão do apiário.`}
+  noindex={itens.length === 0}
+  jsonLd={itens.length ? ld : []}
+>
+  <Menu />
+  <main>
+    <section class="ta-section lista__topo" data-secao="1-topo">
+      <div class="ta-container">
+        <div class="ta-intro">
+          <span class="ta-pill">Aprenda com o Gustavo</span>
+          <h1 class="display-l">Conteúdos sobre apicultura</h1>
+          <p class="ta-lead">O que o Gustavo aprendeu em {BIO.anos} anos de apicultura, explicado passo a passo.</p>
+        </div>
+        {temas.length > 1 && (
+          <div class="lista__filtro" role="group" aria-label="Filtrar por tema">
+            <button type="button" class="on" data-filtro="" aria-pressed="true">Todos</button>
+            {temas.map((t) => <button type="button" data-filtro={t.slug} aria-pressed="false">{t.nome}</button>)}
+          </div>
+        )}
+      </div>
+    </section>
+
+    <section class="ta-section ta-section--light lista__sec" data-theme="light" data-secao="2-lista">
+      <div class="ta-container">
+        {itens.length
+          ? <div class="lista__grid">{itens.map((c) => <CardConteudo c={c} nivel="h2" />)}</div>
+          : <p class="ta-lead">Os primeiros conteúdos estão sendo preparados. Enquanto isso, conheça o <a href={SITE.clubeUrl}>{SITE.clube}</a>.</p>}
+      </div>
+    </section>
+  </main>
+  <Rodape />
+</Tecnoapis>
+
+<script is:inline>
+  (function () {
+    var bts = document.querySelectorAll('[data-filtro]');
+    bts.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var t = b.getAttribute('data-filtro');
+        bts.forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        document.querySelectorAll('.lista__grid [data-tema]').forEach(function (c) { c.hidden = !!t && c.getAttribute('data-tema') !== t; });
+      });
+    });
+  })();
+</script>
+
+<style>
+  .lista__topo { padding-block: var(--space-12) var(--space-10); }
+  .lista__filtro { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-8); }
+  .lista__filtro button { min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-full); border: 1px solid var(--border); background: transparent; color: var(--ink); font: 500 15px/1 var(--font-sans); cursor: pointer; }
+  .lista__filtro button:hover { border-color: var(--accent); }
+  .lista__filtro button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .lista__sec { padding-block: var(--space-12) var(--space-16); }
+  .lista__grid { display: grid; gap: var(--space-5); }
+  .lista__grid :global([hidden]) { display: none; }
+  @media (min-width: 640px) { .lista__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (min-width: 1000px) { .lista__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .lista__sec a { color: #7a5200; }
+</style>

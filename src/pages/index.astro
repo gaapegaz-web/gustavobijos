@@ -13,6 +13,7 @@ import ClubeConteudo from '~/components/ClubeConteudo.astro';
 import Sobre from '~/components/home/Sobre.astro';
 import Trajetoria from '~/components/home/Trajetoria.astro';
 import Perguntas from '~/components/home/Perguntas.astro';
+import Conteudos from '~/components/home/Conteudos.astro';
 import Rodape from '~/components/home/Rodape.astro';
 import { BIO, FAQ_PROFESSOR, MARCAS, SITE, visiveis } from '~/config/site';
 import { ENV } from '~/lib/env';
@@ -52,6 +53,7 @@ const faqLd = {
     <Trajetoria preview={preview} />
     {/* Marcas só aparece com 3 ou mais confirmadas */}
     {visiveis(MARCAS, preview).length >= 3 && <Marcas preview={preview} />}
+    <Conteudos />
     <Perguntas preview={preview} />
   </main>
   <Rodape />

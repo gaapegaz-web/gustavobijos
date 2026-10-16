@@ -1,0 +1,22 @@
+---
+/** Prévia de um conteúdo (inclusive rascunho) exatamente como fica no site. Fora do Google e sem Pixel. */
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
+import Artigo from '~/components/conteudos/Artigo.astro';
+import { porId } from '~/lib/conteudos';
+
+export const prerender = false;
+
+const c = porId(Number(Astro.params.id));
+if (!c) return Astro.redirect('/admin/conteudos');
+---
+<Tecnoapis title={`Prévia: ${c.titulo}`} noindex nofollow semPixel>
+  <div class="previa">Prévia{c.status === 'rascunho' ? ' · rascunho, ainda fora do site' : ''} · <a href={`/admin/conteudos/${c.id}`}>voltar a editar</a></div>
+  <Menu />
+  <main><Artigo c={c} /></main>
+</Tecnoapis>
+
+<style is:global>
+  .previa { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 60; max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: var(--radius-full); background: #fff3d1; color: #5a3d00; font: 600 13px/1.35 var(--font-sans); text-align: center; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+  .previa a { color: #5a3d00; }
+</style>

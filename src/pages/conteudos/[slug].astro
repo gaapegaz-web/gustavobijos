@@ -1,0 +1,28 @@
+---
+/** Um conteúdo publicado. Rascunho ou endereço inexistente = 404 (a prévia de rascunho fica no /admin). */
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
+import Rodape from '~/components/home/Rodape.astro';
+import Artigo from '~/components/conteudos/Artigo.astro';
+import { ldConteudo } from '~/components/conteudos/ld';
+import { imagemSocial, porSlug, tituloGoogle } from '~/lib/conteudos';
+import { SITE } from '~/config/site';
+
+export const prerender = false;
+
+const c = porSlug(Astro.params.slug ?? '');
+if (!c || c.status !== 'publicado') return Astro.rewrite('/404');
+const social = imagemSocial(c);
+---
+<Tecnoapis
+  title={tituloGoogle(c.titulo, SITE.apelido)}
+  ogTitle={c.titulo}
+  description={c.resumo || undefined}
+  ogType="article"
+  {...(social ? { ogImage: social.url, ogImageLargura: social.largura, ogImageAltura: social.altura, ogImageAlt: c.capa_alt || c.titulo } : {})}
+  jsonLd={ldConteudo(c)}
+>
+  <Menu />
+  <main><Artigo c={c} /></main>
+  <Rodape />
+</Tecnoapis>

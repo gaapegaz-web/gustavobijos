@@ -1,0 +1,70 @@
+---
+/** O que as pessoas fazem dentro das páginas: rolagem, formulário, seções vistas e cliques. */
+import Admin from '~/layouts/Admin.astro';
+import { periodo, HUMANO, pct, seg, nomePagina } from '~/lib/painel';
+
+export const prerender = false;
+
+const { dias, desde, rotulo, q, q1 } = periodo(Astro.url);
+const sessoes = q1<any>(`SELECT count(*) n FROM sessoes WHERE robo = 0 AND created_at >= datetime('now', ?)`).n as number;
+const scroll = q(`SELECT valor m, count(DISTINCT c.sessao_id) n FROM comportamento c WHERE tipo='scroll' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY valor ORDER BY valor`);
+const paginasComDados = q<{ pagina: string; n: number }>(`SELECT pagina, count(DISTINCT sessao_id) n FROM comportamento WHERE tipo='pagina' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY pagina ORDER BY n DESC`);
+const secoes = q(`SELECT c.pagina, c.alvo secao, count(DISTINCT c.sessao_id) n,
+  (SELECT avg(soma) FROM (SELECT sum(t.valor) soma FROM comportamento t WHERE t.tipo='secao_tempo' AND t.alvo=c.alvo AND t.pagina=c.pagina AND ${HUMANO('t.sessao_id')} AND t.created_at >= datetime('now', ?) GROUP BY t.sessao_id)) / 1000.0 tempo
+  FROM comportamento c WHERE c.tipo='secao_vista' AND ${HUMANO('c.sessao_id')} AND c.created_at >= datetime('now', ?) GROUP BY c.pagina, c.alvo`, desde);
+const baseSecao = Object.fromEntries(paginasComDados.map((p) => [p.pagina, p.n]));
+const ordemSecao = (a: string) => { const m = a.match(/^(\d+)-/); return m ? Number(m[1]) : 999; };
+// Páginas na ordem de visitas; seções na ordem em que aparecem na página
+const secoesPorPagina = paginasComDados
+  .map((p) => [p.pagina, secoes.filter((r: any) => r.pagina === p.pagina).sort((a: any, b: any) => ordemSecao(a.secao) - ordemSecao(b.secao))] as const)
+  .filter(([, rows]) => rows.length);
+// "4-conteudo" vira "4 · conteudo": o número é a posição na página e separa seções de mesmo nome
+const nomeSecao = (s: string) => s.replace(/^(\d+)-/, '$1 · ').replace(/-/g, ' ');
+const cliques = q(`SELECT pagina, alvo, count(*) n, count(DISTINCT sessao_id) s FROM comportamento WHERE tipo='clique' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY pagina, alvo ORDER BY n DESC LIMIT 30`);
+const erros = q(`SELECT alvo, count(*) n FROM comportamento WHERE tipo='form_erro' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY alvo ORDER BY n DESC`);
+const popup = q1<any>(`SELECT sum(tipo='popup_aberto') abriu, sum(tipo='popup_fechado') fechou, sum(tipo='form_envio') enviou,
+  (SELECT avg(valor) FROM comportamento WHERE tipo='popup_fechado' AND ${HUMANO()} AND created_at >= datetime('now', ?)) tempo FROM comportamento WHERE ${HUMANO()} AND created_at >= datetime('now', ?)`, desde);
+const maxScroll = Math.max(1, sessoes);
+---
+<Admin titulo="Comportamento" ativo="comportamento" periodo={dias} sub={`O que as pessoas fazem dentro das páginas, ${rotulo}: até onde rolam, o que veem e onde clicam.`}>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Até onde rolam <small>todas as páginas</small></h3>
+      {scroll.length ? <div class="bars">{scroll.map((r: any) => <div class="bar"><span class="rot">{r.m}% da página</span><div class="tr"><i style={`width:${pct(r.n, maxScroll)}%`}></i></div><span class="n"><b>{r.n}</b><small>{pct(r.n, maxScroll)}%</small></span></div>)}</div> : <p class="mut">Sem dados no período.</p>}
+    </div>
+    <div class="card">
+      <h3>Formulário <small>pop-up de cadastro, em qualquer página</small></h3>
+      <div class="bars">
+        <div class="bar"><span class="rot">Abriram</span><div class="tr"><i style="width:100%"></i></div><span class="n"><b>{popup.abriu ?? 0}</b></span></div>
+        <div class="bar"><span class="rot">Enviaram</span><div class="tr"><i style={`width:${pct(popup.enviou ?? 0, popup.abriu || 1)}%`}></i></div><span class="n"><b>{popup.enviou ?? 0}</b><small>{pct(popup.enviou ?? 0, popup.abriu ?? 0)}%</small></span></div>
+      </div>
+      <p class="nota">Tempo médio aberto antes de fechar: <b>{seg(popup.tempo) || '—'}</b><br/>Erros de preenchimento: <b>{erros.length ? erros.map((e: any) => `${e.alvo} (${e.n})`).join(', ') : 'nenhum'}</b></p>
+    </div>
+  </div>
+
+  <section class="grid g32">
+    <div class="card">
+      <h3>Seções vistas <small>% das visitas da página que chegaram à seção e o tempo médio nela</small></h3>
+      {secoesPorPagina.length ? secoesPorPagina.map(([pagina, rows]) => (
+        <div class="pagina">
+          <h4>{nomePagina(pagina)} <span class="mut">· {baseSecao[pagina] ?? 0} visitas</span></h4>
+          <div class="bars">{rows.map((r: any) => <div class="bar"><span class="rot" title={r.secao}>{nomeSecao(r.secao)}</span><div class="tr"><i style={`width:${pct(r.n, baseSecao[r.pagina] || 1)}%`}></i></div><span class="n"><b>{pct(r.n, baseSecao[r.pagina])}%</b><small>{seg(r.tempo) || '—'}</small></span></div>)}</div>
+        </div>
+      )) : <p class="mut">Sem dados de seção ainda. Aparecem quando alguém rola uma página.</p>}
+    </div>
+    <div class="card p0" style="align-self:start">
+      <div class="card__h"><h3>Cliques</h3></div>
+      <div class="tbl alta"><table><thead><tr><th>Página</th><th>Onde</th><th class="n">Cliques</th><th class="n">Visitas</th></tr></thead><tbody>
+        {cliques.length ? cliques.map((r: any) => <tr><td class="dim">{nomePagina(r.pagina)}</td><td class="alvo">{r.alvo}</td><td class="n">{r.n}</td><td class="n">{r.s}</td></tr>) : <tr><td colspan="4" class="tbl-vazio">Nenhum clique registrado.</td></tr>}
+      </tbody></table></div>
+    </div>
+  </section>
+  <p class="rodape"><a href="/admin/comportamento.csv">Baixar todos os eventos de comportamento (CSV)</a></p>
+</Admin>
+
+<style>
+  .pagina + .pagina{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+  h4{margin:0 0 10px;font-size:13.5px;font-weight:600}
+  h4 .mut{font-weight:400}
+  .alvo{white-space:normal;min-width:160px;max-width:260px;overflow-wrap:anywhere}
+</style>

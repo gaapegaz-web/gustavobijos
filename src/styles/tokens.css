@@ -49,8 +49,8 @@
   --radius-full: 9999px;
   --container: 1120px;
   --gutter: 20px;
-  --font-display: "Fraunces", "Georgia", serif;
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", "Fraunces Fallback", "Georgia", serif;
+  --font-sans: "Inter", "Inter Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (min-width: 720px) { :root { --gutter: 32px; } }
 

@@ -1,0 +1,52 @@
+---
+/** De onde vêm as visitas e os leads: UTM, site de referência e aparelho. */
+import Admin from '~/layouts/Admin.astro';
+import { periodo, pct, seg, NOME_DISP } from '~/lib/painel';
+
+export const prerender = false;
+
+const { dias, rotulo, q } = periodo(Astro.url);
+const origem = q(`SELECT coalesce(utm_source, CASE WHEN referrer IS NOT NULL THEN 'referência' ELSE '(direto)' END) fonte, coalesce(utm_medium,'') midia, coalesce(utm_content,'') conteudo,
+  count(*) n, sum(abriu_form) abriu, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo, avg(scroll_max) scroll
+  FROM sessoes WHERE robo = 0 AND created_at >= datetime('now', ?) GROUP BY fonte, midia, conteudo ORDER BY n DESC LIMIT 40`);
+const dispositivos = q(`SELECT coalesce(dispositivo,'?') disp, count(*) n, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo FROM sessoes WHERE robo = 0 AND created_at >= datetime('now', ?) GROUP BY disp ORDER BY n DESC`);
+const porFonte = q(`SELECT coalesce(utm_source,'(direto)') fonte, coalesce(utm_medium,'') medio, coalesce(utm_content,'') conteudo, count(*) leads, sum(comprou) compras
+  FROM leads WHERE created_at >= datetime('now', ?) GROUP BY fonte, medio, conteudo ORDER BY leads DESC`);
+const site = (r: string) => { try { return new URL(r).hostname.replace(/^www\./, ''); } catch { return r; } };
+// Agrupa por site (o referrer completo traz caminho e parâmetros diferentes para o mesmo site)
+const referencias = Object.entries(
+  q<{ referrer: string; n: number }>(`SELECT referrer, count(*) n FROM sessoes WHERE robo = 0 AND utm_source IS NULL AND referrer IS NOT NULL AND created_at >= datetime('now', ?) GROUP BY referrer`)
+    .reduce<Record<string, number>>((acc, r) => ((acc[site(r.referrer)] = (acc[site(r.referrer)] ?? 0) + r.n), acc), {}),
+).sort((a, b) => b[1] - a[1]).slice(0, 15);
+---
+<Admin titulo="Origem" ativo="origem" periodo={dias} sub={`De onde chegam as visitas e os leads, ${rotulo}. "(direto)" é quem chegou sem UTM nem site de referência.`}>
+  <div class="card p0">
+    <div class="card__h"><h3>Visitas por UTM</h3><span class="mut" style="font-size:12.5px">use o mesmo nome de campanha do Meta Ads para cruzar os dados</span></div>
+    <div class="tbl alta"><table><thead><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th class="n">Visitas</th><th class="n">Abriram form</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th><th class="n">Rolagem</th></tr></thead><tbody>
+      {origem.length ? origem.map((r: any) => <tr><td>{r.fonte}</td><td class="dim">{r.midia || '—'}</td><td class="dim">{r.conteudo || '—'}</td><td class="n"><span class="mini"><i style={`width:${pct(r.n, origem[0].n)}%`}></i></span>{r.n}</td><td class="n">{r.abriu}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td><td class="n">{Math.round(r.scroll)}%</td></tr>) : <tr><td colspan="9" class="tbl-vazio">Sem visitas no período.</td></tr>}
+    </tbody></table></div>
+  </div>
+
+  <section class="grid g2">
+    <div class="card p0">
+      <div class="card__h"><h3>Leads por origem</h3></div>
+      <div class="tbl"><table><thead><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th class="n">Leads</th><th class="n">Compras</th></tr></thead><tbody>
+        {porFonte.length ? porFonte.map((r: any) => <tr><td><a href={`/admin/leads?origem=${encodeURIComponent(r.fonte)}`}>{r.fonte}</a></td><td class="dim">{r.medio || '—'}</td><td class="dim">{r.conteudo || '—'}</td><td class="n">{r.leads}</td><td class="n">{r.compras}</td></tr>) : <tr><td colspan="5" class="tbl-vazio">Sem leads no período.</td></tr>}
+      </tbody></table></div>
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="card p0">
+        <div class="card__h"><h3>Aparelho</h3></div>
+        <div class="tbl"><table><thead><tr><th>Aparelho</th><th class="n">Visitas</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th></tr></thead><tbody>
+          {dispositivos.length ? dispositivos.map((r: any) => <tr><td>{NOME_DISP[r.disp] ?? r.disp}</td><td class="n"><span class="mini"><i style={`width:${pct(r.n, dispositivos[0].n)}%`}></i></span>{r.n}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td></tr>) : <tr><td colspan="5" class="tbl-vazio">Sem dados ainda.</td></tr>}
+        </tbody></table></div>
+      </div>
+      <div class="card p0">
+        <div class="card__h"><h3>Sites de referência</h3><span class="mut" style="font-size:12.5px">visitas sem UTM que vieram de outro site</span></div>
+        <div class="tbl"><table><thead><tr><th>Site</th><th class="n">Visitas</th></tr></thead><tbody>
+          {referencias.length ? referencias.map(([s, n]) => <tr><td>{s}</td><td class="n">{n}</td></tr>) : <tr><td colspan="2" class="tbl-vazio">Nenhuma no período.</td></tr>}
+        </tbody></table></div>
+      </div>
+    </div>
+  </section>
+</Admin>

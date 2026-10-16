@@ -1,40 +1,18 @@
 ---
 /**
- * Painel da captação. Três faixas: números principais (com comparação ao período anterior),
- * tendência (por dia, funil, rolagem) e detalhe (tabelas). O gerador de UTM fica no fim, como ferramenta.
+ * Visão geral da captação do site inteiro (todas as páginas e formulários, não só uma campanha):
+ * números do período com comparação, gráfico por dia, funil, cadastros por página e os últimos leads.
+ * As outras abas (Leads, Origem, Comportamento, Meta, Links) ficam em /admin/<aba>.
  */
+import Admin from '~/layouts/Admin.astro';
 import { db } from '~/lib/db';
-import { CAMPANHA } from '~/config/black';
-import { fmtDataHora, fmtDiaSemana, brl } from '~/lib/texto';
-import { ENV } from '~/lib/env';
+import { brl } from '~/lib/texto';
+import { periodo, statusMeta, pct, seg, num, dt, nomePagina, fone } from '~/lib/painel';
 
 const d = db();
-const live = new Date(CAMPANHA.live.data);
-const dias = [1, 7, 30, 3650].includes(Number(Astro.url.searchParams.get('dias'))) ? Number(Astro.url.searchParams.get('dias')) : 30;
-const desde = `-${dias} days`;
-const desdeAnterior = `-${dias * 2} days`;
-const temAnterior = dias !== 3650;
-const q = <T = any>(sql: string, ...p: unknown[]) => d.prepare(sql).all(desde, ...p) as T[];
-const q1 = <T = any>(sql: string, ...p: unknown[]) => d.prepare(sql).get(desde, ...p) as T;
-const HUMANO = (a = 'sessao_id') => `${a} NOT IN (SELECT id FROM sessoes WHERE robo = 1)`;
-const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : 0);
-const seg = (s: number | null) => (s == null ? '' : s < 60 ? `${Math.round(s)} s` : `${Math.floor(s / 60)} min ${Math.round(s % 60)} s`);
-const num = (n: number) => new Intl.NumberFormat('pt-BR').format(n ?? 0);
-const rotuloPeriodo = dias === 3650 ? 'desde o início' : dias === 1 ? 'últimas 24 h' : `últimos ${dias} dias`;
-const rotuloAnterior = dias === 1 ? '24 h anteriores' : `${dias} dias anteriores`;
-
-/* ---------- Meta ---------- */
-const meta = {
-  pixel: !!ENV.META_PIXEL_ID, token: !!ENV.META_CAPI_TOKEN, teste: !!ENV.META_TEST_EVENT_CODE,
-  ...(d.prepare(`SELECT sum(capi_status='ok') ok, sum(capi_status LIKE 'erro%') erro, sum(capi_status='pulado') pulado FROM eventos WHERE created_at >= datetime('now', ?)`).get(desde) as any),
-};
-const webhooksErro = d.prepare('SELECT * FROM webhooks WHERE processado = 0 ORDER BY id DESC LIMIT 10').all() as any[];
-const comprasSemValor = (d.prepare("SELECT count(*) n FROM eventos WHERE tipo='Purchase' AND capi_status LIKE 'pulado: sem valor%' AND created_at >= datetime('now','-30 days')").get() as any).n;
-const alertas: string[] = [];
-if (!meta.pixel || !meta.token) alertas.push(`A Meta não está recebendo eventos. Falta ${[!meta.pixel && 'META_PIXEL_ID', !meta.token && 'META_CAPI_TOKEN'].filter(Boolean).join(' e ')} no arquivo /srv/tecnoapis/.env.`);
-if ((meta.erro ?? 0) > 0) alertas.push(`${meta.erro} eventos com erro na Conversions API. Veja "Eventos enviados à Meta" no fim da página.`);
-if (comprasSemValor > 0) alertas.push(`${comprasSemValor} compra(s) da Hubla chegaram sem valor e NÃO foram enviadas à Meta (a Meta recusa Purchase sem valor). Provável mudança no formato do webhook da Hubla: o payload bruto está na tabela webhooks.`);
-if (webhooksErro.length > 0) alertas.push(`${webhooksErro.length} webhooks da Hubla com erro (último: ${webhooksErro[0].erro}).`);
+const P = periodo(Astro.url);
+const { dias, desde, desdeAnterior, temAnterior, rotulo, rotuloAnterior, q, q1 } = P;
+const { alertas } = statusMeta(desde);
 
 /* ---------- Números do período (e do período anterior, para comparar) ---------- */
 const SQL_SESSOES = `SELECT count(*) sessoes, count(DISTINCT visitante_id) visitantes, sum(scroll_max >= 50) rolou50, sum(abriu_form) abriu, sum(iniciou_form) iniciou,
@@ -55,7 +33,7 @@ const pessoas = (() => {
   const visitas = new Map<string, number>();
   for (const r of rows) { const k = raiz('v:' + r.vid); visitas.set(k, (visitas.get(k) ?? 0) + 1); }
   const v = [...visitas.values()];
-  return { n: v.length, uma: v.filter((x) => x === 1).length, duas: v.filter((x) => x === 2).length, mais: v.filter((x) => x >= 3).length };
+  return { n: v.length, duas: v.filter((x) => x === 2).length, mais: v.filter((x) => x >= 3).length };
 })();
 const SQL_LEADS = `SELECT count(*) n, coalesce(sum(comprou),0) compraram, coalesce(sum(envios - 1), 0) repetidos, coalesce(sum(meta_lead = 0),0) mesmo_aparelho FROM leads WHERE created_at >= datetime('now', ?)`;
 const leads = q1<any>(SQL_LEADS);
@@ -87,305 +65,109 @@ const maiorPerda = funil.slice(1).reduce<{ i: number; p: number } | null>((acc, 
   const p = pct(f.n, ant); return !acc || p < acc.p ? { i: i + 1, p } : acc;
 }, null);
 
-/* ---------- Comportamento ---------- */
-const scroll = q(`SELECT valor m, count(DISTINCT c.sessao_id) n FROM comportamento c WHERE tipo='scroll' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY valor ORDER BY valor`);
-const paginasComDados = q<{ pagina: string; n: number }>(`SELECT pagina, count(DISTINCT sessao_id) n FROM comportamento WHERE tipo='pagina' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY pagina ORDER BY n DESC`);
-const secoes = q(`SELECT c.pagina, c.alvo secao, count(DISTINCT c.sessao_id) n,
-  (SELECT avg(soma) FROM (SELECT sum(t.valor) soma FROM comportamento t WHERE t.tipo='secao_tempo' AND t.alvo=c.alvo AND t.pagina=c.pagina AND ${HUMANO('t.sessao_id')} AND t.created_at >= datetime('now', ?) GROUP BY t.sessao_id)) / 1000.0 tempo
-  FROM comportamento c WHERE c.tipo='secao_vista' AND ${HUMANO('c.sessao_id')} AND c.created_at >= datetime('now', ?) GROUP BY c.pagina, c.alvo ORDER BY c.pagina, c.alvo`, desde);
-const baseSecao = Object.fromEntries(paginasComDados.map((p) => [p.pagina, p.n]));
-const ordemSecao = (a: string) => { const m = a.match(/^(\d+)-/); return m ? Number(m[1]) : 999; };
-secoes.sort((a: any, b: any) => (a.pagina === b.pagina ? ordemSecao(a.secao) - ordemSecao(b.secao) : a.pagina.localeCompare(b.pagina)));
-const secoesPorPagina = Object.entries(secoes.reduce<Record<string, any[]>>((acc, r: any) => ((acc[r.pagina] ??= []).push(r), acc), {}));
-const nomeSecao = (s: string) => s.replace(/^\d+-/, '').replace(/-/g, ' ');
-const cliques = q(`SELECT pagina, alvo, count(*) n, count(DISTINCT sessao_id) s FROM comportamento WHERE tipo='clique' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY pagina, alvo ORDER BY n DESC LIMIT 20`);
-const erros = q(`SELECT alvo, count(*) n FROM comportamento WHERE tipo='form_erro' AND ${HUMANO()} AND created_at >= datetime('now', ?) GROUP BY alvo ORDER BY n DESC`);
-const popup = q1<any>(`SELECT sum(tipo='popup_aberto') abriu, sum(tipo='popup_fechado') fechou, sum(tipo='form_envio') enviou,
-  (SELECT avg(valor) FROM comportamento WHERE tipo='popup_fechado' AND ${HUMANO()} AND created_at >= datetime('now', ?)) tempo FROM comportamento WHERE ${HUMANO()} AND created_at >= datetime('now', ?)`, desde);
-const origem = q(`SELECT coalesce(utm_source, CASE WHEN referrer IS NOT NULL THEN 'referência' ELSE '(direto)' END) fonte, coalesce(utm_medium,'') midia, coalesce(utm_content,'') conteudo,
-  count(*) n, sum(abriu_form) abriu, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo, avg(scroll_max) scroll
-  FROM sessoes WHERE robo = 0 AND created_at >= datetime('now', ?) GROUP BY fonte, midia, conteudo ORDER BY n DESC LIMIT 25`);
-const dispositivos = q(`SELECT coalesce(dispositivo,'?') disp, count(*) n, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo FROM sessoes WHERE robo = 0 AND created_at >= datetime('now', ?) GROUP BY disp ORDER BY n DESC`);
-const nomeDisp: Record<string, string> = { celular: 'Celular', computador: 'Computador', tablet: 'Tablet', '?': 'Não identificado' };
+/* ---------- Por página: por onde as visitas entram e onde os leads se cadastram ---------- */
+const entradas = Object.fromEntries(q<any>(`SELECT primeira_pagina p, count(*) n FROM sessoes WHERE robo = 0 AND primeira_pagina IS NOT NULL AND created_at >= datetime('now', ?) GROUP BY p`).map((r) => [r.p, r.n]));
+const cadastros = Object.fromEntries(q<any>(`SELECT coalesce(pagina,'?') p, count(*) n FROM leads WHERE created_at >= datetime('now', ?) GROUP BY p`).map((r) => [r.p, r.n]));
+const porPagina = [...new Set([...Object.keys(entradas), ...Object.keys(cadastros)])]
+  .filter((p) => p !== '/obrigado')
+  .map((p) => ({ p, visitas: entradas[p] ?? 0, leads: cadastros[p] ?? 0 }))
+  .sort((a, b) => b.leads - a.leads || b.visitas - a.visitas);
+const maxLeadsPagina = Math.max(1, ...porPagina.map((x) => x.leads));
+
+/* ---------- Série diária contínua (sem buracos): os últimos N dias, do mais antigo ao mais novo ---------- */
 const porDia = d.prepare(`SELECT dia, sessoes, leads, abriu_form, clicou_grupo, tempo_ativo_medio_s FROM v_funil_diario LIMIT 31`).all() as any[];
 const leadsDia = Object.fromEntries((d.prepare(`SELECT date(created_at,'-3 hours') dia, count(*) n FROM leads GROUP BY dia`).all() as any[]).map((r) => [r.dia, r.n]));
-
-/* Série diária contínua (sem buracos) para o gráfico e os minigráficos: os últimos N dias, do mais antigo ao mais novo */
 const diasGrafico = dias === 1 ? 7 : Math.min(dias, 30);
 const hojeSP = new Date(Date.now() - 3 * 3600_000);
 const serie = Array.from({ length: diasGrafico }, (_, i) => {
-  const dt = new Date(hojeSP.getTime() - (diasGrafico - 1 - i) * 86400_000);
-  const dia = dt.toISOString().slice(0, 10);
+  const dia = new Date(hojeSP.getTime() - (diasGrafico - 1 - i) * 86400_000).toISOString().slice(0, 10);
   const r = porDia.find((x) => x.dia === dia);
   return { dia, rotulo: `${dia.slice(8, 10)}/${dia.slice(5, 7)}`, sessoes: r?.sessoes ?? 0, leads: leadsDia[dia] ?? r?.leads ?? 0, grupo: r?.clicou_grupo ?? 0 };
 });
 const maxDia = Math.max(1, ...serie.map((x) => x.sessoes));
-/** Caminho SVG de um minigráfico (120×32) para uma lista de valores */
+/** Caminho SVG de um minigráfico (96×28) para uma lista de valores */
 const sparkline = (vals: number[]) => {
-  const max = Math.max(1, ...vals); const w = 120, h = 32, p = 3;
+  const max = Math.max(1, ...vals); const w = 96, h = 28, p = 3;
   const pts = vals.map((v, i) => [p + (i * (w - 2 * p)) / Math.max(1, vals.length - 1), h - p - (v / max) * (h - 2 * p)] as const);
   return { d: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' '), fim: pts[pts.length - 1] };
 };
 
-/* ---------- Leads, links, eventos ---------- */
-const porFonte = q(`SELECT coalesce(l.utm_source,'(direto)') fonte, coalesce(l.utm_medium,'') medio, coalesce(l.utm_content,'') conteudo, count(*) leads, sum(l.comprou) compras
-  FROM leads l WHERE l.created_at >= datetime('now', ?) GROUP BY fonte, medio, conteudo ORDER BY leads DESC`);
-const recentes = d.prepare(`SELECT l.id, l.nome, l.whatsapp, l.utm_source, l.utm_medium, l.utm_content, l.comprou, l.created_at, l.envios, l.meta_lead, s.tempo_ativo_s, s.scroll_max, s.dispositivo, s.clicou_grupo
-  FROM leads l LEFT JOIN sessoes s ON s.id = l.sessao_id ORDER BY l.id DESC LIMIT 30`).all() as any[];
-const ultimosEventos = d.prepare('SELECT e.*, l.nome FROM eventos e LEFT JOIN leads l ON l.id = e.lead_id ORDER BY e.id DESC LIMIT 25').all() as any[];
-const statusEvento = (st: string | null) => {
-  if (st === 'ok') return { cls: 'ok', txt: 'enviado' };
-  if (st?.startsWith('erro')) return { cls: 'err', txt: st };
-  if (st === 'repetido') return { cls: 'mut', txt: 'não enviado: cadastro repetido' };
-  if (st === 'mesmo_aparelho') return { cls: 'mut', txt: 'não enviado: mesmo aparelho' };
-  if (st?.startsWith('pulado: sem valor')) return { cls: 'warn', txt: 'não enviado: Hubla não mandou o valor' };
-  if (st === 'pulado') return { cls: 'mut', txt: 'não enviado' };
-  return { cls: 'mut', txt: st ?? '—' };
-};
-const links = d.prepare('SELECT * FROM links ORDER BY created_at DESC').all() as any[];
-const dominio = CAMPANHA.dominio;
-const dt = (x: string) => fmtDataHora(new Date(x));
-const maxScroll = Math.max(1, s.sessoes ?? 0);
-const geradoEm = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+const recentes = d.prepare(`SELECT l.id, l.nome, l.whatsapp, l.pagina, l.utm_source, l.comprou, l.created_at, s.clicou_grupo
+  FROM leads l LEFT JOIN sessoes s ON s.id = l.sessao_id ORDER BY l.id DESC LIMIT 6`).all() as any[];
 
+const ICO = {
+  visitas: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  leads: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+  grupo: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  vendas: '<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>',
+};
 const kpisPrincipais = [
-  { rotulo: 'Visitas', valor: num(s.sessoes ?? 0), detalhe: `${num(pessoas.n)} ${pessoas.n === 1 ? 'pessoa' : 'pessoas'}${robos ? ` · ${num(robos)} de robôs fora da conta` : ''}`, delta: delta(s.sessoes ?? 0, sAnt?.sessoes), serie: serie.map((x) => x.sessoes) },
-  { rotulo: 'Leads', valor: num(leads.n ?? 0), detalhe: `${pct(s.leads_sessao ?? 0, s.sessoes ?? 0)}% das visitas`, delta: delta(leads.n ?? 0, leadsAnt?.n), serie: serie.map((x) => x.leads) },
-  { rotulo: 'Clicaram no grupo', valor: num(s.grupo ?? 0), detalhe: `${pct(s.grupo ?? 0, s.leads_sessao ?? 0)}% dos leads`, delta: delta(s.grupo ?? 0, sAnt?.grupo), serie: serie.map((x) => x.grupo) },
-  { rotulo: 'Vendas', valor: num(vendas.n), detalhe: `${brl(vendas.v)}${reembolsos ? ` · ${reembolsos} ${reembolsos === 1 ? 'reembolso' : 'reembolsos'}` : ''}`, delta: delta(vendas.n, vendasAnt?.n), serie: null },
+  { rotulo: 'Visitas', ico: ICO.visitas, cor: 'c', valor: num(s.sessoes ?? 0), detalhe: `${num(pessoas.n)} ${pessoas.n === 1 ? 'pessoa' : 'pessoas'}${robos ? ` · ${num(robos)} robôs fora da conta` : ''}`, delta: delta(s.sessoes ?? 0, sAnt?.sessoes), serie: serie.map((x) => x.sessoes) },
+  { rotulo: 'Leads', ico: ICO.leads, cor: 'a', valor: num(leads.n ?? 0), detalhe: `${pct(s.leads_sessao ?? 0, s.sessoes ?? 0)}% das visitas`, delta: delta(leads.n ?? 0, leadsAnt?.n), serie: serie.map((x) => x.leads) },
+  { rotulo: 'Clicaram no grupo', ico: ICO.grupo, cor: 'b', valor: num(s.grupo ?? 0), detalhe: `${pct(s.grupo ?? 0, s.leads_sessao ?? 0)}% dos leads`, delta: delta(s.grupo ?? 0, sAnt?.grupo), serie: serie.map((x) => x.grupo) },
+  { rotulo: 'Vendas', ico: ICO.vendas, cor: 'd', valor: num(vendas.n), detalhe: `${brl(vendas.v)}${reembolsos ? ` · ${reembolsos} ${reembolsos === 1 ? 'reembolso' : 'reembolsos'}` : ''}`, delta: delta(vendas.n, vendasAnt?.n), serie: null },
 ];
 const kpisSecundarios = [
   { rotulo: 'Voltaram', valor: num(pessoas.duas + pessoas.mais), detalhe: `${pessoas.duas} vieram 2×, ${pessoas.mais} vieram 3× ou mais` },
-  { rotulo: 'Tempo ativo médio', valor: seg(s.ativo) || '—', detalhe: 'por visita, só com a aba em foco' },
+  { rotulo: 'Tempo ativo médio', valor: seg(s.ativo) || '—', detalhe: 'por visita, com a aba em foco' },
   { rotulo: 'Rolagem média', valor: `${Math.round(s.scroll ?? 0)}%`, detalhe: 'da altura da página' },
   { rotulo: 'Cadastros repetidos', valor: num(leads.repetidos ?? 0), detalhe: (leads.mesmo_aparelho ?? 0) > 0 ? `bloqueados · ${leads.mesmo_aparelho} do mesmo aparelho` : 'bloqueados' },
   { rotulo: 'Leads que compraram', valor: `${pct(leads.compraram ?? 0, leads.n ?? 0)}%`, detalhe: `${num(leads.compraram ?? 0)} de ${num(leads.n ?? 0)}` },
 ];
+const svg = (paths: string, t = 15) => `<svg width="${t}" height="${t}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const ALERTA = svg('<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>', 17);
 ---
-<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Painel · {CAMPANHA.nome}</title>
-<link rel="icon" href="/favicon.ico" />
-<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<style>
-  :root{
-    --bg:#0e0e10;--card:#151518;--card-2:#1b1b20;--line:rgba(255,255,255,.08);--line-2:rgba(255,255,255,.14);
-    --ink:#f0efea;--ink-2:#b8b5ad;--mut:#8a8780;--acc:#f2a900;--acc-soft:rgba(242,169,0,.14);--acc-bar:#d99700;
-    --ok:#5bd37a;--ok-soft:rgba(91,211,122,.14);--err:#ff6b5e;--err-soft:rgba(255,107,94,.14);--warn:#ffb84d;--warn-soft:rgba(255,184,77,.14);
-    --track:#232329;--grid:rgba(255,255,255,.06);--r:12px;--r-sm:8px;
-  }
-  *{box-sizing:border-box} html{scroll-behavior:smooth;scroll-padding-top:72px}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-  a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
-  code{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
-  .wrap{max-width:1240px;margin:0 auto;padding:0 20px 80px}
-  .mut{color:var(--mut)} .ok{color:var(--ok)} .err{color:var(--err)} .warn{color:var(--warn)}
+<Admin titulo="Visão geral" ativo="geral" periodo={dias} sub={`Captação do site inteiro: todas as páginas e formulários, ${rotulo}${temAnterior ? `, comparado com os ${rotuloAnterior}` : ''}.`}>
 
-  /* Topo fixo: título, período e atalhos */
-  .topo{position:sticky;top:0;z-index:5;background:rgba(14,14,16,.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-  .topo__in{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center;justify-content:space-between}
-  .topo h1{margin:0;font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px}
-  .topo h1 img{height:26px;width:auto}
-  .topo__sub{color:var(--mut);font-size:12.5px;margin-top:2px}
-  .topo__sub b{color:var(--ink-2);font-weight:500}
-  .seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px}
-  .seg a{padding:6px 14px;border-radius:999px;color:var(--ink-2);font-size:13px;font-weight:500}
-  .seg a:hover{text-decoration:none;color:var(--ink)}
-  .seg a.on{background:var(--acc);color:#111;font-weight:600}
-  .nav{display:flex;flex-wrap:wrap;gap:2px 4px;font-size:13px}
-  .nav a{padding:5px 10px;border-radius:var(--r-sm);color:var(--ink-2);white-space:nowrap} .nav a:hover{background:var(--card);text-decoration:none;color:var(--ink)}
-  @media (max-width:760px){.nav{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;margin:0 -20px;padding:0 16px;scrollbar-width:none} .nav::-webkit-scrollbar{display:none} .nav a{padding:4px 8px}}
+  {alertas.map((a) => <div class="aviso err" role="alert"><Fragment set:html={ALERTA} /><div>{a}</div></div>)}
 
-  /* Faixa de status e alertas */
-  .status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:20px 0 0;font-size:12.5px}
-  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);white-space:nowrap}
-  .chip i{width:7px;height:7px;border-radius:50%;background:var(--mut);flex:none}
-  .chip.ok i{background:var(--ok)} .chip.err i{background:var(--err)} .chip.warn i{background:var(--warn)}
-  .chip.ok{color:var(--ok);border-color:rgba(91,211,122,.3)} .chip.err{color:var(--err);border-color:rgba(255,107,94,.3)} .chip.warn{color:var(--warn);border-color:rgba(255,184,77,.3)}
-  .status .sep{color:var(--mut);margin-left:auto}
-  .alerta{display:flex;gap:12px;align-items:flex-start;margin-top:14px;padding:12px 16px;border-radius:var(--r);background:var(--err-soft);border:1px solid rgba(255,107,94,.35);font-size:13.5px}
-  .alerta svg{flex:none;margin-top:2px;color:var(--err)}
-
-  /* Seções */
-  section{margin-top:40px}
-  .sec-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin:0 0 12px}
-  .sec-h h2{margin:0;font-size:15px;font-weight:600}
-  .sec-h p{margin:0;color:var(--mut);font-size:13px}
-  .sec-h .acoes{margin-left:auto;display:flex;gap:12px;font-size:13px}
-  h3{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--ink-2)}
-
-  /* Grades e cartões */
-  .grid{display:grid;gap:12px}
-  .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g5{grid-template-columns:repeat(5,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g32{grid-template-columns:3fr 2fr}
-  @media (max-width:1000px){.g4,.g5{grid-template-columns:repeat(2,minmax(0,1fr))} .g32{grid-template-columns:1fr}}
-  @media (max-width:640px){.g2,.g4{grid-template-columns:1fr} .g5{grid-template-columns:repeat(2,minmax(0,1fr))} .kpi__val{font-size:34px}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;min-width:0}
-  .card.p0{padding:0;overflow:hidden}
-
-  /* Cartões de número */
-  .kpi{display:flex;flex-direction:column;gap:6px;position:relative}
-  .kpi__rot{font-size:13px;color:var(--ink-2);font-weight:500}
-  .kpi__val{font-size:38px;line-height:1;font-weight:600;letter-spacing:-.02em;color:var(--ink);white-space:nowrap}
-  .kpi__det{font-size:12.5px;color:var(--mut)}
-  .kpi__linha{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
-  .kpi__delta{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;letter-spacing:0;padding:3px 8px;border-radius:999px;background:var(--track);color:var(--ink-2);vertical-align:middle;margin-left:10px;position:relative;top:-6px}
-  .kpi__delta.up{color:var(--ok);background:var(--ok-soft)} .kpi__delta.down{color:var(--err);background:var(--err-soft)}
-  .kpi__spark{width:120px;height:32px;flex:none}
-  .kpi__spark path{fill:none;stroke:var(--mut);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
-  .kpi__spark circle{fill:var(--acc)}
-  .kpi--s .kpi__val{font-size:24px}
-  .kpi--s{gap:4px;padding:14px 16px}
-
-  /* Barras horizontais (funil, rolagem, seções) */
-  .bars{display:grid;gap:10px}
-  .bar{display:grid;grid-template-columns:minmax(120px,200px) 1fr auto;gap:12px;align-items:center;font-size:13px}
-  .bar .rot{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .bar .tr{height:12px;border-radius:999px;background:var(--track);overflow:hidden}
-  .bar .tr i{display:block;height:100%;border-radius:0 999px 999px 0;background:var(--acc-bar);min-width:2px}
-  .bar.ponto .tr i{background:var(--acc)}
-  .bar .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:110px}
-  .bar .n small{color:var(--mut);font-size:12px;margin-left:4px}
-  .bar .n b{font-weight:600}
-  .bar.alerta-etapa .rot{color:var(--warn)}
-  @media (max-width:640px){.bar{grid-template-columns:1fr;gap:4px} .bar .n{text-align:left;min-width:0}}
-  .nota{margin:14px 0 0;font-size:12.5px;color:var(--mut)}
-  .nota b{color:var(--ink-2);font-weight:500}
-  .vazio{color:var(--mut);padding:28px 16px;text-align:center;font-size:13px}
-  .vazio b{display:block;color:var(--ink-2);font-weight:500;margin-bottom:4px}
-
-  /* Gráfico de colunas por dia */
-  .chart{display:flex;flex-direction:column;gap:8px}
-  .legenda{display:flex;gap:16px;font-size:12.5px;color:var(--ink-2);flex-wrap:wrap}
-  .legenda span{display:inline-flex;align-items:center;gap:6px}
-  .legenda i{width:10px;height:10px;border-radius:3px;background:var(--track)}
-  .legenda i.v{background:#4a4a52} .legenda i.l{background:var(--acc)}
-  .cols{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;align-items:end;gap:4px;height:160px;margin-top:14px;border-bottom:1px solid var(--line-2);position:relative}
-  .cols::before,.cols::after{content:'';position:absolute;left:0;right:0;border-top:1px solid var(--grid);pointer-events:none}
-  .cols::before{top:33%} .cols::after{top:66%}
-  .col{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:100%;position:relative}
-  .col i{display:block;width:min(100%,24px);border-radius:4px 4px 0 0;max-width:24px}
-  .col i[style="height:0%"]{display:none}
-  .col i.v{background:#4a4a52;flex:1} .col i.l{background:var(--acc);flex:1}
-  .col:hover i.v{background:#5c5c66}
-  .col .tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#26262c;border:1px solid var(--line-2);border-radius:var(--r-sm);padding:6px 10px;font-size:12px;white-space:nowrap;display:none;z-index:2;color:var(--ink)}
-  .col .tip b{display:block;color:var(--mut);font-weight:500;font-size:11px}
-  .col:hover .tip{display:block}
-  .eixo{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;font-size:11px;color:var(--mut);text-align:center;font-variant-numeric:tabular-nums}
-  .eixo span:nth-child(n){visibility:hidden} .eixo span.vis{visibility:visible}
-  .eixo-y{position:absolute;top:-16px;right:0;font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
-  .eixo-y::before{content:'máx. '}
-
-  /* Tabelas */
-  .tbl{overflow:auto;max-height:560px}
-  table{border-collapse:collapse;width:100%;font-size:13px}
-  th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
-  th{position:sticky;top:0;background:var(--card);color:var(--mut);font-weight:500;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;z-index:1}
-  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums} td.c,th.c{text-align:center}
-  tbody tr:hover td{background:var(--card-2)} tbody tr:last-child td{border-bottom:0}
-  td .mini{display:inline-block;vertical-align:middle;width:60px;height:6px;border-radius:999px;background:var(--track);margin-right:8px;overflow:hidden}
-  td .mini i{display:block;height:100%;background:var(--acc-bar);border-radius:999px}
-  .tag{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:500;background:var(--track);color:var(--ink-2)}
-  .tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.err{background:var(--err-soft);color:var(--err)} .tag.warn{background:var(--warn-soft);color:var(--warn)}
-  td.dim{color:var(--mut)}
-  .tbl-vazio{color:var(--mut);padding:24px 14px;text-align:center}
-  details.tabela{margin-top:12px} details.tabela summary{cursor:pointer;color:var(--ink-2);font-size:13px;list-style:none;display:inline-flex;align-items:center;gap:6px;user-select:none}
-  details.tabela summary::-webkit-details-marker{display:none}
-  details.tabela summary::before{content:'';width:0;height:0;border:4px solid transparent;border-left:6px solid var(--mut);transition:transform .15s}
-  details.tabela[open] summary::before{transform:rotate(90deg)}
-  details.tabela .tbl{margin-top:10px}
-
-  /* Ferramenta: gerador de UTM */
-  .utm-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-  .utm-tab{padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink-2);font:500 13px/1 Inter,inherit;cursor:pointer}
-  .utm-tab.on{background:var(--acc);border-color:var(--acc);color:#111;font-weight:600}
-  .utm-painel{display:none} .utm-painel.on{display:block}
-  .utm-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-  .utm-form label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--mut)}
-  .utm-form input,.utm-form select{background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-sm);color:var(--ink);padding:9px 11px;font:13px/1.3 Inter,inherit;min-height:38px}
-  .utm-form input:focus,.utm-form select:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:var(--acc)}
-  .utm-acoes{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
-  .btn{background:var(--acc);border:0;border-radius:var(--r-sm);color:#111;font:600 13px/1 Inter,inherit;padding:11px 16px;cursor:pointer;min-height:38px}
-  .btn:hover{filter:brightness(1.06)} .btn.sec{background:transparent;border:1px solid var(--line-2);color:var(--ink)}
-  .utm-saida{margin-top:14px;display:none} .utm-saida.on{display:block}
-  .utm-url{background:var(--bg);border:1px solid var(--line-2);border-radius:var(--r-sm);padding:10px 12px;font:12px/1.5 ui-monospace,monospace;color:var(--ink);word-break:break-all;margin-bottom:8px}
-  .utm-msg{font-size:13px;margin-top:8px} .utm-msg.err{color:var(--err)} .utm-msg.ok{color:var(--ok)}
-  .del{background:transparent;border:1px solid transparent;border-radius:var(--r-sm);color:var(--mut);cursor:pointer;font:12px Inter,inherit;padding:4px 8px}
-  .del:hover{color:var(--err);border-color:rgba(255,107,94,.4);background:var(--err-soft)}
-  .rodape{margin-top:48px;color:var(--mut);font-size:12.5px;display:flex;flex-wrap:wrap;gap:6px 18px}
-</style></head><body>
-
-<div class="topo"><div class="topo__in">
-  <div>
-    <h1><img src="/img/black-friday-logo.webp" alt="" width="353" height="160" /> Painel da captação</h1>
-    <div class="topo__sub">Live <b>{fmtDiaSemana(live)}, {fmtDataHora(live)}</b> · {rotuloPeriodo} · gerado às {geradoEm}</div>
-  </div>
-  <nav class="nav" aria-label="Seções"><a href="#resumo">Resumo</a><a href="#funil">Funil</a><a href="#origem">Origem</a><a href="#pagina">Página</a><a href="#leads">Leads</a><a href="#meta">Meta</a><a href="#links">Links e UTM</a></nav>
-  <nav class="seg" aria-label="Período">{[[1, 'Hoje'], [7, '7 dias'], [30, '30 dias'], [3650, 'Tudo']].map(([v, l]) => <a href={`?dias=${v}`} class={v === dias ? 'on' : ''} aria-current={v === dias ? 'page' : undefined}>{l}</a>)}</nav>
-</div></div>
-
-<div class="wrap">
-
-<div class="status">
-  <span class={`chip ${meta.pixel ? 'ok' : 'err'}`}><i></i>Pixel {meta.pixel ? 'configurado' : 'sem ID'}</span>
-  <span class={`chip ${meta.token ? 'ok' : 'err'}`}><i></i>Conversions API {meta.token ? 'configurada' : 'sem token'}</span>
-  {meta.teste && <span class="chip warn"><i></i>Modo de teste ligado</span>}
-  <span class="chip"><i></i>Meta: {meta.ok ?? 0} enviados · {meta.erro ?? 0} com erro · {meta.pulado ?? 0} não enviados</span>
-  <span class="sep"><a href="/admin/leads.csv">leads.csv</a> · <a href="/admin/eventos.csv">eventos.csv</a> · <a href="/admin/comportamento.csv">comportamento.csv</a></span>
-</div>
-{alertas.map((a) => <div class="alerta" role="alert"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>{a}</div></div>)}
-
-<!-- ===== Faixa 1: números principais ===== -->
-<section id="resumo">
-  <div class="sec-h"><h2>Resumo</h2><p>{rotuloPeriodo}{temAnterior ? `, comparado com os ${rotuloAnterior}` : ''}</p></div>
-  <div class="grid g4">
+  <div class="kpis">
     {kpisPrincipais.map((k) => {
       const sp = k.serie ? sparkline(k.serie) : null;
       return (
-        <div class="card kpi">
-          <span class="kpi__rot">{k.rotulo}</span>
+        <div>
+          <span class="kpi__rot"><span class={`kpi__ico ${k.cor}`}><Fragment set:html={svg(k.ico)} /></span>{k.rotulo}</span>
           <div class="kpi__linha">
             <span class="kpi__val">{k.valor}{k.delta && <span class={`kpi__delta ${k.delta.dir > 0 ? 'up' : k.delta.dir < 0 ? 'down' : ''}`} title={`em relação aos ${rotuloAnterior}`}>{k.delta.dir > 0 ? '↑' : k.delta.dir < 0 ? '↓' : '→'} {k.delta.texto}</span>}</span>
-            {sp && <svg class="kpi__spark" viewBox="0 0 120 32" aria-hidden="true"><path d={sp.d} /><circle cx={sp.fim[0]} cy={sp.fim[1]} r="3" /></svg>}
+            {sp && <svg class="kpi__spark" viewBox="0 0 96 28" aria-hidden="true"><path d={sp.d} /><circle cx={sp.fim[0]} cy={sp.fim[1]} r="3" /></svg>}
           </div>
           <span class="kpi__det">{k.detalhe}</span>
         </div>
       );
     })}
   </div>
-  <div class="grid g5" style="margin-top:12px">
-    {kpisSecundarios.map((k) => <div class="card kpi kpi--s"><span class="kpi__rot">{k.rotulo}</span><span class="kpi__val">{k.valor}</span><span class="kpi__det">{k.detalhe}</span></div>)}
-  </div>
-</section>
-
-<!-- ===== Faixa 2: tendência ===== -->
-<section id="funil">
-  <div class="sec-h"><h2>Por dia</h2><p>visitas e leads, últimos {diasGrafico} dias</p></div>
-  <div class="card chart">
-    <div class="legenda"><span><i class="v"></i>Visitas</span><span><i class="l"></i>Leads</span></div>
-    {serie.some((x) => x.sessoes || x.leads) ? (
-      <>
-        <div class="cols"><span class="eixo-y">{maxDia}</span>
-          {serie.map((x) => (
-            <div class="col">
-              <i class="v" style={`height:${(x.sessoes / maxDia) * 100}%`}></i>
-              <i class="l" style={`height:${(x.leads / maxDia) * 100}%`}></i>
-              <span class="tip"><b>{x.rotulo}</b>{x.sessoes} visitas · {x.leads} leads{x.grupo ? ` · ${x.grupo} no grupo` : ''}</span>
-            </div>
-          ))}
-        </div>
-        <div class="eixo">{serie.map((x, i) => <span class={i === 0 || i === serie.length - 1 || (serie.length > 10 ? i % 5 === 0 : true) ? 'vis' : ''}>{x.rotulo}</span>)}</div>
-      </>
-    ) : <div class="vazio"><b>Sem visitas nos últimos {diasGrafico} dias</b>O gráfico aparece assim que alguém abrir a página.</div>}
-    <details class="tabela"><summary>Ver tabela por dia</summary>
-      <div class="tbl"><table><thead><tr><th>Dia</th><th class="n">Visitas</th><th class="n">Abriram form</th><th class="n">Leads</th><th class="n">Clicaram no grupo</th><th class="n">Tempo ativo médio</th></tr></thead><tbody>
-        {porDia.length ? porDia.map((r) => <tr><td>{r.dia.slice(8, 10)}/{r.dia.slice(5, 7)}</td><td class="n">{r.sessoes}</td><td class="n">{r.abriu_form}</td><td class="n">{leadsDia[r.dia] ?? r.leads}</td><td class="n">{r.clicou_grupo}</td><td class="n">{seg(r.tempo_ativo_medio_s)}</td></tr>) : <tr><td colspan="6" class="tbl-vazio">Sem dados ainda.</td></tr>}
-      </tbody></table></div>
-    </details>
+  <div class="kpis k5" style="margin-top:14px">
+    {kpisSecundarios.map((k) => <div><span class="kpi__rot">{k.rotulo}</span><div class="kpi__linha"><span class="kpi__val">{k.valor}</span></div><span class="kpi__det">{k.detalhe}</span></div>)}
   </div>
 
-  <div class="grid g32" style="margin-top:12px">
+  <section>
+    <div class="card chart">
+      <div class="chart__h"><h3>Por dia <small>visitas e leads, últimos {diasGrafico} dias</small></h3><div class="legenda"><span><i class="v"></i>Visitas</span><span><i class="l"></i>Leads</span></div></div>
+      {serie.some((x) => x.sessoes || x.leads) ? (
+        <>
+          <div class="cols"><span class="eixo-y">{maxDia}</span>
+            {serie.map((x) => (
+              <div class="col">
+                <i class="v" style={`height:${(x.sessoes / maxDia) * 100}%`}></i>
+                <i class="l" style={`height:${(x.leads / maxDia) * 100}%`}></i>
+                <span class="tip"><b>{x.rotulo}</b>{x.sessoes} visitas · {x.leads} leads{x.grupo ? ` · ${x.grupo} no grupo` : ''}</span>
+              </div>
+            ))}
+          </div>
+          <div class="eixo">{serie.map((x, i) => <span class={i === 0 || i === serie.length - 1 || (serie.length > 10 ? i % 5 === 0 : true) ? 'vis' : ''}>{x.rotulo}</span>)}</div>
+        </>
+      ) : <p class="mut">Sem visitas nos últimos {diasGrafico} dias. O gráfico aparece assim que alguém abrir o site.</p>}
+      <details class="tabela"><summary>Ver tabela por dia</summary>
+        <div class="tbl"><table><thead><tr><th>Dia</th><th class="n">Visitas</th><th class="n">Abriram form</th><th class="n">Leads</th><th class="n">Clicaram no grupo</th><th class="n">Tempo ativo médio</th></tr></thead><tbody>
+          {porDia.length ? porDia.map((r) => <tr><td>{r.dia.slice(8, 10)}/{r.dia.slice(5, 7)}</td><td class="n">{r.sessoes}</td><td class="n">{r.abriu_form}</td><td class="n">{leadsDia[r.dia] ?? r.leads}</td><td class="n">{r.clicou_grupo}</td><td class="n">{seg(r.tempo_ativo_medio_s)}</td></tr>) : <tr><td colspan="6" class="tbl-vazio">Sem dados ainda.</td></tr>}
+        </tbody></table></div>
+      </details>
+    </div>
+  </section>
+
+  <section class="grid g32">
     <div class="card">
-      <div class="sec-h" style="margin-bottom:14px"><h2 style="font-size:14px">Funil</h2><p>cada etapa em relação às visitas; entre parênteses, em relação à etapa anterior</p></div>
+      <h3>Funil <small>cada etapa em relação às visitas; entre parênteses, à etapa anterior</small></h3>
       {funil[0].n ? (
         <div class="bars">
           {funil.map((f, i) => (
@@ -396,231 +178,59 @@ const kpisSecundarios = [
             </div>
           ))}
         </div>
-      ) : <div class="vazio"><b>Sem visitas no período</b>Troque o período lá em cima ou aguarde as primeiras visitas.</div>}
+      ) : <p class="mut">Sem visitas no período. Troque o período lá em cima.</p>}
       {maiorPerda && maiorPerda.p < 50 && <p class="nota">Maior perda: <b>{funil[maiorPerda.i - 1].nome.toLowerCase()} → {funil[maiorPerda.i].nome.toLowerCase()}</b>, só {maiorPerda.p}% passam.</p>}
     </div>
-    <div class="grid" style="grid-template-rows:auto 1fr;gap:12px">
-      <div class="card">
-        <h3>Até onde rolam</h3>
-        {scroll.length ? <div class="bars">{scroll.map((r: any) => <div class="bar"><span class="rot">{r.m}% da página</span><div class="tr"><i style={`width:${pct(r.n, maxScroll)}%`}></i></div><span class="n"><b>{r.n}</b><small>{pct(r.n, maxScroll)}%</small></span></div>)}</div> : <div class="vazio">Sem dados ainda.</div>}
-      </div>
-      <div class="card">
-        <h3>Pop-up do formulário</h3>
-        <div class="bars">
-          <div class="bar"><span class="rot">Abriram</span><div class="tr"><i style="width:100%"></i></div><span class="n"><b>{popup.abriu ?? 0}</b></span></div>
-          <div class="bar"><span class="rot">Enviaram</span><div class="tr"><i style={`width:${pct(popup.enviou ?? 0, popup.abriu || 1)}%`}></i></div><span class="n"><b>{popup.enviou ?? 0}</b><small>{pct(popup.enviou ?? 0, popup.abriu ?? 0)}%</small></span></div>
-        </div>
-        <p class="nota">Tempo médio aberto antes de fechar: <b>{seg(popup.tempo) || '—'}</b><br/>Erros de preenchimento: <b>{erros.length ? erros.map((e: any) => `${e.alvo} (${e.n})`).join(', ') : 'nenhum'}</b></p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===== Faixa 3: detalhe ===== -->
-<section id="origem">
-  <div class="sec-h"><h2>Origem das visitas</h2><p>por UTM; "(direto)" é quem chegou sem UTM nem site de referência</p></div>
-  <div class="card p0"><div class="tbl"><table><thead><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th class="n">Visitas</th><th class="n">Abriram form</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th><th class="n">Rolagem</th></tr></thead><tbody>
-    {origem.length ? origem.map((r: any) => <tr><td>{r.fonte}</td><td class="dim">{r.midia || '—'}</td><td class="dim">{r.conteudo || '—'}</td><td class="n"><span class="mini"><i style={`width:${pct(r.n, origem[0].n)}%`}></i></span>{r.n}</td><td class="n">{r.abriu}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td><td class="n">{Math.round(r.scroll)}%</td></tr>) : <tr><td colspan="9" class="tbl-vazio">Sem visitas no período.</td></tr>}
-  </tbody></table></div></div>
-
-  <div class="grid g2" style="margin-top:12px">
     <div class="card p0">
-      <div class="tbl"><table><thead><tr><th>Dispositivo</th><th class="n">Visitas</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th></tr></thead><tbody>
-        {dispositivos.length ? dispositivos.map((r: any) => <tr><td>{nomeDisp[r.disp] ?? r.disp}</td><td class="n"><span class="mini"><i style={`width:${pct(r.n, dispositivos[0].n)}%`}></i></span>{r.n}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td></tr>) : <tr><td colspan="5" class="tbl-vazio">Sem dados ainda.</td></tr>}
+      <div class="card__h"><h3>Onde as pessoas se cadastram</h3><span class="mut" style="font-size:12.5px">por página do site</span></div>
+      <div class="tbl"><table><thead><tr><th>Página</th><th class="n">Entraram por ela</th><th class="n">Leads</th></tr></thead><tbody>
+        {porPagina.length ? porPagina.map((r) => <tr>
+          <td>{r.leads > 0 ? <a href={`/admin/leads?pagina=${encodeURIComponent(r.p)}`}>{nomePagina(r.p)}</a> : nomePagina(r.p)}</td>
+          <td class="n">{num(r.visitas)}</td>
+          <td class="n"><span class="mini"><i style={`width:${pct(r.leads, maxLeadsPagina)}%`}></i></span><b>{num(r.leads)}</b></td>
+        </tr>) : <tr><td colspan="3" class="tbl-vazio">Sem visitas no período.</td></tr>}
       </tbody></table></div>
     </div>
-    <div class="card p0">
-      <div class="tbl"><table><thead><tr><th>Leads por origem</th><th>Mídia</th><th>Conteúdo</th><th class="n">Leads</th><th class="n">Compras</th></tr></thead><tbody>
-        {porFonte.length ? porFonte.map((r: any) => <tr><td>{r.fonte}</td><td class="dim">{r.medio || '—'}</td><td class="dim">{r.conteudo || '—'}</td><td class="n">{r.leads}</td><td class="n">{r.compras}</td></tr>) : <tr><td colspan="5" class="tbl-vazio">Sem leads no período.</td></tr>}
-      </tbody></table></div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section id="pagina">
-  <div class="sec-h"><h2>Comportamento na página</h2><p>quantas visitas viram cada seção, quanto tempo ficaram e onde clicaram</p></div>
-  <div class="grid g32">
-    <div class="card">
-      {secoesPorPagina.length ? secoesPorPagina.map(([pagina, rows]) => (
-        <div style="margin-bottom:18px">
-          <h3><code>{pagina}</code> <span class="mut" style="font-weight:400">· {baseSecao[pagina] ?? 0} visitas</span></h3>
-          <div class="bars">{rows.map((r: any) => <div class="bar"><span class="rot" title={r.secao}>{nomeSecao(r.secao)}</span><div class="tr"><i style={`width:${pct(r.n, baseSecao[r.pagina] || 1)}%`}></i></div><span class="n"><b>{pct(r.n, baseSecao[r.pagina])}%</b><small>{seg(r.tempo) || '—'}</small></span></div>)}</div>
-        </div>
-      )) : <div class="vazio"><b>Sem dados de seção ainda</b>Aparecem quando alguém rola a página.</div>}
-    </div>
-    <div class="card p0">
-      <div class="tbl"><table><thead><tr><th>Cliques</th><th>Onde</th><th class="n">Cliques</th><th class="n">Visitas</th></tr></thead><tbody>
-        {cliques.length ? cliques.map((r: any) => <tr><td class="dim"><code>{r.pagina}</code></td><td>{r.alvo}</td><td class="n">{r.n}</td><td class="n">{r.s}</td></tr>) : <tr><td colspan="4" class="tbl-vazio">Nenhum clique registrado.</td></tr>}
-      </tbody></table></div>
-    </div>
-  </div>
-</section>
+  <section class="card p0">
+    <div class="card__h"><h3>Últimos leads</h3><a href="/admin/leads" style="font-size:13px;font-weight:500">Ver todos →</a></div>
+    <div class="tbl"><table><thead><tr><th>Nome</th><th>Página</th><th>Origem</th><th class="c">Grupo</th><th class="c">Comprou</th><th>Quando</th></tr></thead><tbody>
+      {recentes.length ? recentes.map((l) => <tr>
+        <td><b style="font-weight:600">{l.nome}</b> <span class="mut" style="margin-left:6px">{fone(l.whatsapp)}</span></td>
+        <td>{nomePagina(l.pagina)}</td>
+        <td class="dim">{l.utm_source || '(direto)'}</td>
+        <td class="c">{l.clicou_grupo ? <span class="tag ok">sim</span> : <span class="mut">—</span>}</td>
+        <td class="c">{l.comprou ? <span class="tag ok">sim</span> : <span class="mut">—</span>}</td>
+        <td class="dim">{dt(l.created_at)}</td>
+      </tr>) : <tr><td colspan="6" class="tbl-vazio">Nenhum lead ainda.</td></tr>}
+    </tbody></table></div>
+  </section>
 
-<section id="leads">
-  <div class="sec-h"><h2>Últimos leads</h2><p>os 30 mais recentes, com o que fizeram na página</p><div class="acoes"><a href="/admin/leads.csv">Baixar todos (CSV)</a></div></div>
-  <div class="card p0"><div class="tbl"><table><thead><tr><th class="n">#</th><th>Quando</th><th>Nome</th><th>WhatsApp</th><th>Origem</th><th>Aparelho</th><th class="n">Tempo ativo</th><th class="n">Rolagem</th><th class="c">Grupo</th><th class="c">Comprou</th><th class="n">Envios</th></tr></thead><tbody>
-    {recentes.length ? recentes.map((l) => <tr>
-      <td class="n dim">{l.id}</td><td class="dim">{dt(l.created_at)}</td><td>{l.nome}</td><td><code>{l.whatsapp}</code></td>
-      <td class="dim">{[l.utm_source, l.utm_medium, l.utm_content].filter(Boolean).join(' / ') || '—'}</td>
-      <td class="dim">{nomeDisp[l.dispositivo] ?? l.dispositivo ?? '—'}</td>
-      <td class="n">{seg(l.tempo_ativo_s)}</td><td class="n">{l.scroll_max != null ? `${l.scroll_max}%` : ''}</td>
-      <td class="c">{l.clicou_grupo ? <span class="tag ok">✓ sim</span> : <span class="dim">—</span>}</td>
-      <td class="c">{l.comprou ? <span class="tag ok">✓ sim</span> : <span class="dim">—</span>}</td>
-      <td class="n">{l.envios > 1 ? <span class="tag warn">{l.envios}×</span> : l.envios}{l.meta_lead === 0 ? <span class="dim"> · mesmo aparelho</span> : ''}</td>
-    </tr>) : <tr><td colspan="11" class="tbl-vazio">Nenhum lead ainda.</td></tr>}
-  </tbody></table></div></div>
-</section>
+  <p class="rodape"><span>Visitas de robôs ficam fora de todas as contas.</span><span>Recarregue a página para atualizar.</span></p>
+</Admin>
 
-<section id="meta">
-  <div class="sec-h"><h2>Eventos enviados à Meta</h2><p>os 25 mais recentes</p><div class="acoes"><a href="/admin/eventos.csv">Baixar todos (CSV)</a></div></div>
-  <div class="card p0"><div class="tbl"><table><thead><tr><th>Quando</th><th>Evento</th><th>Origem</th><th>Lead</th><th class="n">Valor</th><th>Meta</th></tr></thead><tbody>
-    {ultimosEventos.length ? ultimosEventos.map((e) => { const st = statusEvento(e.capi_status); return <tr><td class="dim">{dt(e.created_at)}</td><td>{e.tipo}</td><td class="dim">{e.origem}</td><td>{e.nome || <span class="dim">—</span>}</td><td class="n">{e.valor != null ? brl(e.valor) : ''}</td><td><span class={`tag ${st.cls}`}>{st.cls === 'ok' ? '✓ ' : st.cls === 'err' ? '✕ ' : ''}{st.txt}</span></td></tr>; }) : <tr><td colspan="6" class="tbl-vazio">Nenhum evento.</td></tr>}
-  </tbody></table></div></div>
-</section>
-
-<!-- ===== Ferramenta ===== -->
-<section id="links">
-  <div class="sec-h"><h2>Links e UTM</h2><p>use o mesmo nome de campanha do Meta Ads para cruzar os dados no Gerenciador de Anúncios</p></div>
-  <div class="card">
-    <div class="utm-tabs">
-      <button type="button" class="utm-tab on" data-tab="curto">Link curto (/r/...)</button>
-      <button type="button" class="utm-tab" data-tab="direto">Só as UTMs, para colar onde eu quiser</button>
-    </div>
-
-    <div class="utm-painel on" data-painel="curto">
-      <p class="mut" style="margin:0 0 14px;font-size:13px">Gera um link curto fixo, tipo <code>{dominio}/r/live-01</code>, que sempre redireciona para a mesma página com essas UTMs. Bom para grupo, bio e descrição de vídeo; conta os cliques.</p>
-      <form class="utm-form" id="form-curto">
-        <label>Destino<select name="destino"><option value="/black">/black — captação da live</option><option value="/">/ — página inicial</option><option value="__custom">outra URL...</option></select></label>
-        <label class="dest-custom" style="display:none">URL de destino<input name="destino_custom" placeholder="https://gustavobijos.com.br/..." /></label>
-        <label>Nome do link (slug)<input name="slug" placeholder="live-01" required /></label>
-        <label>Origem (utm_source)<input name="utm_source" placeholder="instagram, whatsapp, youtube..." required /></label>
-        <label>Mídia (utm_medium)<input name="utm_medium" placeholder="bio, grupo, reels, cpc..." /></label>
-        <label>Campanha (utm_campaign)<input name="utm_campaign" placeholder="mesmo nome da campanha no Meta Ads" /></label>
-        <label>Conteúdo (utm_content)<input name="utm_content" placeholder="conjunto de anúncios / variação" /></label>
-        <label>Anúncio (utm_term)<input name="utm_term" placeholder="nome do anúncio/criativo no Meta Ads" /></label>
-        <label>Descrição<input name="descricao" placeholder="ex: stories dia 1/11" /></label>
-      </form>
-      <div class="utm-acoes"><button type="button" class="btn" id="btn-criar-curto">Criar link</button></div>
-      <div class="utm-saida" id="saida-curto"><div class="utm-url" id="url-curto"></div><button type="button" class="btn sec" id="copiar-curto">Copiar link</button></div>
-      <div class="utm-msg" id="msg-curto"></div>
-    </div>
-
-    <div class="utm-painel" data-painel="direto">
-      <p class="mut" style="margin:0 0 14px;font-size:13px">Monta a URL completa com as UTMs, sem criar link curto nem contar clique. Cole direto como link do anúncio, da bio ou de qualquer botão.</p>
-      <form class="utm-form" id="form-direto">
-        <label>Página<select name="pagina"><option value="/black">/black — captação da live</option><option value="/">/ — página inicial</option><option value="__custom">outra URL...</option></select></label>
-        <label class="pag-custom" style="display:none">URL<input name="pagina_custom" placeholder="https://gustavobijos.com.br/..." /></label>
-        <label>Origem (utm_source)<input name="utm_source" placeholder="facebook, instagram..." required /></label>
-        <label>Mídia (utm_medium)<input name="utm_medium" placeholder="cpc, stories, reels..." /></label>
-        <label>Campanha (utm_campaign)<input name="utm_campaign" placeholder="mesmo nome da campanha no Meta Ads" /></label>
-        <label>Conteúdo (utm_content)<input name="utm_content" placeholder="conjunto de anúncios" /></label>
-        <label>Anúncio (utm_term)<input name="utm_term" placeholder="nome do anúncio/criativo" /></label>
-      </form>
-      <div class="utm-acoes"><button type="button" class="btn" id="btn-gerar-direto">Gerar URL</button></div>
-      <div class="utm-saida" id="saida-direto"><div class="utm-url" id="url-direto"></div><button type="button" class="btn sec" id="copiar-direto">Copiar URL</button></div>
-    </div>
-  </div>
-
-  {links.length > 0 && (
-    <div class="card p0" style="margin-top:12px">
-      <div class="tbl"><table><thead><tr><th>Link curto</th><th>Destino</th><th>Origem</th><th>Mídia</th><th>Campanha</th><th>Anúncio</th><th class="n">Cliques</th><th></th></tr></thead><tbody>
-        {links.map((l: any) => (
-          <tr data-row-slug={l.slug}>
-            <td><code>{dominio.replace(/^https?:\/\//, '')}/r/{l.slug}</code></td>
-            <td class="dim">{l.destino}{l.descricao ? ` · ${l.descricao}` : ''}</td>
-            <td>{l.utm_source}</td>
-            <td class="dim">{l.utm_medium || '—'}</td>
-            <td class="dim">{l.utm_campaign || '—'}</td>
-            <td class="dim">{l.utm_term || '—'}</td>
-            <td class="n">{l.cliques}</td>
-            <td class="n"><button type="button" class="del" data-del-slug={l.slug}>Excluir</button></td>
-          </tr>
-        ))}
-      </tbody></table></div>
-    </div>
-  )}
-</section>
-
-<p class="rodape"><span>Horários em Brasília.</span><span>Visitas de robôs ficam fora de todas as contas.</span><span>Página gerada às {geradoEm}; recarregue para atualizar.</span></p>
-</div>
-
-<script define:vars={{ dominio }}>
-  function qs(s, r) { return (r || document).querySelector(s); }
-  function qsa(s, r) { return Array.from((r || document).querySelectorAll(s)); }
-
-  // Abas
-  qsa('.utm-tab').forEach((tab) => tab.addEventListener('click', () => {
-    qsa('.utm-tab').forEach((t) => t.classList.remove('on'));
-    qsa('.utm-painel').forEach((p) => p.classList.remove('on'));
-    tab.classList.add('on');
-    qs(`.utm-painel[data-painel="${tab.dataset.tab}"]`).classList.add('on');
-  }));
-
-  // Mostrar campo de URL customizada quando "outra URL..." é escolhido
-  function ligarCustom(selectName, formId, wrapperSel) {
-    var form = qs('#' + formId);
-    var sel = form.querySelector(`[name="${selectName}"]`);
-    var wrap = form.querySelector(wrapperSel);
-    sel.addEventListener('change', () => { wrap.style.display = sel.value === '__custom' ? 'flex' : 'none'; });
-  }
-  ligarCustom('destino', 'form-curto', '.dest-custom');
-  ligarCustom('pagina', 'form-direto', '.pag-custom');
-
-  function valores(form) {
-    var fd = new FormData(form);
-    var o = {}; fd.forEach((v, k) => (o[k] = String(v).trim()));
-    return o;
-  }
-
-  function montarUrl(base, v) {
-    var u = new URL(base, dominio);
-    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach((k) => { if (v[k]) u.searchParams.set(k, v[k]); });
-    return u.toString();
-  }
-
-  function copiar(texto, btn) {
-    navigator.clipboard?.writeText(texto).then(() => {
-      var orig = btn.textContent; btn.textContent = 'Copiado!';
-      setTimeout(() => (btn.textContent = orig), 1500);
-    });
-  }
-
-  // Modo 1: link curto
-  qs('#btn-criar-curto').addEventListener('click', async () => {
-    var v = valores(qs('#form-curto'));
-    var destino = v.destino === '__custom' ? v.destino_custom : v.destino;
-    var msg = qs('#msg-curto'); msg.textContent = ''; msg.className = 'utm-msg';
-    try {
-      var res = await fetch('/api/admin/links', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ slug: v.slug, destino: destino, utm_source: v.utm_source, utm_medium: v.utm_medium, utm_campaign: v.utm_campaign, utm_content: v.utm_content, utm_term: v.utm_term, descricao: v.descricao }),
-      });
-      var j = await res.json();
-      if (!j.ok) { msg.textContent = j.erro || 'Erro ao criar o link.'; msg.classList.add('err'); return; }
-      var url = dominio + '/r/' + j.slug;
-      qs('#url-curto').textContent = url;
-      qs('#saida-curto').classList.add('on');
-      msg.textContent = 'Link criado.'; msg.classList.add('ok');
-      setTimeout(() => (location.href = location.pathname + location.search + '#links'), 900);
-    } catch (e) { msg.textContent = 'Falha ao falar com o servidor.'; msg.classList.add('err'); }
-  });
-  qs('#copiar-curto').addEventListener('click', function () { copiar(qs('#url-curto').textContent, this); });
-
-  // Modo 2: só UTM, qualquer URL
-  qs('#btn-gerar-direto').addEventListener('click', () => {
-    var v = valores(qs('#form-direto'));
-    var pagina = v.pagina === '__custom' ? v.pagina_custom : v.pagina;
-    var url = montarUrl(pagina, v);
-    qs('#url-direto').textContent = url;
-    qs('#saida-direto').classList.add('on');
-  });
-  qs('#copiar-direto').addEventListener('click', function () { copiar(qs('#url-direto').textContent, this); });
-
-  // Excluir link
-  qsa('[data-del-slug]').forEach((btn) => btn.addEventListener('click', async () => {
-    if (!confirm('Excluir /r/' + btn.dataset.delSlug + '? Isso não afeta cliques já registrados.')) return;
-    await fetch('/api/admin/links?slug=' + encodeURIComponent(btn.dataset.delSlug), { method: 'DELETE' });
-    qs(`tr[data-row-slug="${btn.dataset.delSlug}"]`)?.remove();
-  }));
-</script>
-</body></html>
+<style>
+  .chart__h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px}
+  .chart__h h3{margin:0}
+  .legenda{display:flex;gap:16px;font-size:12.5px;color:var(--ink-2)}
+  .legenda span{display:inline-flex;align-items:center;gap:6px}
+  .legenda i{width:10px;height:10px;border-radius:3px}
+  .legenda i.v,.col i.v{background:#d9d2c5} .legenda i.l,.col i.l{background:var(--acc)}
+  .cols{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:end;gap:4px;height:180px;margin-top:26px;border-bottom:1px solid var(--line-2);position:relative}
+  .cols::before,.cols::after{content:'';position:absolute;left:0;right:0;border-top:1px dashed var(--line);pointer-events:none}
+  .cols::before{top:33%} .cols::after{top:66%}
+  .col{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:100%;position:relative}
+  .col i{display:block;flex:1;max-width:22px;border-radius:4px 4px 0 0}
+  .col i[style="height:0%"]{display:none}
+  .col:hover i.v{background:#c9c0b0}
+  .col .tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:var(--r-sm);padding:6px 10px;font-size:12px;white-space:nowrap;display:none;z-index:2}
+  .col .tip b{display:block;color:#bdb6a9;font-weight:500;font-size:11px}
+  .col:hover .tip{display:block}
+  .col:first-child .tip{left:0;transform:none} .col:last-child .tip{left:auto;right:0;transform:none}
+  .eixo{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;font-size:11px;color:var(--mut);text-align:center;font-variant-numeric:tabular-nums;margin-top:6px}
+  .eixo span{visibility:hidden;white-space:nowrap;display:flex;justify-content:center} .eixo span:first-child{justify-content:flex-start} .eixo span:last-child{justify-content:flex-end}
+  @media (max-width:640px){.eixo span.vis{visibility:hidden} .eixo span:first-child,.eixo span:last-child{visibility:visible}} .eixo span.vis{visibility:visible}
+  .eixo-y{position:absolute;top:-18px;right:0;font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .eixo-y::before{content:'máx. '}
+</style>

@@ -1,6 +1,6 @@
 # Tracking e análise: gustavobijos.com.br
 
-Dois fluxos independentes saem da página. Os dois ficam no `public/js/ta-v4.js`.
+Dois fluxos independentes saem da página. Os dois ficam no `public/js/ta-v5.js`.
 
 1. **Meta (anúncios):** Pixel no navegador + cópia no servidor pela Conversions API, com o mesmo `event_id` para a Meta não contar duas vezes.
 2. **Comportamento (nosso):** o que a pessoa faz na página, gravado no SQLite em `sessoes` e `comportamento`. Nada disso vai para a Meta.
@@ -22,15 +22,15 @@ Mantemos poucos eventos de propósito: scroll e tempo de engajamento (ver "Tabel
 
 Correspondência (match quality): o servidor manda telefone, nome, external_id (id do lead) e estado (`st`, tirado do DDD do WhatsApp) em SHA-256, mais fbp, fbc, IP e user agent. Na /obrigado o Pixel também recebe telefone, nome e external_id em hash (advanced matching).
 
-**Fbp/fbc robustos:** o `_fbp` só existe depois que o fbevents.js (script de terceiro, assíncrono) termina de carregar. Num clique muito rápido logo que a página abre, a réplica para o servidor poderia sair sem esse cookie. `ta-v4.js` agora espera até ~800ms por ele antes de mandar PageView e os outros eventos para `/api/event`, sem atrasar o disparo do Pixel em si (que é imediato). O `_fbc` sintético a partir de `fbclid` já é criado no middleware em qualquer página carregada com esse parâmetro, antes de qualquer clique.
+**Fbp/fbc robustos:** o `_fbp` só existe depois que o fbevents.js (script de terceiro, assíncrono) termina de carregar. Num clique muito rápido logo que a página abre, a réplica para o servidor poderia sair sem esse cookie. Desde a `ta-v5.js` o próprio script cria o `_fbp` (formato `fb.1.<ms>.<aleatório>`) antes do fbevents.js, e o Pixel adota esse cookie. O fbevents.js só baixa na primeira interação (toque, tecla, rolagem) ou 3 s depois do `load`, para não pesar na primeira tela; na `/obrigado` carrega na hora. Os eventos esperam na fila do `fbq` e a cópia CAPI sai na hora. Se o navegador recusar o cookie, a espera de ~800ms pelo `_fbp` continua como rede de segurança. O `_fbc` sintético a partir de `fbclid` já é criado no middleware em qualquer página carregada com esse parâmetro, antes de qualquer clique.
 
-## Gerador de UTM (/admin)
+## Gerador de UTM (/admin/links)
 
-Seção no topo do painel, dois modos:
-- **Link curto (`/r/<slug>`):** cria uma linha na tabela `links` e sempre redireciona para a mesma página com as UTMs. Bom para divulgar em grupo, bio, descrição de vídeo — e para contar cliques.
-- **Só as UTMs:** monta a URL completa (ex. `https://gustavobijos.com.br/black?utm_source=...`) no navegador, sem gravar nada no banco nem criar link curto. Para colar direto como link de um anúncio do Meta Ads, onde o próprio Meta já encurta/rastreia o clique.
-
-Os dois modos aceitam `utm_term`, para guardar o nome do anúncio/criativo do Meta Ads — use o mesmo texto de `utm_campaign`/`utm_term` que está na campanha do Meta Ads para os números baterem depois no Gerenciador de Anúncios e na tabela "Leads por origem"/"Origem das visitas" do painel.
+Montador em 3 passos com prévia ao vivo: (1) para onde leva (páginas de `config/paginas.ts`, um artigo publicado ou outra página), (2) onde vai divulgar (modelos que já preenchem `utm_source`/`utm_medium` no padrão da casa: instagram/bio, instagram/stories, whatsapp/grupo, youtube/descricao, youtube/live, email/email...), (3) campanha e nome. Os valores viram minúsculos, sem acento e com hífen no lugar de espaço, para "Instagram" e "instagram" não virarem duas origens.
+- **Link curto (`/r/<slug>`):** grava na tabela `links`, sempre redireciona para a mesma página com as UTMs e conta cliques. Para bio, grupo, e-mail e descrição de vídeo. O botão cria e já copia.
+- **URL completa:** sempre aparece na prévia, com botão de copiar, sem gravar nada.
+- **Anúncio Meta Ads:** não usa link curto. Gera a URL do site + "Parâmetros de URL" para colar no anúncio: `utm_source=meta&utm_medium=cpc&utm_campaign={{campaign.name}}&utm_content={{adset.name}}&utm_term={{ad.name}}`. O Meta troca os `{{...}}` pelos nomes reais da campanha, do conjunto e do anúncio, então os números do painel batem com o Gerenciador sem digitar nada.
+- Na lista, "Modelo" carrega um link existente no montador para criar uma variação.
 
 API: `POST /api/admin/links` (criar) e `DELETE /api/admin/links?slug=...` (excluir), protegidas pela mesma basic auth do `/admin`.
 
@@ -47,7 +47,7 @@ Hubla). Tudo abaixo já funciona em QUALQUER página nova, sem configuração ex
   em toda página HTML e grava em cookie first-party por 90 dias (`ta_utm`). Não importa a rota —
   funciona em `/`, `/black` ou qualquer página futura.
 - **Pixel + CAPI:** basta a página usar o layout `~/layouts/Tecnoapis.astro`, que já carrega
-  `ta-v4.js` (Pixel) e expõe `data-track-click` para eventos declarativos.
+  `ta-v5.js` (Pixel) e expõe `data-track-click` para eventos declarativos.
 - **Checkout da Hubla com UTM:** use o componente `~/components/BotaoCheckout.astro` em vez de um
   `<a>` cru. Ele:
   1. Lê as UTMs do cookie + da querystring da própria página (cookie tem prioridade por último:

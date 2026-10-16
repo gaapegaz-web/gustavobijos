@@ -18,6 +18,10 @@ import { acharImagem } from '~/lib/imagens';
 interface Props {
   title: string; description?: string; ogTitle?: string; leadEventId?: string; noindex?: boolean; nofollow?: boolean;
   ogImage?: string; ogImageAlt?: string; jsonLd?: Record<string, unknown>[]; am?: Record<string, string>;
+  /** Tamanho da og:image quando não é a padrão 1200x630 (ex.: capa do YouTube, 480x360). */
+  ogImageLargura?: number; ogImageAltura?: number;
+  /** 'article' nos conteúdos (/conteudos/<slug>). */
+  ogType?: 'website' | 'article';
   pageType?: 'WebPage' | 'ProfilePage';
   /** Imagem de fundo (CSS) que o navegador só descobriria depois do CSS: pré-carrega. */
   preload?: string;
@@ -26,7 +30,7 @@ interface Props {
 }
 const {
   title, description = BIO.resumo, pageType = 'WebPage', ogTitle = title, leadEventId, noindex = false, nofollow = false,
-  semPixel = false, preload, ogImage = '/img/og-gustavo.jpg', ogImageAlt = 'Gustavo Bijos, apicultor e criador do Clube Tecnoapis', jsonLd = [], am,
+  semPixel = false, preload, ogImage = '/img/og-gustavo.jpg', ogImageLargura = 1200, ogImageAltura = 630, ogType, ogImageAlt = 'Gustavo Bijos, apicultor e criador do Clube Tecnoapis', jsonLd = [], am,
 } = Astro.props;
 // Canonical sempre sem barra final (o middleware redireciona /x/ para /x). Na 404 não faz sentido declarar URL.
 const canonical = new URL(Astro.url.pathname.replace(/\/+$/, '') || '/', SITE.dominio).toString();
@@ -63,7 +67,7 @@ const grafo = {
     },
     ...empresas.map((m) => ({ '@type': 'Organization', '@id': `${site}#${m.id}`, name: m.nome, description: m.descricao, founder: { '@id': `${site}#gustavo` }, ...(m.url && m.externo ? { url: m.url } : {}) })),
     { '@type': 'WebSite', '@id': `${site}#site`, url: site, name: SITE.apelido, alternateName: `${SITE.professor} | ${SITE.clube}`, inLanguage: 'pt-BR', publisher: { '@id': `${site}#gustavo` } },
-    { '@type': pageType, '@id': `${canonical}#pagina`, url: canonical, name: title, description, inLanguage: 'pt-BR', isPartOf: { '@id': `${site}#site` }, primaryImageOfPage: { '@type': 'ImageObject', url: ogImageUrl, width: 1200, height: 630 }, ...(pageType === 'ProfilePage' ? { mainEntity: { '@id': `${site}#gustavo` } } : {}) },
+    { '@type': pageType, '@id': `${canonical}#pagina`, url: canonical, name: title, description, inLanguage: 'pt-BR', isPartOf: { '@id': `${site}#site` }, primaryImageOfPage: { '@type': 'ImageObject', url: ogImageUrl, width: ogImageLargura, height: ogImageAltura }, ...(pageType === 'ProfilePage' ? { mainEntity: { '@id': `${site}#gustavo` } } : {}) },
     ...jsonLd,
   ],
 };
@@ -79,7 +83,7 @@ const grafo = {
   <meta name="robots" content={robots} />
   <meta name="author" content={SITE.professor} />
 
-  <meta property="og:type" content={pageType === 'ProfilePage' ? 'profile' : 'website'} />
+  <meta property="og:type" content={ogType ?? (pageType === 'ProfilePage' ? 'profile' : 'website')} />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:site_name" content={SITE.apelido} />
   {!ehErro && <meta property="og:url" content={canonical} />}
@@ -88,8 +92,8 @@ const grafo = {
   <meta property="og:image" content={ogImageUrl} />
   <meta property="og:image:secure_url" content={ogImageUrl} />
   <meta property="og:image:type" content={ogImageTipo} />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:image:width" content={String(ogImageLargura)} />
+  <meta property="og:image:height" content={String(ogImageAltura)} />
   <meta property="og:image:alt" content={ogImageAlt} />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content={ogTitle} />
@@ -107,7 +111,7 @@ const grafo = {
   <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-v20-latin.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="/fonts/fraunces-v38-latin.woff2" crossorigin />
   {!semPixel && <script is:inline define:vars={{ pixelId: ENV.META_PIXEL_ID, leadEventId, am }}>window.__TA = { pixelId, leadEventId, am };</script>}
-  {!semPixel && <script is:inline src="/js/ta-v4.js" defer></script>}
+  {!semPixel && <script is:inline src="/js/ta-v5.js" defer></script>}
 </head>
 <body class="ta-root">
   {/* JSON-LD e noscript ficam no body: no head atrasavam a descoberta do CSS e das fontes, e <img> nem é válido lá */}

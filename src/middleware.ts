@@ -37,7 +37,7 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   }
 
   // Captura UTMs / fbclid em cookie first-party (90 dias), só em páginas HTML
-  if (request.method === 'GET' && !url.pathname.startsWith('/api') && !url.pathname.startsWith('/_')) {
+  if (request.method === 'GET' && !url.pathname.startsWith('/api') && !url.pathname.startsWith('/_') && !url.pathname.startsWith('/uploads/')) {
     const novas = lerUtmsDaUrl(url);
     if (Object.keys(novas).length) {
       const antigas = lerUtmsDoCookie(cookies);

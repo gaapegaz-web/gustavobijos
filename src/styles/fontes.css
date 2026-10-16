@@ -13,3 +13,17 @@
   src: url('/fonts/inter-v20-latin.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+
+/*
+ * Reservas com as medidas da fonte própria (calculadas com @capsizecss): enquanto a woff2 baixa, o texto
+ * aparece em Georgia/Arial já do mesmo tamanho, e a troca não empurra a página (CLS do H1 no desktop).
+ * Só valem onde Georgia/Arial existem (Windows, Mac); no Android o navegador segue para a próxima da lista.
+ */
+@font-face {
+  font-family: 'Fraunces Fallback'; src: local('Georgia');
+  ascent-override: 92.9623%; descent-override: 24.2386%; line-gap-override: 0%; size-adjust: 105.2039%;
+}
+@font-face {
+  font-family: 'Inter Fallback'; src: local('Arial'), local('ArialMT');
+  ascent-override: 90.4365%; descent-override: 22.518%; line-gap-override: 0%; size-adjust: 107.1194%;
+}

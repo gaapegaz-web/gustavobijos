@@ -7,7 +7,7 @@ import { CAPAS } from '~/config/clube';
     {[0, 1].map((copia) => (
       <ul class="capas__lista" aria-hidden={copia ? 'true' : undefined}>
         {CAPAS.map(([arquivo, nome]) => (
-          <li><img src={`/img/cursos/${arquivo}.webp`} alt={copia ? '' : nome} width="400" height="560" loading="lazy" decoding="async" draggable="false" /></li>
+          <li><img src={`/img/cursos/${arquivo}.webp`} srcset={`/img/cursos/${arquivo}.webp 400w, /img/cursos/${arquivo}-600.webp 600w`} sizes="(min-width: 900px) 280px, 56vw" alt={copia ? '' : nome} width="400" height="560" loading="lazy" decoding="async" draggable="false" /></li>
         ))}
       </ul>
     ))}
@@ -74,8 +74,8 @@ import { CAPAS } from '~/config/clube';
 <style>
   /* Sangra até a borda da tela; o degradê nas laterais dá a ideia de que a fila não acaba */
   .capas {
-    --capa: clamp(132px, 36vw, 200px);
-    --fade: min(12%, 120px);
+    --capa: clamp(190px, 56vw, 280px); /* grande de propósito: é a vitrine dos cursos (capas de 600 px no srcset) */
+    --fade: min(8%, 120px);
     margin-top: var(--space-8);
     overflow: hidden;
     touch-action: pan-y;
@@ -86,9 +86,9 @@ import { CAPAS } from '~/config/clube';
     mask-image: linear-gradient(90deg, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
   }
   .capas--arrastando { cursor: grabbing; }
-  .capas__trilho { display: flex; column-gap: 12px; width: max-content; will-change: transform; }
-  .capas__lista { display: flex; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .capas__trilho { display: flex; column-gap: 14px; width: max-content; will-change: transform; }
+  .capas__lista { display: flex; gap: 14px; margin: 0; padding: 0; list-style: none; }
   .capas__lista li { flex: 0 0 var(--capa); }
-  .capas__lista img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 7; border-radius: var(--radius-md); border: 1px solid var(--border); background: #161616; pointer-events: none; }
-  @media (min-width: 900px) { .capas { margin-top: var(--space-12); } .capas__trilho, .capas__lista { gap: 16px; } }
+  .capas__lista img { display: block; width: 100%; height: auto; aspect-ratio: 5 / 7; border-radius: var(--radius-md); border: 1px solid var(--border); background: #161616; pointer-events: none; box-shadow: 0 18px 40px -18px rgba(0,0,0,.7); }
+  @media (min-width: 900px) { .capas { margin-top: var(--space-12); } .capas__trilho, .capas__lista { gap: 20px; } }
 </style>

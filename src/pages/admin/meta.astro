@@ -1,0 +1,70 @@
+---
+/** Integração com a Meta (Pixel + Conversions API) e webhooks da Hubla: o que foi enviado e o que deu erro. */
+import Admin from '~/layouts/Admin.astro';
+import { db } from '~/lib/db';
+import { brl } from '~/lib/texto';
+import { periodo, statusMeta, dt, num } from '~/lib/painel';
+
+export const prerender = false;
+
+const { dias, desde, rotulo, q } = periodo(Astro.url);
+const { meta, webhooksErro, alertas } = statusMeta(desde);
+const porTipo = q(`SELECT tipo, count(*) n, sum(capi_status='ok') ok FROM eventos WHERE created_at >= datetime('now', ?) GROUP BY tipo ORDER BY n DESC`);
+const ultimosEventos = db().prepare('SELECT e.*, l.nome FROM eventos e LEFT JOIN leads l ON l.id = e.lead_id ORDER BY e.id DESC LIMIT 50').all() as any[];
+const statusEvento = (st: string | null) => {
+  if (st === 'ok') return { cls: 'ok', txt: 'enviado' };
+  if (st?.startsWith('erro')) return { cls: 'err', txt: st };
+  if (st === 'repetido') return { cls: '', txt: 'não enviado: cadastro repetido' };
+  if (st === 'mesmo_aparelho') return { cls: '', txt: 'não enviado: mesmo aparelho' };
+  if (st?.startsWith('pulado: sem valor')) return { cls: 'warn', txt: 'não enviado: Hubla não mandou o valor' };
+  if (st === 'pulado') return { cls: '', txt: 'não enviado' };
+  return { cls: '', txt: st ?? '—' };
+};
+const ALERTA = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+---
+<Admin titulo="Meta" ativo="meta" periodo={dias} sub={`Eventos mandados para o Pixel e a Conversions API, ${rotulo}.`}>
+  <a slot="acoes" class="btn sec" href="/admin/eventos.csv">Exportar eventos (CSV)</a>
+
+  <div class="status">
+    <span class={`chip ${meta.pixel ? 'ok' : 'err'}`}><i></i>Pixel {meta.pixel ? 'configurado' : 'sem ID'}</span>
+    <span class={`chip ${meta.token ? 'ok' : 'err'}`}><i></i>Conversions API {meta.token ? 'configurada' : 'sem token'}</span>
+    {meta.teste ? <span class="chip warn"><i></i>Modo de teste ligado</span> : <span class="chip"><i></i>Modo de teste desligado: tudo vai como evento real</span>}
+  </div>
+  {alertas.map((a) => <div class="aviso err" role="alert"><Fragment set:html={ALERTA} /><div>{a}</div></div>)}
+
+  <div class="kpis">
+    <div><span class="kpi__rot">Enviados</span><div class="kpi__linha"><span class="kpi__val">{num(meta.ok ?? 0)}</span></div><span class="kpi__det">aceitos pela Conversions API</span></div>
+    <div><span class="kpi__rot">Com erro</span><div class="kpi__linha"><span class={`kpi__val ${(meta.erro ?? 0) > 0 ? 'err' : ''}`}>{num(meta.erro ?? 0)}</span></div><span class="kpi__det">a Meta recusou</span></div>
+    <div><span class="kpi__rot">Não enviados</span><div class="kpi__linha"><span class="kpi__val">{num(meta.pulado ?? 0)}</span></div><span class="kpi__det">de propósito (repetidos, sem valor)</span></div>
+    <div><span class="kpi__rot">Webhooks da Hubla com erro</span><div class="kpi__linha"><span class={`kpi__val ${webhooksErro.length ? 'err' : ''}`}>{webhooksErro.length}</span></div><span class="kpi__det">não processados</span></div>
+  </div>
+
+  <section class="grid g32">
+    <div class="card p0">
+      <div class="card__h"><h3>Últimos eventos</h3><span class="mut" style="font-size:12.5px">os 50 mais recentes</span></div>
+      <div class="tbl alta"><table><thead><tr><th>Quando</th><th>Evento</th><th>Origem</th><th>Lead</th><th class="n">Valor</th><th>Meta</th></tr></thead><tbody>
+        {ultimosEventos.length ? ultimosEventos.map((e) => { const st = statusEvento(e.capi_status); return <tr><td class="dim">{dt(e.created_at)}</td><td>{e.tipo}</td><td class="dim">{e.origem}</td><td>{e.nome || <span class="mut">—</span>}</td><td class="n">{e.valor != null ? brl(e.valor) : ''}</td><td><span class={`tag ${st.cls}`}>{st.txt}</span></td></tr>; }) : <tr><td colspan="6" class="tbl-vazio">Nenhum evento.</td></tr>}
+      </tbody></table></div>
+    </div>
+    <div class="card p0" style="align-self:start">
+      <div class="card__h"><h3>Por tipo de evento</h3></div>
+      <div class="tbl"><table><thead><tr><th>Evento</th><th class="n">Total</th><th class="n">Enviados</th></tr></thead><tbody>
+        {porTipo.length ? porTipo.map((r: any) => <tr><td>{r.tipo}</td><td class="n">{r.n}</td><td class="n">{r.ok}</td></tr>) : <tr><td colspan="3" class="tbl-vazio">Nenhum evento no período.</td></tr>}
+      </tbody></table></div>
+    </div>
+  </section>
+
+  {webhooksErro.length > 0 && (
+    <section class="card p0">
+      <div class="card__h"><h3>Webhooks da Hubla com erro</h3></div>
+      <div class="tbl"><table><thead><tr><th>#</th><th>Quando</th><th>Erro</th></tr></thead><tbody>
+        {webhooksErro.map((w) => <tr><td class="dim">{w.id}</td><td class="dim">{w.created_at ? dt(w.created_at) : '—'}</td><td style="white-space:normal">{w.erro}</td></tr>)}
+      </tbody></table></div>
+    </section>
+  )}
+</Admin>
+
+<style>
+  .status{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .kpi__val.err{color:var(--err)}
+</style>

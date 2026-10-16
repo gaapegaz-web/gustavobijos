@@ -1,0 +1,279 @@
+---
+/**
+ * Criar (/admin/conteudos/novo) ou editar um conteúdo. O formulário posta para a própria página.
+ * Ações: salvar (mantém a situação), publicar, voltar para rascunho, excluir.
+ * publicado_em é gravado só na primeira publicação; atualizado_em muda a cada salvamento (vira o <lastmod> do sitemap).
+ * Mudança que aparece no site (publicar, editar publicado, despublicar, excluir) avisa o Bing pelo IndexNow.
+ */
+import Admin from '~/layouts/Admin.astro';
+import { TEMAS_CONTEUDO } from '~/config/conteudos';
+import { SITE } from '~/config/site';
+import { db } from '~/lib/db';
+import { SLUG_OK, TITULO_MAX, porId, slugify, tituloGoogle, youtubeId, type Conteudo } from '~/lib/conteudos';
+import { avisarIndexNow } from '~/lib/indexnow';
+
+export const prerender = false;
+
+const { request, url } = Astro;
+const novo = Astro.params.id === 'novo';
+const id = novo ? 0 : Number(Astro.params.id);
+const atual = novo ? undefined : porId(id);
+if (!novo && !atual) return Astro.redirect('/admin/conteudos');
+
+type Campos = Pick<Conteudo, 'titulo' | 'slug' | 'resumo' | 'tema' | 'video_url' | 'corpo' | 'capa' | 'capa_alt'>;
+let v: Campos = atual ?? { titulo: '', slug: '', resumo: '', tema: '', video_url: '', corpo: '', capa: '', capa_alt: '' };
+let erro = '';
+
+if (request.method === 'POST') {
+  // Basic auth fica guardada no navegador: só aceita formulário vindo do próprio site
+  const origem = request.headers.get('origin');
+  if (origem && new URL(origem).host !== request.headers.get('host')) return new Response('Origem não permitida', { status: 403 });
+
+  const f = await request.formData();
+  const acao = String(f.get('acao') || 'salvar');
+  if (acao === 'excluir' && atual) {
+    db().prepare('DELETE FROM conteudos WHERE id = ?').run(id);
+    if (atual.status === 'publicado') avisarIndexNow([`/conteudos/${atual.slug}`, '/conteudos', '/']);
+    return Astro.redirect('/admin/conteudos?ok=excluido');
+  }
+  const txt = (k: string, max: number) => String(f.get(k) ?? '').replace(/\r\n/g, '\n').trim().slice(0, max);
+  v = { titulo: txt('titulo', 160), slug: txt('slug', 80).toLowerCase(), resumo: txt('resumo', 320), tema: txt('tema', 40), video_url: txt('video_url', 300), corpo: txt('corpo', 200_000), capa: txt('capa', 200), capa_alt: txt('capa_alt', 200) };
+  if (v.capa && !/^\/uploads\/conteudos\/[a-z0-9-]+$/.test(v.capa)) v.capa = '';
+  if (!v.slug) v.slug = slugify(v.titulo);
+  if (!TEMAS_CONTEUDO.some((t) => t.slug === v.tema)) v.tema = '';
+  const status = acao === 'publicar' ? 'publicado' : acao === 'despublicar' ? 'rascunho' : (atual?.status ?? 'rascunho');
+
+  if (!v.titulo) erro = 'Escreva o título.';
+  else if (!SLUG_OK.test(v.slug)) erro = 'O endereço só pode ter letras minúsculas sem acento, números e hífens (ex.: como-trocar-a-rainha).';
+  else if (db().prepare('SELECT 1 FROM conteudos WHERE slug = ? AND id != ?').get(v.slug, id)) erro = `Já existe um conteúdo com o endereço /conteudos/${v.slug}.`;
+  else if (v.video_url && !youtubeId(v.video_url)) erro = 'O link do vídeo não parece ser do YouTube. Cole o link completo (youtube.com/watch?v=... ou youtu.be/...).';
+  else if (status === 'publicado' && (!v.resumo || !v.corpo)) erro = 'Para publicar, preencha o resumo e o texto.';
+
+  if (!erro) {
+    // A home e /conteudos listam os publicados; slug trocado em publicado deixa o endereço antigo em 404
+    const noSite = status === 'publicado' || atual?.status === 'publicado';
+    if (noSite) avisarIndexNow([`/conteudos/${v.slug}`, ...(atual?.status === 'publicado' && atual.slug !== v.slug ? [`/conteudos/${atual.slug}`] : []), '/conteudos', '/']);
+    const dados = { ...v, tema: v.tema || null, video_url: v.video_url || null, capa: v.capa || null, capa_alt: v.capa ? v.capa_alt || null : null, status };
+    if (novo) {
+      const r = db().prepare(`INSERT INTO conteudos (titulo, slug, resumo, tema, video_url, corpo, capa, capa_alt, status, publicado_em)
+        VALUES (@titulo, @slug, @resumo, @tema, @video_url, @corpo, @capa, @capa_alt, @status, CASE WHEN @status = 'publicado' THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') END)`).run(dados);
+      return Astro.redirect(`/admin/conteudos/${r.lastInsertRowid}?ok=${acao}`);
+    }
+    db().prepare(`UPDATE conteudos SET titulo = @titulo, slug = @slug, resumo = @resumo, tema = @tema, video_url = @video_url, corpo = @corpo, capa = @capa, capa_alt = @capa_alt, status = @status,
+      publicado_em = CASE WHEN @status = 'publicado' THEN coalesce(publicado_em, strftime('%Y-%m-%dT%H:%M:%fZ','now')) ELSE publicado_em END,
+      atualizado_em = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = @id`).run({ ...dados, id });
+    return Astro.redirect(`/admin/conteudos/${id}?ok=${acao}`);
+  }
+}
+
+const c = novo ? undefined : porId(id);
+const publicado = c?.status === 'publicado';
+const ok = url.searchParams.get('ok');
+const MSG: Record<string, string> = { salvar: 'Alterações salvas.', publicar: 'Publicado! Já está no site, na home e no sitemap.', despublicar: 'Voltou para rascunho e saiu do site.' };
+const dominio = SITE.dominio.replace(/^https?:\/\//, '');
+---
+<Admin titulo={novo ? 'Novo conteúdo' : v.titulo} ativo="conteudos" cabecalho={false}>
+  <p class="trilha"><a href="/admin/conteudos">← Conteúdos</a></p>
+  <div class="cab">
+    <h1>{novo ? 'Novo conteúdo' : 'Editar conteúdo'}</h1>
+    {c && (publicado ? <span class="chip ok"><i></i>Publicado</span> : <span class="chip warn"><i></i>Rascunho</span>)}
+    {c && <span class="links">{publicado ? <a href={`/conteudos/${c.slug}`} target="_blank" rel="noopener">Ver no site ↗</a> : <a href={`/admin/conteudos/previa/${c.id}`} target="_blank" rel="noopener">Ver prévia ↗</a>}</span>}
+  </div>
+
+  {ok && MSG[ok] && !erro && <div class="aviso ok">{MSG[ok]}</div>}
+  {erro && <div class="aviso err" role="alert">{erro}</div>}
+
+  <form method="post" class="ed" id="ed">
+    <div class="ed__main">
+      <label>Título <span class="mut" id="conta-tit">0/{TITULO_MAX}</span><input name="titulo" value={v.titulo} required maxlength="160" placeholder="Ex.: Quando trocar a rainha da colmeia?" autocomplete="off" /></label>
+      <label>Texto <span class="mut">(Markdown)</span>
+        <textarea name="corpo" rows="28" placeholder="Escreva aqui. Use ## para subtítulos.">{v.corpo}</textarea>
+      </label>
+      <div class="foto-texto">
+        <button type="button" class="btn sec" id="btn-foto">+ Inserir foto no texto</button>
+        <input type="file" id="arq-foto" accept="image/jpeg,image/png,image/webp" hidden />
+        <span class="mut" id="msg-foto">Entra onde estiver o cursor. Qualquer tamanho: o site reduz para até 1200 px de largura.</span>
+      </div>
+      <details class="ajuda"><summary>Como formatar o texto</summary>
+        <table><tbody>
+          <tr><td><code>## Subtítulo</code></td><td>subtítulo de seção (use vários: o Google lê como tópicos)</td></tr>
+          <tr><td><code>### Subtítulo menor</code></td><td>subtópico dentro de uma seção</td></tr>
+          <tr><td><code>**negrito**</code></td><td><b>negrito</b></td></tr>
+          <tr><td><code>- item</code></td><td>lista com marcadores (<code>1. item</code> para numerada)</td></tr>
+          <tr><td><code>&gt; frase</code></td><td>citação em destaque (bom para frases do Gustavo)</td></tr>
+          <tr><td><code>[texto](https://...)</code></td><td>link</td></tr>
+          <tr><td><code>![descrição](/uploads/...)</code></td><td>foto (use o botão "Inserir foto no texto"; troque "descrição" pelo que aparece na foto)</td></tr>
+        </tbody></table>
+      </details>
+    </div>
+
+    <aside class="ed__lado">
+      <div class="card">
+        <div class="botoes">
+          {!publicado && <button class="btn ok" name="acao" value="publicar">Publicar</button>}
+          <button class="btn" name="acao" value="salvar">{publicado ? 'Salvar alterações' : 'Salvar rascunho'}</button>
+        </div>
+        {publicado && <p class="mut nota">As alterações vão para o site assim que você salvar.</p>}
+      </div>
+
+      <div class="card capa">
+        <p class="capa__tit">Imagem de capa</p>
+        <div class="capa__prev" id="capa-prev">{v.capa ? <img src={`${v.capa}-720.webp`} alt="" width="720" height="405" /> : <span class="mut">Sem capa: {youtubeId(v.video_url) ? 'usa a miniatura do vídeo' : 'usa a capa automática com o tema'}</span>}</div>
+        <input type="hidden" name="capa" value={v.capa ?? ''} />
+        <div class="botoes">
+          <button type="button" class="btn sec" id="btn-capa">{v.capa ? 'Trocar imagem' : 'Enviar imagem'}</button>
+          <button type="button" class="btn perigo" id="tirar-capa" hidden={!v.capa}>Tirar</button>
+        </div>
+        <input type="file" id="arq-capa" accept="image/jpeg,image/png,image/webp" hidden />
+        <p class="mut nota" id="msg-capa">Horizontal (16:9), com pelo menos <b>1200 × 675 px</b>; o ideal é <b>1600 × 900</b>. JPG, PNG ou WebP até 20 MB. O site corta, comprime e gera a versão do WhatsApp sozinho; deixe o assunto principal no centro.</p>
+        <label>Descrição da imagem<input name="capa_alt" value={v.capa_alt ?? ''} maxlength="200" placeholder="Ex.: Gustavo segurando um quadro de cria no apiário" /></label>
+      </div>
+
+      <div class="card campos">
+        <label>Resumo <span class="mut" id="conta">0/160</span>
+          <textarea name="resumo" rows="4" maxlength="320" placeholder="1 ou 2 frases. Aparece no Google, no card e no WhatsApp.">{v.resumo}</textarea>
+        </label>
+        <label>Tema
+          <select name="tema"><option value="">Sem tema</option>{TEMAS_CONTEUDO.map((t) => <option value={t.slug} selected={v.tema === t.slug}>{t.nome}</option>)}</select>
+        </label>
+        <label>Vídeo do YouTube <span class="mut">(opcional)</span>
+          <input name="video_url" value={v.video_url ?? ''} placeholder="https://youtu.be/..." inputmode="url" autocomplete="off" />
+        </label>
+        <label>Endereço
+          <span class="slug"><span class="mut">{dominio}/conteudos/</span><input name="slug" value={v.slug} placeholder="gerado do título" autocomplete="off" pattern="[a-z0-9]+(-[a-z0-9]+)*" /></span>
+        </label>
+        {publicado && <p class="aviso warn" style="margin:0">Mudar o endereço de um conteúdo publicado quebra os links que já foram compartilhados.</p>}
+      </div>
+
+      <div class="card">
+        <p class="mut" style="margin:0 0 8px;font-size:12px">Como deve aparecer no Google</p>
+        <div class="serp">
+          <span class="serp__url">{dominio} › conteudos</span>
+          <span class="serp__tit" id="serp-tit">{tituloGoogle(v.titulo || 'Título do conteúdo', SITE.apelido)}</span>
+          <span class="serp__desc" id="serp-desc">{v.resumo || 'O resumo aparece aqui.'}</span>
+        </div>
+      </div>
+
+      {c && (
+        <div class="card">
+          {publicado && <button class="btn sec" name="acao" value="despublicar" formnovalidate>Voltar para rascunho</button>}
+          <button class="btn perigo" name="acao" value="excluir" formnovalidate data-confirmar="Excluir este conteúdo? Não dá para desfazer.">Excluir</button>
+          {c.origem && <p class="mut nota">Importado de: {c.origem}</p>}
+        </div>
+      )}
+    </aside>
+  </form>
+</Admin>
+
+<script is:inline define:vars={{ apelido: SITE.apelido, tituloMax: TITULO_MAX }}>
+  var f = document.getElementById('ed');
+  var resumo = f.resumo, titulo = f.titulo, slug = f.slug, conta = document.getElementById('conta'), contaTit = document.getElementById('conta-tit');
+  function atualiza() {
+    var n = resumo.value.trim().length;
+    conta.textContent = n + '/160';
+    conta.style.color = n > 160 ? 'var(--warn)' : n >= 70 ? 'var(--ok)' : '';
+    // Mesma regra de tituloGoogle() (lib/conteudos.ts); acima do limite o Google mostra cortado com "..."
+    var t = titulo.value.trim() || 'Título do conteúdo', comMarca = t + ' | ' + apelido, nt = titulo.value.trim().length;
+    var tg = comMarca.length <= tituloMax ? comMarca : t;
+    contaTit.textContent = nt + '/' + tituloMax + (nt > tituloMax ? ' · o Google corta' : '');
+    contaTit.style.color = nt > tituloMax ? 'var(--warn)' : nt >= 30 ? 'var(--ok)' : '';
+    document.getElementById('serp-tit').textContent = tg.length > tituloMax ? tg.slice(0, tituloMax - 3).replace(/\s+\S*$/, '') + ' ...' : tg;
+    document.getElementById('serp-desc').textContent = resumo.value || 'O resumo aparece aqui.';
+  }
+  resumo.addEventListener('input', atualiza); titulo.addEventListener('input', atualiza); atualiza();
+  // Endereço sugerido a partir do título enquanto ninguém mexer nele à mão
+  var slugManual = !!slug.value;
+  slug.addEventListener('input', function () { slugManual = true; });
+  titulo.addEventListener('input', function () {
+    if (slugManual) return;
+    slug.value = titulo.value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/-+$/, '');
+  });
+  // Envio de imagens (capa e fotos do texto) para /api/admin/imagem
+  function enviar(arquivo, tipo) {
+    var fd = new FormData();
+    fd.append('arquivo', arquivo); fd.append('tipo', tipo); fd.append('slug', slug.value || titulo.value);
+    return fetch('/api/admin/imagem', { method: 'POST', body: fd }).then(function (r) { return r.json(); });
+  }
+  var arqCapa = document.getElementById('arq-capa'), msgCapa = document.getElementById('msg-capa'), textoAjudaCapa = msgCapa.innerHTML;
+  document.getElementById('btn-capa').addEventListener('click', function () { arqCapa.click(); });
+  arqCapa.addEventListener('change', function () {
+    if (!arqCapa.files[0]) return;
+    msgCapa.textContent = 'Enviando e ajustando a imagem...';
+    enviar(arqCapa.files[0], 'capa').then(function (r) {
+      if (!r.ok) { msgCapa.textContent = r.erro; msgCapa.style.color = 'var(--err)'; return; }
+      f.capa.value = r.capa; sujo = true;
+      document.getElementById('capa-prev').innerHTML = '<img src="' + r.capa + '-720.webp" alt="" width="720" height="405">';
+      document.getElementById('tirar-capa').hidden = false;
+      document.getElementById('btn-capa').textContent = 'Trocar imagem';
+      msgCapa.style.color = r.pequena ? 'var(--warn)' : '';
+      msgCapa.innerHTML = (r.pequena ? 'Imagem enviada, mas é menor que 1200 px de largura e pode ficar borrada. ' : 'Imagem enviada. ') + '<b>Clique em salvar</b> para ela entrar no conteúdo.';
+      if (!f.capa_alt.value) f.capa_alt.focus();
+    }).catch(function () { msgCapa.textContent = 'Falha no envio. Tente de novo.'; });
+    arqCapa.value = '';
+  });
+  document.getElementById('tirar-capa').addEventListener('click', function () {
+    f.capa.value = ''; sujo = true; this.hidden = true;
+    document.getElementById('capa-prev').innerHTML = '<span class="mut">Sem capa (salve para confirmar)</span>';
+    document.getElementById('btn-capa').textContent = 'Enviar imagem';
+    msgCapa.innerHTML = textoAjudaCapa; msgCapa.style.color = '';
+  });
+  var arqFoto = document.getElementById('arq-foto'), msgFoto = document.getElementById('msg-foto'), corpo = f.corpo;
+  document.getElementById('btn-foto').addEventListener('click', function () { arqFoto.click(); });
+  arqFoto.addEventListener('change', function () {
+    if (!arqFoto.files[0]) return;
+    var ini = corpo.selectionStart, fim = corpo.selectionEnd;
+    msgFoto.textContent = 'Enviando...';
+    enviar(arqFoto.files[0], 'texto').then(function (r) {
+      if (!r.ok) { msgFoto.textContent = r.erro; return; }
+      var rotulo = 'descrição da foto';
+      var trecho = '\n\n![' + rotulo + '](' + r.url + ')\n\n';
+      corpo.value = corpo.value.slice(0, ini) + trecho + corpo.value.slice(fim);
+      corpo.focus();
+      corpo.setSelectionRange(ini + 4, ini + 4 + rotulo.length);
+      sujo = true;
+      msgFoto.textContent = 'Foto inserida. Escreva no lugar de "descrição da foto" o que aparece nela, e salve.';
+    }).catch(function () { msgFoto.textContent = 'Falha no envio. Tente de novo.'; });
+    arqFoto.value = '';
+  });
+
+  document.querySelectorAll('[data-confirmar]').forEach(function (b) {
+    b.addEventListener('click', function (e) { if (!confirm(b.getAttribute('data-confirmar'))) e.preventDefault(); });
+  });
+  // Aviso ao sair com alterações não salvas
+  var sujo = false;
+  f.addEventListener('input', function () { sujo = true; });
+  f.addEventListener('submit', function () { sujo = false; });
+  window.addEventListener('beforeunload', function (e) { if (sujo) { e.preventDefault(); e.returnValue = ''; } });
+</script>
+
+<style>
+  .trilha{margin:0 0 8px;font-size:13px}
+  .cab{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:20px}
+  .cab .links{margin-left:auto;font-size:13.5px}
+  .ed{display:grid;gap:20px;align-items:start}
+  @media (min-width:1000px){.ed{grid-template-columns:minmax(0,1fr) 360px}.ed__lado{position:sticky;top:24px}}
+  .ed__main,.ed__lado{display:flex;flex-direction:column;gap:14px;min-width:0}
+  label{display:flex;flex-direction:column;gap:6px;font-weight:500;font-size:13px;color:var(--ink-2)}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--card);color:var(--ink);font:400 14.5px/1.5 Inter,system-ui,sans-serif}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
+  input[name="titulo"]{font-size:20px;font-weight:600;padding:12px 14px}
+  textarea[name="corpo"]{font:400 15px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;min-height:480px;resize:vertical}
+  .ajuda{font-size:13px;color:var(--ink-2)} .ajuda summary{cursor:pointer;color:var(--acc-ink)} .ajuda table{margin-top:8px}
+  .campos{display:flex;flex-direction:column;gap:14px}
+  .botoes{display:flex;flex-wrap:wrap;gap:8px}
+  .botoes .btn{flex:1}
+  .nota{margin:10px 0 0;font-size:12.5px}
+  .ed__lado .card:last-child{display:flex;flex-wrap:wrap;gap:8px}
+  .slug{display:flex;align-items:center;gap:0;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--card);padding-left:12px;font-size:12.5px;overflow:hidden}
+  .slug input{border:0;border-radius:0;padding-left:2px;box-shadow:none!important;font-size:13.5px}
+  .capa{display:flex;flex-direction:column;gap:12px}
+  .capa__tit{margin:0;font-weight:600;font-size:13px;color:var(--ink-2)}
+  .capa__prev{aspect-ratio:16/9;border-radius:var(--r-sm);background:var(--card-2);border:1px dashed var(--line-2);display:flex;align-items:center;justify-content:center;text-align:center;padding:0;overflow:hidden;font-size:12.5px}
+  .capa__prev img{width:100%;height:100%;object-fit:cover;display:block}
+  .capa .nota{margin:0}
+  .foto-texto{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:12.5px}
+  .serp{display:flex;flex-direction:column;gap:3px;padding:14px;border-radius:var(--r-sm);background:#fff;border:1px solid var(--line);font-family:Arial,sans-serif}
+  .serp__url{font-size:12px;color:#4d5156}
+  .serp__tit{font-size:18px;line-height:1.3;color:#1a0dab}
+  .serp__desc{font-size:13.5px;line-height:1.5;color:#4d5156;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+</style>

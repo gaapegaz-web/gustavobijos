@@ -1,0 +1,121 @@
+---
+/**
+ * Página de um conteúdo (usada em /conteudos/<slug> e na prévia do /admin): cabeçalho, vídeo (se houver),
+ * texto, convite para o Clube e "Leia também".
+ */
+import CardConteudo from './CardConteudo.astro';
+import VideoLeve from './VideoLeve.astro';
+import { nomeTema } from '~/config/conteudos';
+import { SITE } from '~/config/site';
+import { capaEnviada, fmtData, minutosLeitura, relacionados, renderCorpo, youtubeId, type Conteudo } from '~/lib/conteudos';
+import { acharImagem } from '~/lib/imagens';
+interface Props { c: Conteudo }
+const { c } = Astro.props;
+const video = youtubeId(c.video_url);
+const capa = c.capa ? capaEnviada(c.capa) : null;
+const tema = nomeTema(c.tema);
+const html = renderCorpo(c.corpo, c.titulo);
+const outros = c.status === 'publicado' ? relacionados(c, 3) : [];
+const avatar = acharImagem('gustavo-avatar');
+const data = c.publicado_em ?? c.atualizado_em;
+const editado = c.publicado_em && c.atualizado_em.slice(0, 10) > c.publicado_em.slice(0, 10);
+---
+<article>
+  <header class="ta-section art__topo" data-secao="1-topo">
+    <div class="ta-container art__estreito">
+      <nav class="art__trilha" aria-label="Você está em"><a href="/">Início</a><span aria-hidden="true">›</span><a href="/conteudos">Conteúdos</a>{tema && <><span aria-hidden="true">›</span><span>{tema}</span></>}</nav>
+      <h1 class="display-l art__titulo">{c.titulo}</h1>
+      {c.resumo && <p class="ta-lead art__resumo">{c.resumo}</p>}
+      <div class="art__autor">
+        {avatar && <img src={avatar} alt="" width="48" height="48" />}
+        {/* Cada trecho não quebra por dentro: no celular a linha quebra só entre eles */}
+        <p><span class="art__cred"><a href="/#sobre">{SITE.apelido}</a><span aria-hidden="true">|</span><span>Professor de apicultura</span><span aria-hidden="true">|</span><span>Criador do Tecnoapis</span></span><span>{fmtData(data)}{editado ? ` · atualizado em ${fmtData(c.atualizado_em)}` : ''} · {minutosLeitura(c.corpo)} min de leitura</span></p>
+      </div>
+      {video
+        ? <div class="art__video"><VideoLeve id={video} titulo={c.titulo} /></div>
+        : capa && <figure class="art__capa"><img src={capa.src} srcset={capa.srcset} sizes="(min-width: 800px) 720px, 100vw" alt={c.capa_alt || ''} width={capa.largura} height={capa.altura} fetchpriority="high" decoding="async" /></figure>}
+    </div>
+  </header>
+
+  <section class="ta-section ta-section--light art__corpo-sec" data-theme="light" data-secao="2-texto">
+    <div class="ta-container art__estreito">
+      <div class="art__corpo" set:html={html} />
+    </div>
+  </section>
+
+  <section class="ta-section art__clube" data-secao="3-clube">
+    <div class="ta-container art__estreito art__cta">
+      <span class="ta-pill">{SITE.clube}</span>
+      <h2 class="display-m">Quer aprender isso na prática, com o Gustavo?</h2>
+      <p class="ta-lead">No {SITE.clube} você tem os cursos completos, gravados no apiário, e uma live toda segunda para tirar dúvidas.</p>
+      <a class="ta-btn ta-btn--primary ta-btn--lg" href={SITE.clubeUrl} data-track-click="CliqueClube" data-track-params={JSON.stringify({ content_name: `conteudo:${c.slug}` })}>Conhecer o Clube Tecnoapis</a>
+    </div>
+  </section>
+
+  {outros.length > 0 && (
+    <section class="ta-section ta-section--light" data-theme="light" data-secao="4-relacionados">
+      <div class="ta-container">
+        <h2 class="display-m art__rel-titulo">Leia também</h2>
+        <div class="art__rel">{outros.map((o) => <CardConteudo c={o} />)}</div>
+      </div>
+    </section>
+  )}
+</article>
+
+<style>
+  .art__estreito { max-width: 760px; }
+  .art__topo { padding-block: var(--space-8) var(--space-12); }
+  .art__trilha { display: flex; flex-wrap: wrap; gap: 4px 8px; font: 500 14px/1.4 var(--font-sans); color: var(--ink-muted); margin-bottom: var(--space-5); }
+  .art__trilha a { color: var(--ink-muted); text-decoration: none; } .art__trilha a:hover { color: var(--ink); }
+  .art__titulo { font-size: clamp(30px, 7vw, 48px); }
+  .art__resumo { margin-top: var(--space-4); }
+  .art__autor { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-6); }
+  .art__autor img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex: none; }
+  .art__autor p { display: flex; flex-direction: column; font: 400 14px/1.45 var(--font-sans); color: var(--ink-muted); }
+  .art__autor a { font-weight: 600; color: var(--ink); text-decoration: none; }
+  .art__cred { display: flex; flex-wrap: wrap; column-gap: 6px; color: var(--ink); }
+  .art__cred > * { white-space: nowrap; }
+  .art__cred > [aria-hidden] { color: var(--ink-muted); }
+  /* Tela estreita: um item por linha, sem as barras (senão a barra sobra no fim da linha) */
+  @media (max-width: 519px) { .art__cred { flex-direction: column; } .art__cred > [aria-hidden] { display: none; } }
+  .art__video, .art__capa { margin-top: var(--space-8); }
+  .art__capa img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius-lg); }
+  .art__corpo-sec { padding-block: var(--space-12) var(--space-16); }
+
+  /* Texto do artigo: letra grande e linha folgada (público 40+, no celular) */
+  .art__corpo { font: 400 18px/1.75 var(--font-sans); color: var(--ink); }
+  .art__corpo :global(:where(p, li)) { text-wrap: pretty; }
+  .art__corpo :global(> * + *) { margin-top: 1.1em; }
+  .art__corpo :global(h2) { font: 500 clamp(25px, 5vw, 30px)/1.2 var(--font-display); letter-spacing: -.01em; margin-top: 1.8em; }
+  .art__corpo :global(h3) { font: 600 20px/1.35 var(--font-sans); margin-top: 1.6em; }
+  .art__corpo :global(h4) { font: 600 18px/1.4 var(--font-sans); margin-top: 1.4em; }
+  .art__corpo :global(:is(ul, ol)) { padding-left: 1.3em; }
+  .art__corpo :global(li + li) { margin-top: .45em; }
+  .art__corpo :global(li::marker) { color: #9a6700; }
+  .art__corpo :global(strong) { font-weight: 650; }
+  .art__corpo :global(a) { color: #7a5200; text-underline-offset: 3px; }
+  .art__corpo :global(blockquote) { margin-inline: 0; padding: var(--space-4) var(--space-5); border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius-md) var(--radius-md) 0; font-style: italic; }
+  .art__corpo :global(blockquote p) { margin: 0; }
+  .art__corpo :global(img) { border-radius: var(--radius-md); height: auto; }
+  .art__corpo :global(hr) { border: 0; border-top: 1px solid var(--border); margin-block: 2em; }
+  .art__corpo :global(table) { width: 100%; border-collapse: collapse; font-size: 16px; display: block; overflow-x: auto; }
+  .art__corpo :global(:is(th, td)) { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  .art__corpo :global(th) { font-weight: 600; background: var(--surface); }
+  /* Celular: cada linha da tabela vira um cartão; a 1ª célula é o título e as outras levam o nome da coluna */
+  @media (max-width: 639px) {
+    .art__corpo :global(table) { display: block; overflow: visible; }
+    .art__corpo :global(thead) { display: none; }
+    .art__corpo :global(:is(tbody, tr, td)) { display: block; }
+    .art__corpo :global(tr) { background: var(--surface); border-radius: var(--radius-md); padding: var(--space-4); }
+    .art__corpo :global(tr + tr) { margin-top: var(--space-3); }
+    .art__corpo :global(td) { padding: 0; border: 0; }
+    .art__corpo :global(td:first-child) { font-weight: 650; font-size: 17px; margin-bottom: var(--space-2); }
+    .art__corpo :global(td + td) { margin-top: var(--space-2); }
+    .art__corpo :global(td + td::before) { content: attr(data-label) ': '; font-weight: 600; color: #7a5200; }
+  }
+
+  .art__cta { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-4); }
+  .art__rel-titulo { margin-bottom: var(--space-8); }
+  .art__rel { display: grid; gap: var(--space-5); }
+  @media (min-width: 720px) { .art__rel { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+</style>

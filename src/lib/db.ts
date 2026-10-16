@@ -42,6 +42,8 @@ function migrar(d: Database.Database) {
     const sql = readFileSync(resolve(process.cwd(), 'schema.sql'), 'utf8').match(/CREATE VIEW IF NOT EXISTS v_funil_diario[\s\S]*?;/);
     if (sql) d.exec(sql[0]);
   }
+  if (!cols('conteudos').has('capa')) d.exec('ALTER TABLE conteudos ADD COLUMN capa TEXT');
+  if (!cols('conteudos').has('capa_alt')) d.exec('ALTER TABLE conteudos ADD COLUMN capa_alt TEXT');
   // Um lead por WhatsApp (o cadastro repetido só soma em "envios")
   try { d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp_unico ON leads(whatsapp)'); } catch (e) { console.error('[db] há WhatsApp duplicado; índice único não criado:', (e as Error).message); }
 }

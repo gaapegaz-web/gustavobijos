@@ -3,6 +3,7 @@ import { AREAS, NUMEROS } from '~/config/clube';
 import { PAGINAS } from '~/config/paginas';
 import { BIO, FAQ_PROFESSOR, MARCAS, PERFIS, SITE, TRAJETORIA, visiveis } from '~/config/site';
 import { ENV } from '~/lib/env';
+import { publicados } from '~/lib/conteudos';
 
 export const prerender = false;
 
@@ -19,6 +20,7 @@ export const GET: APIRoute = () => {
   const paginas = PAGINAS.filter((p) => p.path !== '/' || !ENV.REDIRECT_RAIZ);
   const fixas = paginas.filter((p) => !p.campanha);
   const campanhas = paginas.filter((p) => p.campanha);
+  const conteudos = publicados();
 
   const md = `# ${SITE.apelido} (${SITE.professor})
 
@@ -54,7 +56,7 @@ ${areas}
 ## Páginas
 
 ${fixas.map((p) => `- [${p.titulo}](${new URL(p.path, site)}): ${p.descricao}`).join('\n')}
-${campanhas.length ? `\n## Campanhas em andamento\n\n${campanhas.map((p) => `- [${p.titulo}](${new URL(p.path, site)}): ${p.descricao}`).join('\n')}\n` : ''}`;
+${conteudos.length ? `\n## Conteúdos (artigos de ${SITE.apelido})\n\nLista completa: ${site}/conteudos\n\n${conteudos.map((c) => `- [${c.titulo}](${site}/conteudos/${c.slug})${c.resumo ? `: ${c.resumo}` : ''}`).join('\n')}\n` : ''}${campanhas.length ? `\n## Campanhas em andamento\n\n${campanhas.map((p) => `- [${p.titulo}](${new URL(p.path, site)}): ${p.descricao}`).join('\n')}\n` : ''}`;
 
   return new Response(md, { headers: { 'content-type': 'text/markdown; charset=utf-8', 'cache-control': 'public, max-age=3600' } });
 };

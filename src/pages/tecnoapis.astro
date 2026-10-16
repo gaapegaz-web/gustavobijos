@@ -27,7 +27,7 @@ const srcsetLarga = fotoLarga && srcsetImagem('gustavo-hero-largo', [1280], 1920
 const url = `${SITE.dominio}/tecnoapis`;
 const ld = [
   {
-    '@type': 'Product', '@id': `${url}#assinatura`, name: OFERTA_CLUBE.produto, brand: { '@id': `${SITE.dominio}/#clube` },
+    '@type': 'Product', '@id': `${url}#assinatura`, name: OFERTA_CLUBE.produto, brand: { '@type': 'Brand', name: SITE.clube },
     description: 'Assinatura anual do Clube Tecnoapis: 25 cursos de apicultura online, lives exclusivas toda segunda-feira, grupo de membros e contato direto com o professor Gustavo Bijos.',
     image: `${SITE.dominio}/img/plataforma-tecnoapis-completa-1300.webp`,
     offers: { '@type': 'Offer', price: OFERTA_CLUBE.preco, priceCurrency: 'BRL', availability: 'https://schema.org/InStock', url,

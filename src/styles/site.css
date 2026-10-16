@@ -115,14 +115,19 @@ p + p { margin-top: var(--space-3); }
 @media (min-width: 640px) { .topo__info { flex-direction: row; align-items: center; gap: var(--space-6); } .topo__logo { height: 44px; } .topo__cta { min-height: 44px; padding: 0 var(--space-6); font-size: 13.5px; } }
 
 
-/* CTA vivo: maiúsculo, brilho pulsando */
-.cta-pulse { position: relative; text-transform: uppercase; letter-spacing: .05em; font-weight: 800; font-size: 17px; box-shadow: 0 0 0 0 rgba(232,170,60,.6); animation: cta-pulse 1.8s ease-out infinite; }
+/* CTA vivo: maiúsculo, brilho pulsando. A onda é um ::after animado só com transform e opacity
+   (roda no compositor), com a cor do próprio botão; antes era box-shadow, que obrigava o navegador a repintar a cada quadro. */
+.cta-pulse { position: relative; isolation: isolate; text-transform: uppercase; letter-spacing: .05em; font-weight: 800; font-size: 17px; animation: cta-pulse 1.8s ease-out infinite; }
+.cta-pulse::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: inherit; pointer-events: none; animation: cta-onda 1.8s ease-out infinite; }
 .cta-pulse:hover { filter: brightness(1.1); animation-play-state: paused; transform: translateY(-1px); }
+.cta-pulse:hover::after { animation-play-state: paused; }
 @keyframes cta-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(232,170,60,.65); transform: scale(1); }
+  0%, 100% { transform: scale(1); }
   50% { transform: scale(1.025); }
-  70% { box-shadow: 0 0 0 16px rgba(232,170,60,0); }
-  100% { box-shadow: 0 0 0 0 rgba(232,170,60,0); transform: scale(1); }
+}
+@keyframes cta-onda {
+  0% { opacity: .6; transform: scale(1); }
+  70%, 100% { opacity: 0; transform: scale(1.085, 1.55); }
 }
 .topo--centro .topo__in { justify-content: center; }
 .topo--centro .topo__info { align-items: center; }
@@ -136,12 +141,5 @@ body { text-wrap: pretty; }
 /* Botão verde (WhatsApp): usado na /black e na /obrigado */
 .cta-verde { background: #25d366; color: #06210f; border-color: transparent; }
 .cta-verde:hover { filter: brightness(1.06); }
-.cta-pulse.cta-verde { animation-name: cta-pulse-verde; }
-@keyframes cta-pulse-verde {
-  0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, .6); transform: scale(1); }
-  50% { transform: scale(1.025); }
-  70% { box-shadow: 0 0 0 16px rgba(37, 211, 102, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); transform: scale(1); }
-}
 /* Contraste AA da etiqueta nas faixas claras (o mel padrão fica em 4,4:1) */
 [data-theme="light"] .ta-pill, [data-theme="light"] .ta-badge--soft { color: #7a5200; }

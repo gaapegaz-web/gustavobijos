@@ -5,7 +5,7 @@ import { lerUtmsDoCookie, ipDoRequest, ehRobo } from '~/lib/tracking';
 export const prerender = false;
 
 /**
- * Recebe lotes de ações do navegador (public/js/ta-v4.js) e grava em sessoes + comportamento.
+ * Recebe lotes de ações do navegador (public/js/ta-v5.js) e grava em sessoes + comportamento.
  * Não envia nada para a Meta: é o analytics próprio da página. Ver ANALISE.md.
  */
 const TIPOS = new Set(['pagina', 'scroll', 'secao_vista', 'secao_tempo', 'clique', 'popup_aberto', 'popup_fechado', 'form_inicio', 'form_campo', 'form_erro', 'form_envio', 'tempo_ativo', 'saida']);
