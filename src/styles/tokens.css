@@ -49,11 +49,11 @@
   --radius-full: 9999px;
   --container: 1120px;
   --gutter: 20px;
-  --font-display: "Fraunces", "Fraunces Fallback", "Georgia", serif;
+  --font-display: "PT Sans", "PT Sans Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-sans: "Inter", "Inter Fallback", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (min-width: 720px) { :root { --gutter: 32px; } }
 
 /* Escala tipográfica */
-.display-l  { font-family: var(--font-display); font-size: clamp(30px, 6.5vw, 46px); line-height: 1.08; font-weight: 500; letter-spacing: -.01em; }
-.display-m  { font-family: var(--font-display); font-size: clamp(24px, 4.5vw, 32px); line-height: 1.15; font-weight: 500; letter-spacing: -.01em; }
+.display-l  { font-family: var(--font-display); font-size: clamp(30px, 6.5vw, 46px); line-height: 1.08; font-weight: 700; letter-spacing: -.01em; }
+.display-m  { font-family: var(--font-display); font-size: clamp(24px, 4.5vw, 32px); line-height: 1.15; font-weight: 700; letter-spacing: -.005em; }

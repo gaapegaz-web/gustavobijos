@@ -28,13 +28,13 @@ const destaques = [...NUMEROS, { n: 'Ao vivo', l: 'live nova toda segunda' }];
 
 <style>
   .clube__topo { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
-  .clube__topo em { font-style: normal; color: var(--accent); }
+  .clube__topo :global(em) { font-style: normal; color: var(--accent); }
   .clube__topo .ta-lead { margin-inline: auto; text-wrap: balance; }
 
   /* Números em destaque: 2×2 no celular, 4 em linha no computador */
   .clube__numeros { list-style: none; margin: var(--space-8) auto 0; padding: 0; max-width: 960px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .clube__numeros li { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 22px 10px; text-align: center; border: 1px solid rgba(242,169,0,.3); border-radius: var(--radius-lg); background: linear-gradient(180deg, rgba(242,169,0,.12), rgba(242,169,0,.03)); }
-  .clube__numeros b { font: 500 clamp(40px, 12vw, 64px)/1 var(--font-display); letter-spacing: -.02em; color: var(--accent); }
+  .clube__numeros b { font: 700 clamp(40px, 12vw, 64px)/1 var(--font-display); letter-spacing: -.01em; color: var(--accent); }
   .clube__numeros span { font: 500 14px/1.3 var(--font-sans); color: var(--ink); }
   .clube__numeros li:last-child { background: var(--accent); border-color: var(--accent); }
   .clube__numeros li:last-child b { font-size: clamp(30px, 8.5vw, 46px); color: var(--on-accent); }
