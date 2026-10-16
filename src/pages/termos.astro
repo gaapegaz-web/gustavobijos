@@ -1,0 +1,135 @@
+---
+/**
+ * Termos de uso e serviço. Versão simples escrita em 16/10/2026 a partir do que o site e o Clube fazem de verdade
+ * (acesso de 1 ano, garantia de 7 dias, pagamento na Hubla); falta validação de advogado.
+ * A venda é no nome do Gustavo (pessoa física). Ao mudar oferta, garantia ou prazo de acesso em config/clube.ts,
+ * confira esta página e atualize a data de "Última atualização".
+ */
+import Tecnoapis from '~/layouts/Tecnoapis.astro';
+import Menu from '~/components/home/Menu.astro';
+import Rodape from '~/components/home/Rodape.astro';
+import Icons from '~/components/Icons.astro';
+import { OFERTA_CLUBE } from '~/config/clube';
+import { BIO, SITE } from '~/config/site';
+import { ENV } from '~/lib/env';
+
+export const prerender = false;
+
+const ATUALIZADA = '16 de outubro de 2026';
+const suporte = ENV.WHATSAPP_SUPORTE_URL;
+const cidade = `${BIO.cidade.nome} (${BIO.cidade.uf})`;
+const dominio = SITE.dominio.replace(/^https?:\/\//, '');
+const dias = OFERTA_CLUBE.garantiaDias;
+---
+<Tecnoapis title={`Termos de uso e serviço | ${SITE.apelido}`} description={`Regras de uso do site ${dominio} e da ${OFERTA_CLUBE.produto}: acesso, garantia de ${dias} dias, direitos sobre o conteúdo e contato.`}>
+  <Menu />
+  <main>
+    <section class="ta-section pv__topo" data-secao="1-topo">
+      <div class="ta-container pv__estreito">
+        <span class="ta-pill">Regras do site e do Clube</span>
+        <h1 class="display-l">Termos de uso e serviço</h1>
+        <p class="ta-lead">As regras para usar este site e o {SITE.clube}, escritas sem juridiquês. Ao navegar aqui ou assinar o Clube, você concorda com elas.</p>
+        <p class="ta-small">Última atualização: {ATUALIZADA}</p>
+      </div>
+    </section>
+
+    <section class="ta-section ta-section--light" data-theme="light" data-secao="2-texto">
+      <div class="ta-container pv__estreito pv__texto">
+        <h2>1. Quem somos</h2>
+        <p>Este site ({dominio}) e o {SITE.clube} são de <strong>{SITE.professor}</strong>, pessoa física, de {cidade}. Quando falamos “nós” nestes termos, é o Gustavo e a equipe que trabalha com ele. Quando falamos “você”, é quem visita o site ou assina o Clube.</p>
+
+        <h2>2. O que o site oferece</h2>
+        <ul>
+          <li>informações sobre o Gustavo e o trabalho dele;</li>
+          <li>artigos e vídeos gratuitos sobre apicultura;</li>
+          <li>inscrição em lives e eventos gratuitos;</li>
+          <li>a venda da <strong>{OFERTA_CLUBE.produto}</strong>, que dá acesso ao {SITE.clube}.</li>
+        </ul>
+
+        <h2>3. O conteúdo é educativo</h2>
+        <p>Os artigos, vídeos, aulas e lives ensinam a apicultura do jeito que o Gustavo pratica. Os resultados no seu apiário dependem da sua região, do clima, das floradas, do manejo e da sua dedicação: <strong>não garantimos produção nem faturamento</strong>.</p>
+        <p>O conteúdo não substitui uma visita técnica nem o atendimento de um médico veterinário quando houver doença ou mortalidade no apiário. Siga também as regras sanitárias e de cadastro do seu estado (como o cadastro de apicultor e a GTA para transportar colmeias).</p>
+
+        <h2>4. Direitos sobre o conteúdo</h2>
+        <p>Textos, vídeos, aulas, apostilas, planilhas, fotos e marcas deste site e do Clube pertencem ao Gustavo ou são usados com autorização. Eles são protegidos pela lei de direitos autorais.</p>
+        <h3>Pode</h3>
+        <ul>
+          <li>compartilhar o link dos artigos e vídeos gratuitos;</li>
+          <li>citar trechos curtos, dando o crédito e o link da fonte.</li>
+        </ul>
+        <h3>Não pode</h3>
+        <ul>
+          <li>copiar o conteúdo inteiro, publicar como se fosse seu ou vender;</li>
+          <li>baixar, gravar a tela ou repassar aulas, lives e materiais do Clube;</li>
+          <li>usar o nome, a imagem ou as marcas do Gustavo sem autorização.</li>
+        </ul>
+
+        <h2>5. Assinatura Anual Tecnoapis</h2>
+        <h3>Compra e pagamento</h3>
+        <p>A compra é feita na <strong>Hubla</strong>, plataforma de pagamento que segue os termos dela. Dá para pagar à vista ou em até {OFERTA_CLUBE.parcelas}x no cartão; no boleto, o pagamento é só à vista. Os dados do cartão ficam com a Hubla: nós não temos acesso a eles.</p>
+        <h3>Acesso</h3>
+        <ul>
+          <li>Depois que o pagamento é aprovado, você recebe por e-mail o seu acesso e o link da plataforma do Clube.</li>
+          <li>O acesso vale por <strong>1 ano</strong> e inclui todos os cursos, bônus e atualizações publicados nesse período.</li>
+          <li>O acesso é <strong>pessoal</strong>: não empreste nem compartilhe o seu login.</li>
+          <li>Podemos atualizar, reorganizar ou substituir aulas para manter o conteúdo em dia.</li>
+        </ul>
+        <h3>Garantia de {dias} dias</h3>
+        <p>Se não gostar, por qualquer motivo, peça o reembolso em até <strong>{dias} dias depois da compra</strong> pelo WhatsApp de suporte. Devolvemos o valor integral, sem perguntas. Isso também cumpre o direito de arrependimento do Código de Defesa do Consumidor (art. 49).</p>
+        <h3>Grupo e lives dos membros</h3>
+        <p>No grupo de membros e no chat das lives, trate todos com respeito. Não é permitido ofender, mandar propaganda ou vender produtos sem autorização da equipe.</p>
+        <h3>Quando o acesso pode ser bloqueado</h3>
+        <p>Se o acesso for compartilhado, se o conteúdo for copiado ou repassado ou se as regras do grupo forem desrespeitadas, podemos bloquear o acesso. Depois do prazo de garantia, nesse caso, não há reembolso. Antes de bloquear, sempre que possível, avisamos você pelo WhatsApp.</p>
+
+        <h2>6. Lives e eventos gratuitos</h2>
+        <p>Ao se inscrever numa live ou num evento gratuito, você recebe os avisos pelo WhatsApp. Datas e horários podem mudar; quando isso acontecer, avisamos pelo mesmo canal.</p>
+
+        <h2>7. Sites e serviços de terceiros</h2>
+        <p>O site tem links e vídeos de outros serviços, como YouTube, Instagram, WhatsApp e Hubla. Cada um tem as próprias regras e políticas, e não respondemos pelo que acontece fora deste site.</p>
+
+        <h2>8. Funcionamento do site</h2>
+        <p>Fazemos o possível para o site e a plataforma do Clube ficarem sempre no ar, mas pode haver pausas para manutenção ou falhas fora do nosso controle. Se o seu acesso ao Clube ficar fora do ar por muito tempo, fale com a gente.</p>
+
+        <h2>9. Seus dados</h2>
+        <p>O que coletamos e como usamos os seus dados está na <a href="/privacidade">Política de privacidade</a>.</p>
+
+        <h2>10. Mudanças nestes termos</h2>
+        <p>Podemos atualizar estes termos. A data da última mudança fica no topo da página. Quem já é assinante continua com as condições da compra (prazo de acesso e garantia) até o fim do período que pagou.</p>
+
+        <h2>11. Lei e foro</h2>
+        <p>Valem as leis brasileiras, incluindo o Código de Defesa do Consumidor. Se for preciso ir à Justiça, vale o foro que a lei garante ao consumidor, em regra o da cidade onde você mora.</p>
+
+        <div class="pv__contato">
+          <h2>12. Como falar com a gente</h2>
+          <p>Dúvidas sobre estes termos, a assinatura ou a garantia? Fale com a equipe do Gustavo pelo WhatsApp de suporte.</p>
+          {suporte
+            ? <a class="ta-btn ta-btn--primary ta-btn--lg" href={suporte} data-track-click="Contact" data-track-params='{"content_name":"termos"}'><Icons name="whatsapp" size={20} />Falar pelo WhatsApp</a>
+            : <p><strong>O contato de suporte será publicado aqui em breve.</strong></p>}
+        </div>
+      </div>
+    </section>
+  </main>
+  <Rodape />
+</Tecnoapis>
+
+<style>
+  .pv__estreito { max-width: 760px; }
+  .pv__topo { padding-block: var(--space-12) var(--space-10); }
+  .pv__topo .ta-pill { margin-bottom: var(--space-4); }
+  .pv__topo .ta-lead { margin-top: var(--space-4); }
+  .pv__topo .ta-small { margin-top: var(--space-4); }
+  .pv__texto { font: 400 18px/1.7 var(--font-sans); color: var(--ink); }
+  .pv__texto :where(p, li) { text-wrap: pretty; }
+  .pv__texto h2 { font: 700 clamp(24px, 5vw, 28px)/1.2 var(--font-display); margin: 1.8em 0 .6em; }
+  .pv__texto h2:first-child { margin-top: 0; }
+  .pv__texto h3 { font: 600 19px/1.35 var(--font-sans); margin: 1.3em 0 .4em; }
+  .pv__texto ul { padding-left: 1.3em; margin: .6em 0; }
+  .pv__texto li + li { margin-top: .4em; }
+  .pv__texto li::marker { color: #9a6700; }
+  .pv__texto p + p { margin-top: .9em; }
+  .pv__texto strong { font-weight: 650; }
+  .pv__texto a:not(.ta-btn) { color: #7a5200; text-underline-offset: 3px; }
+  .pv__contato { margin: 1.8em 0; padding: var(--space-6); border-radius: var(--radius-lg); background: var(--accent-soft); }
+  .pv__contato h2 { margin-top: 0; }
+  .pv__contato .ta-btn { margin-top: var(--space-4); }
+</style>

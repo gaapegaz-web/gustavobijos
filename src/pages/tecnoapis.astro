@@ -123,6 +123,7 @@ const ld = [
           </div>
           <BotaoAssinar local="oferta" class="ta-btn ta-btn--primary ta-btn--lg oferta__btn">Assinar agora</BotaoAssinar>
           <p class="ta-price__note">Acesso por 1 ano a todos os cursos, bônus e atualizações.</p>
+          <p class="ta-small oferta__termos">Ao assinar, você concorda com os <a href="/termos">Termos de uso e serviço</a>.</p>
         </div>
         <div class="garantia">
           <span class="garantia__selo"><Icons name="shield" size={28} /></span>
@@ -186,6 +187,8 @@ const ld = [
   .oferta { display: grid; gap: var(--space-12); align-items: center; }
   .oferta .ta-price { margin-inline: auto; width: 100%; }
   .oferta__btn { width: 100%; }
+  .oferta__termos { text-align: center; }
+  .oferta__termos a { color: inherit; text-underline-offset: 3px; }
   .garantia { display: flex; flex-direction: column; gap: var(--space-4); }
   .garantia__selo { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent-ink); }
   @media (min-width: 900px) { .oferta { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--space-16); } }
