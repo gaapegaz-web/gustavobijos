@@ -1,7 +1,8 @@
 ---
 import Tecnoapis from '~/layouts/Tecnoapis.astro';
 import LeadForm from './LeadForm.astro';
-import Footer from './Footer.astro';
+import Rodape from './home/Rodape.astro';
+import Sobre from './home/Sobre.astro';
 import Icons from './Icons.astro';
 import TopoBlack from './TopoBlack.astro';
 import BotaoGrupo from './black/BotaoGrupo.astro';
@@ -9,7 +10,6 @@ import Faixa from './black/Faixa.astro';
 import Clube from './black/Clube.astro';
 import Cursos from './black/Cursos.astro';
 import NaBlack from './black/NaBlack.astro';
-import Gustavo from './black/Gustavo.astro';
 import Duvidas from './black/Duvidas.astro';
 import ChamadaFinal from './black/ChamadaFinal.astro';
 import '~/styles/black.css';
@@ -108,11 +108,12 @@ const fotoHero = fotoReal ?? '/img/gustavo-hero-vazio.svg';
   <Clube />
   <Cursos />
   <NaBlack nota={notaEvento} />
-  <Gustavo />
+  {/* Bloco padrão do professor (o mesmo da home); foto diferente da do topo, que já mostra o Gustavo com o núcleo */}
+  <Sobre id="gustavo" secao="6-gustavo" pill="Quem está por trás do Clube" foto="gustavo-hero-largo" claro class="bf-claro" />
   <Duvidas quandoLongo={quandoLongo} liveJaPassou={liveJaPassou} />
   <ChamadaFinal selo={liveJaPassou ? 'Black Friday Clube Tecnoapis' : `${diaMes} · às ${hora}h`} nota={liveJaPassou ? 'A gravação do evento está no grupo.' : 'Grátis. O link chega no seu WhatsApp.'} />
 </main>
-<Footer />
+<Rodape />
 
 <dialog class="modal" id="modal-inscricao" data-theme="light" aria-labelledby="modal-titulo">
   <div class="modal__box">

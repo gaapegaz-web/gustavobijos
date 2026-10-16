@@ -4,19 +4,26 @@
  * nome em cor de acento, texto corrido e as redes em lista, cada uma com ícone redondo, nome da rede e usuário.
  * Sem props: a bio da home (BIO.sobre), cargos e redes. Com `paragrafos`, outro texto (ex.: BIO_CLUBE no /tecnoapis),
  * o primeiro em destaque, e o slot no lugar de cargos e redes.
+ * Usado na home, na /tecnoapis e na /black (o bloco padrão do professor). `foto`: uma das FOTOS abaixo (todas 3:2),
+ * para não repetir a foto do topo da página. `claro`: fundo claro. `class`: classe extra na seção (ex.: o creme da Black).
  */
 import Icons from '../Icons.astro';
 import { BIO, PERFIS, SITE, visiveis } from '~/config/site';
 import { acharImagem, srcsetImagem } from '~/lib/imagens';
-interface Props { preview?: boolean; paragrafos?: string[]; pill?: string; titulo?: string; secao?: string; id?: string }
-const { preview = false, paragrafos, pill, titulo = SITE.professor, secao = '4-sobre', id = 'sobre' } = Astro.props;
+const FOTOS = {
+  'gustavo-apiario': { larguras: [720], base: 1080, alt: 'segurando um núcleo de abelhas' },
+  'gustavo-hero-largo': { larguras: [1280], base: 1920, alt: 'de braços cruzados no apiário' },
+} as const;
+interface Props { preview?: boolean; paragrafos?: string[]; pill?: string; titulo?: string; secao?: string; id?: string; foto?: keyof typeof FOTOS; claro?: boolean; class?: string }
+const { preview = false, paragrafos, pill, titulo = SITE.professor, secao = '4-sobre', id = 'sobre', foto: nomeFoto = 'gustavo-apiario', claro = false, class: classe } = Astro.props;
 const proprio = !paragrafos;
-const foto = acharImagem('gustavo-apiario');
+const dados = FOTOS[nomeFoto];
+const foto = acharImagem(nomeFoto);
 const icone = (rede: string) => (['instagram', 'youtube', 'facebook'].includes(rede.toLowerCase()) ? rede.toLowerCase() : 'arrow') as 'instagram' | 'youtube' | 'facebook' | 'arrow';
 ---
-<section class="ta-section" id={id} data-secao={secao}>
+<section class:list={['ta-section', { 'ta-section--light': claro }, classe]} data-theme={claro ? 'light' : undefined} id={id} data-secao={secao}>
   <div class:list={['ta-container', 'sobre', { 'sobre--foto': foto }]}>
-    {foto && <figure class="sobre__foto"><img src={foto} srcset={srcsetImagem('gustavo-apiario', [720], 1080)} sizes="(min-width: 900px) 520px, 100vw" alt={`${SITE.professor} segurando um núcleo de abelhas`} width="1080" height="720" loading="lazy" /></figure>}
+    {foto && <figure class="sobre__foto"><img src={foto} srcset={srcsetImagem(nomeFoto, [...dados.larguras], dados.base)} sizes="(min-width: 900px) 520px, 100vw" alt={`${SITE.professor} ${dados.alt}`} width={dados.base} height={Math.round(dados.base * 2 / 3)} loading="lazy" /></figure>}
     <div class="sobre__texto">
       {pill && <span class="ta-pill">{pill}</span>}
       <h2 class="display-l sobre__nome">{titulo}</h2>
