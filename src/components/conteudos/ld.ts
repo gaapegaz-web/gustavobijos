@@ -18,7 +18,7 @@ export function ldConteudo(c: Conteudo) {
       mainEntityOfPage: { '@id': `${url}#pagina` }, image: imagem, inLanguage: 'pt-BR',
       datePublished: publicado, dateModified: c.atualizado_em,
       author: { '@id': `${site}#gustavo` }, publisher: { '@id': `${site}#gustavo` },
-      ...(c.tema ? { articleSection: nomeTema(c.tema), about: nomeTema(c.tema) } : {}),
+      ...(c.tema ? { articleSection: nomeTema(c.tema), about: { '@type': 'Thing', name: nomeTema(c.tema) } } : {}),
       ...(c.nivel ? { educationalLevel: nomeNivel(c.nivel) } : {}),
       ...(video ? { video: { '@id': `${url}#video` } } : {}),
     },
