@@ -1,52 +1,70 @@
 ---
-/** De onde vêm as visitas e os leads: UTM, site de referência e aparelho. */
 import Admin from '~/layouts/Admin.astro';
-import { periodo, pct, seg, NOME_DISP } from '~/lib/painel';
-
+import ArvoreOrigem from '~/components/admin/ArvoreOrigem.astro';
+import { db } from '~/lib/db';
+import { num, pct, nomePagina } from '~/lib/painel';
+import { dadosOrigem, agrupar, fonteNome, pago, type Dim } from '~/lib/origem';
 export const prerender = false;
-
-const { dias, rotulo, q } = periodo(Astro.url);
-const origem = q(`SELECT coalesce(utm_source, CASE WHEN referrer IS NOT NULL THEN 'referência' ELSE '(direto)' END) fonte, coalesce(utm_medium,'') midia, coalesce(utm_content,'') conteudo,
-  count(*) n, sum(abriu_form) abriu, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo, avg(scroll_max) scroll
-  FROM sessoes WHERE robo = 0 AND created_at >= datetime('now', ?) GROUP BY fonte, midia, conteudo ORDER BY n DESC LIMIT 40`);
-const dispositivos = q(`SELECT coalesce(dispositivo,'?') disp, count(*) n, sum(lead_id IS NOT NULL) leads, avg(tempo_ativo_s) ativo FROM sessoes WHERE robo = 0 AND created_at >= datetime('now', ?) GROUP BY disp ORDER BY n DESC`);
-const porFonte = q(`SELECT coalesce(utm_source,'(direto)') fonte, coalesce(utm_medium,'') medio, coalesce(utm_content,'') conteudo, count(*) leads, sum(comprou) compras
-  FROM leads WHERE created_at >= datetime('now', ?) GROUP BY fonte, medio, conteudo ORDER BY leads DESC`);
-const site = (r: string) => { try { return new URL(r).hostname.replace(/^www\./, ''); } catch { return r; } };
-// Agrupa por site (o referrer completo traz caminho e parâmetros diferentes para o mesmo site)
-const referencias = Object.entries(
-  q<{ referrer: string; n: number }>(`SELECT referrer, count(*) n FROM sessoes WHERE robo = 0 AND utm_source IS NULL AND referrer IS NOT NULL AND created_at >= datetime('now', ?) GROUP BY referrer`)
-    .reduce<Record<string, number>>((acc, r) => ((acc[site(r.referrer)] = (acc[site(r.referrer)] ?? 0) + r.n), acc), {}),
-).sort((a, b) => b[1] - a[1]).slice(0, 15);
+const { dias, filtros, rows, opcoes, total } = dadosOrigem(db(), Astro.url);
+const dimensoes: Record<string, string> = { anuncio:'Anúncios / conteúdos', conjunto:'Conjuntos', campanha:'Campanhas', fonte:'Origens' };
+const por = Object.hasOwn(dimensoes,Astro.url.searchParams.get('por') || '') ? Astro.url.searchParams.get('por')! : 'anuncio';
+const ranking = agrupar(rows, por === 'anuncio' ? ['campanha','conjunto','anuncio'] : por === 'conjunto' ? ['campanha','conjunto'] : [por as Dim]);
+const fontes = agrupar(rows,['fonte']);
+const destinos = agrupar(rows,['fonte','pagina']);
+const exportUrl = '/admin/origem.csv?' + Astro.url.searchParams.toString();
+const link = (extra: Record<string,string>) => '?' + new URLSearchParams({...Object.fromEntries(Astro.url.searchParams),...extra});
+const taxa = (n: number, d: number) => `${pct(n,d).toLocaleString('pt-BR')}%`;
+const etapas = [ ['Visitas',total.visitas],['Viram o formulário',total.abriu],['Começaram a preencher',total.iniciou],['Visitas com cadastro',total.converteu] ] as [string,number][];
+const lider = agrupar(rows.filter(r=>pago(r.midia)),['campanha','conjunto','anuncio']).find(r=>r.anuncio && !/^\d+$/.test(r.anuncio) && r.leads > 0);
+const historicos = rows.filter(r=>/^\d+$/.test(r.anuncio)).reduce((n,r)=>n+r.leads,0);
 ---
-<Admin titulo="Origem" ativo="origem" periodo={dias} sub={`De onde chegam as visitas e os leads, ${rotulo}. "(direto)" é quem chegou sem UTM nem site de referência.`}>
-  <div class="card p0">
-    <div class="card__h"><h3>Visitas por UTM</h3><span class="mut" style="font-size:12.5px">use o mesmo nome de campanha do Meta Ads para cruzar os dados</span></div>
-    <div class="tbl alta"><table><thead><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th class="n">Visitas</th><th class="n">Abriram form</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th><th class="n">Rolagem</th></tr></thead><tbody>
-      {origem.length ? origem.map((r: any) => <tr><td>{r.fonte}</td><td class="dim">{r.midia || '—'}</td><td class="dim">{r.conteudo || '—'}</td><td class="n"><span class="mini"><i style={`width:${pct(r.n, origem[0].n)}%`}></i></span>{r.n}</td><td class="n">{r.abriu}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td><td class="n">{Math.round(r.scroll)}%</td></tr>) : <tr><td colspan="9" class="tbl-vazio">Sem visitas no período.</td></tr>}
-    </tbody></table></div>
+<Admin titulo="Origem e desempenho" ativo="origem" periodo={dias} sub="Entenda de onde vêm as pessoas, quais anúncios geram cadastros e o que acontece depois.">
+  <a slot="acoes" class="btn sec" href={exportUrl}>Exportar dados CSV</a>
+  <form class="origem-filtros card" method="get">
+    <input type="hidden" name="dias" value={dias} /><input type="hidden" name="por" value={por} />
+    <label>Tráfego<select name="canal"><option value="">Todo o tráfego</option><option value="pago" selected={filtros.canal==='pago'}>Somente pago</option><option value="outro" selected={filtros.canal==='outro'}>Orgânico / outros</option></select></label>
+    {Object.entries({fonte:'Origem',campanha:'Campanha',conjunto:'Conjunto',anuncio:'Anúncio',pagina:'Página'}).map(([k,label])=><label>{label}<select name={k}><option value="">Todas as opções</option>{[...new Set([...(opcoes[k] || []),filtros[k]].filter(Boolean))].map(v=><option value={v} selected={filtros[k]===v}>{k==='fonte'?fonteNome(v):v}</option>)}</select></label>)}
+    <button class="btn" type="submit">Aplicar filtros</button><a class="limpar" href={`?dias=${dias}`}>Limpar</a>
+  </form>
+  <div class="resumo">
+    <article class="card"><span>Visitas ao site</span><b>{num(total.visitas)}</b><small>Robôs excluídos</small></article>
+    <article class="card"><span>Novos cadastros</span><b>{num(total.leads)}</b><small>Pessoas cadastradas no período</small></article>
+    <article class="card"><span>Conversão das visitas</span><b>{taxa(total.converteu,total.visitas)}</b><small>{num(total.converteu)} visitas com cadastro</small></article>
+    <article class="card"><span>Clicaram no grupo</span><b>{num(total.grupo)}</b><small>Cliques registrados; não confirma entrada</small></article>
   </div>
-
-  <section class="grid g2">
-    <div class="card p0">
-      <div class="card__h"><h3>Leads por origem</h3></div>
-      <div class="tbl"><table><thead><tr><th>Fonte</th><th>Mídia</th><th>Conteúdo</th><th class="n">Leads</th><th class="n">Compras</th></tr></thead><tbody>
-        {porFonte.length ? porFonte.map((r: any) => <tr><td><a href={`/admin/leads?origem=${encodeURIComponent(r.fonte)}`}>{r.fonte}</a></td><td class="dim">{r.medio || '—'}</td><td class="dim">{r.conteudo || '—'}</td><td class="n">{r.leads}</td><td class="n">{r.compras}</td></tr>) : <tr><td colspan="5" class="tbl-vazio">Sem leads no período.</td></tr>}
-      </tbody></table></div>
-    </div>
-    <div class="grid" style="align-content:start">
-      <div class="card p0">
-        <div class="card__h"><h3>Aparelho</h3></div>
-        <div class="tbl"><table><thead><tr><th>Aparelho</th><th class="n">Visitas</th><th class="n">Leads</th><th class="n">Conv.</th><th class="n">Tempo ativo</th></tr></thead><tbody>
-          {dispositivos.length ? dispositivos.map((r: any) => <tr><td>{NOME_DISP[r.disp] ?? r.disp}</td><td class="n"><span class="mini"><i style={`width:${pct(r.n, dispositivos[0].n)}%`}></i></span>{r.n}</td><td class="n">{r.leads}</td><td class="n">{pct(r.leads, r.n)}%</td><td class="n">{seg(r.ativo)}</td></tr>) : <tr><td colspan="5" class="tbl-vazio">Sem dados ainda.</td></tr>}
-        </tbody></table></div>
-      </div>
-      <div class="card p0">
-        <div class="card__h"><h3>Sites de referência</h3><span class="mut" style="font-size:12.5px">visitas sem UTM que vieram de outro site</span></div>
-        <div class="tbl"><table><thead><tr><th>Site</th><th class="n">Visitas</th></tr></thead><tbody>
-          {referencias.length ? referencias.map(([s, n]) => <tr><td>{s}</td><td class="n">{n}</td></tr>) : <tr><td colspan="2" class="tbl-vazio">Nenhuma no período.</td></tr>}
-        </tbody></table></div>
-      </div>
-    </div>
+  <div class="leitura"><p>{por==='anuncio' && lider ? <><strong>Mais cadastros entre os anúncios pagos com nome: {lider.anuncio}.</strong> {num(lider.leads)} cadastros · {num(lider.visitas)} visitas. Compare também a conversão e o tamanho da amostra abaixo.</> : <>Selecione uma campanha ou veja somente o tráfego pago para comparar seus anúncios.</>}</p><small>Sem dados de investimento: custo por lead e ROAS indisponíveis.</small></div>
+  <div class="macro">
+    <section class="card funil">
+      <h2>Da visita ao cadastro</h2><p class="apoio">Onde as pessoas avançam e onde param.</p>
+      <ol>{etapas.map(([label,n],i)=><li><div><span><small>0{i+1}</small>{label}</span><strong>{num(n)}</strong><em>{taxa(n,total.visitas)} das visitas</em></div><div class="trilho"><i style={`width:${pct(n,total.visitas)}%`}></i></div>{i>0 && <small class="passo">{taxa(n,etapas[i-1][1])} da etapa anterior · {num(etapas[i-1][1]-n)} não avançaram</small>}</li>)}</ol>
+      <div class="depois"><span>Outras ações nas visitas</span><b>{num(total.grupo)} <small>cliques no grupo</small></b><b>{num(total.checkout)} <small>cliques no checkout</small></b></div>
+      <p class="nota">Etapas anteriores incluem quem chegou ao cadastro mesmo sem registrar todos os passos. Grupo e checkout são ações independentes.</p>
+    </section>
+    <section class="card canais"><h2>De onde vêm os cadastros</h2><p class="apoio">Participação de cada origem no recorte selecionado.</p>
+      {fontes.length ? fontes.map(r=><a class="canal" href={link({fonte:r.fonte})}><div><b>{fonteNome(r.fonte)}</b><span>{num(r.leads)} leads <small>· {taxa(r.leads,total.leads)}</small></span></div><div class="trilho"><i style={`width:${pct(r.leads,total.leads)}%`}></i></div><small>{num(r.visitas)} visitas · {taxa(r.converteu,r.visitas)} de conversão</small></a>):<p class="vazio">Sem dados para estes filtros.</p>}
+    </section>
+  </div>
+  <section class="card p0 comparacao">
+    <div class="card__h"><div><h2>Compare o desempenho</h2><p class="apoio">Ordene pelas colunas. Use “Somente pago” para comparar apenas anúncios; outros canais podem usar o campo para conteúdos e links.</p></div></div>
+    <div class="ranking-filtros"><nav aria-label="Comparar por">{Object.entries(dimensoes).map(([k,label])=><a class:list={['aba',{ativa:k===por}]} aria-current={k===por?'page':undefined} href={link({por:k})}>{label}</a>)}</nav><label class="busca"><input id="busca-ranking" type="search" placeholder="Buscar nesta comparação" aria-label="Buscar na comparação" /></label></div>
+    <div class="tbl"><table id="ranking"><thead><tr><th>{dimensoes[por]}</th><th class="n" aria-sort="none"><button data-sort="1">Visitas ↕</button></th><th class="n" aria-sort="descending"><button data-sort="2">Cadastros ↓</button></th><th class="n" aria-sort="none"><button data-sort="3">Conversão ↕</button></th><th class="n" aria-sort="none"><button data-sort="4">Grupo ↕</button></th><th class="n" aria-sort="none"><button data-sort="5">Checkout ↕</button></th><th class="n" aria-sort="none"><button data-sort="6">Compradores ↕</button></th></tr></thead><tbody>
+      {ranking.map(r=><tr class="resultado"><td><b>{por==='fonte'?fonteNome(r.fonte):r[por as Dim] || 'Não identificado'}</b>{por==='anuncio' && /^\d+$/.test(r.anuncio) && <span class="tag warn">ID antigo</span>}{(por==='anuncio'||por==='conjunto') && <small>{r.campanha || 'Sem campanha'}{por==='anuncio' && ` → ${r.conjunto || 'Sem conjunto'}`}</small>}</td><td class="n" data-value={r.visitas}>{num(r.visitas)}</td><td class="n" data-value={r.leads}><strong>{num(r.leads)}</strong></td><td class="n" data-value={pct(r.converteu,r.visitas)}><span class="taxa">{r.visitas?taxa(r.converteu,r.visitas):'—'}</span><small>{num(r.converteu)} visitas com cadastro</small></td><td class="n" data-value={r.grupo}>{num(r.grupo)}</td><td class="n" data-value={r.checkout}>{num(r.checkout)}</td><td class="n" data-value={r.compras}>{num(r.compras)}</td></tr>)}
+      <tr id="ranking-vazio" hidden={ranking.length>0}><td colspan="7" class="tbl-vazio">Nenhum resultado neste recorte.</td></tr>
+    </tbody></table></div>
+    <p class="nota rodape">Conversão = visitas com cadastro ÷ visitas, não cadastros ÷ visitas. Cadastros são pessoas novas no período; uma visita pode cadastrar mais de uma pessoa. Compradores = cadastros do período com compra registrada, mesmo se a compra ocorreu depois. Poucas visitas ainda não permitem apontar um vencedor.</p>
   </section>
+  <div class="macro inferior">
+    <section class="card p0"><div class="card__h"><div><h2>Explore em cascata</h2><p class="apoio">Abra origem → campanha → conjunto → anúncio.</p></div></div>{rows.length ? <ArvoreOrigem rows={rows} />:<p class="tbl-vazio">Nenhum caminho no período.</p>}</section>
+    <section class="card p0"><div class="card__h"><div><h2>Para onde o tráfego vai</h2><p class="apoio">Origem → página de entrada → resultado.</p></div></div><div class="tbl"><table class="destinos"><thead><tr><th>Caminho</th><th class="n">Visitas</th><th class="n">Cadastros</th></tr></thead><tbody>{destinos.map(r=><tr><td><small>{fonteNome(r.fonte)} →</small><b>{nomePagina(r.pagina)}</b></td><td class="n">{num(r.visitas)}</td><td class="n">{num(r.leads)}</td></tr>)}{!destinos.length&&<tr><td colspan="3" class="tbl-vazio">Sem dados no período.</td></tr>}</tbody></table></div><p class="nota rodape">Para visitas, usamos a primeira página da sessão. Para cadastros, a página do formulário; podem ser diferentes.</p></section>
+  </div>
+  <details class="metodologia card"><summary>Como ler estes números</summary><p>O período considera a data de início da visita e a data de criação do cadastro, separadamente. A conversão usa apenas visitas rastreadas com cadastro associado. Cadastros sem sessão continuam no total de cadastros.</p><p>“Pago” usa a mídia UTM (paid_social, cpc, ppc, paid_search, paid, cpm, display ou social_paid). Sem UTM não dá para afirmar que a visita veio de anúncio. As UTMs guardadas no navegador podem atribuir uma visita de retorno à origem anterior.</p><p>Nomes repetidos são agrupados dentro da mesma campanha e conjunto. As fontes “ig” e “instagram” são reunidas, assim como “fb” e “facebook”. O CSV detalha origem, mídia, campanha, conjunto, anúncio e página, com os filtros aplicados. {historicos>0 && `${num(historicos)} cadastros deste recorte ainda usam o ID antigo do anúncio. `}Não há correspondência automática entre IDs antigos e nomes novos.</p><p>Os dados são os registrados no site; não são impressões, alcance ou cliques do Gerenciador da Meta. Sem investimento importado, não calculamos CPL ou ROAS.</p></details>
 </Admin>
+<script>
+const input=document.querySelector<HTMLInputElement>('#busca-ranking');
+const linhas=[...document.querySelectorAll<HTMLTableRowElement>('#ranking .resultado')];
+input?.addEventListener('input',()=>{const normal=(s:string)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();let n=0;for(const row of linhas){row.hidden=!normal(row.cells[0].textContent||'').includes(normal(input.value));if(!row.hidden)n++;}document.getElementById('ranking-vazio')!.hidden=n>0;});
+document.querySelectorAll<HTMLButtonElement>('[data-sort]').forEach(btn=>btn.addEventListener('click',()=>{const col=Number(btn.dataset.sort),th=btn.closest('th')!,asc=th.getAttribute('aria-sort')==='descending';document.querySelectorAll('#ranking th[aria-sort]').forEach(h=>{h.setAttribute('aria-sort','none');const b=h.querySelector('button');if(b)b.textContent=b.textContent!.replace(/[↓↑]/g,'↕');});th.setAttribute('aria-sort',asc?'ascending':'descending');btn.textContent=btn.textContent!.replace('↕',asc?'↑':'↓');linhas.sort((a,b)=>(Number(a.cells[col].dataset.value)-Number(b.cells[col].dataset.value))*(asc?1:-1));for(const r of linhas)r.parentElement!.appendChild(r);}));
+</script>
+<style>
+h2{font-size:17px;margin:0;font-weight:650}.apoio{font-size:13px;color:var(--mut);margin:5px 0 0}.origem-filtros{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-bottom:18px;padding:16px}.origem-filtros label{display:flex;flex:1 1 160px;min-width:0;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2)}.origem-filtros select{width:100%;min-width:0;padding:9px;border:1px solid var(--line-2);border-radius:7px;background:#fff;font:inherit;color:var(--ink)}.limpar{padding:9px;font-size:13px}.resumo{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.resumo article{padding:17px}.resumo span,.resumo small{display:block;color:var(--mut);font-size:12px}.resumo b{display:block;font-size:31px;letter-spacing:-.02em;margin:5px 0}.leitura{margin:16px 0 0;padding:14px 16px;border-left:3px solid var(--acc);background:var(--acc-soft);border-radius:0 8px 8px 0}.leitura p{margin:0 0 5px;font-size:13px}.leitura small{color:var(--ink-2);font-size:12px}.macro{display:grid;grid-template-columns:1.15fr 1fr;gap:18px}.macro section{min-width:0;margin-top:20px}.funil ol{list-style:none;padding:0;margin:22px 0}.funil li{margin:0 0 16px}.funil li>div:first-child{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 12px;margin-bottom:7px}.funil li span{font-size:13px}.funil li span small{display:inline;margin-right:10px;color:var(--mut);font-size:11px}.funil li strong{font-size:21px}.funil em{grid-column:1 / -1;font-size:11px;font-style:normal;color:var(--mut)}.trilho{height:8px;background:var(--track);border-radius:4px;overflow:hidden}.trilho i{display:block;height:100%;background:var(--acc-bar);border-radius:4px}.passo{display:block;color:var(--mut);font-size:11px;margin-top:5px}.depois{border-top:1px solid var(--line);padding-top:13px;display:flex;flex-wrap:wrap;gap:12px 20px}.depois>span{width:100%;color:var(--mut);font-size:12px}.depois b{font-size:20px}.depois small{font-size:12px;font-weight:400;color:var(--mut)}.nota{font-size:12px;color:var(--mut);line-height:1.65;margin:14px 0 0}.canal{display:block;margin-top:20px;color:var(--ink)}.canal:hover{text-decoration:none}.canal>div:first-child{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin-bottom:7px}.canal .trilho{margin-bottom:5px}.canal small{font-size:11px;color:var(--mut)}.ranking-filtros{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:0 16px 16px}.ranking-filtros nav{display:flex;flex-wrap:wrap;gap:4px}.aba{display:block;padding:7px 11px;border-radius:6px;color:var(--ink-2);font-size:12px}.aba.ativa{background:var(--acc-soft);color:var(--acc-ink);font-weight:600}.ranking-filtros .busca{max-width:250px}.comparacao{margin-top:20px}.comparacao .tbl{max-height:520px;overflow:auto}#ranking{min-width:800px}#ranking td:first-child{min-width:210px;max-width:340px;white-space:normal;overflow-wrap:anywhere}#ranking th button{border:0;background:none;font:inherit;color:inherit;padding:0;cursor:pointer}#ranking td small{display:block;font-size:11px;color:var(--mut);font-weight:400}#ranking td strong{color:var(--ok)}#ranking td .tag{font-size:10px;margin-left:6px}.taxa{font-weight:600}.rodape{padding:12px 16px;margin:0;border-top:1px solid var(--line)}.destinos td:first-child{white-space:normal;overflow-wrap:anywhere}.destinos td small,.destinos td b{display:block}.destinos td small{font-size:11px;color:var(--mut)}.metodologia{margin-top:20px;font-size:13px;color:var(--ink-2)}.metodologia summary{cursor:pointer;font-weight:600}.metodologia p{max-width:85ch}.inferior{align-items:start}@media(max-width:1100px){.macro{grid-template-columns:1fr}.resumo{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.origem-filtros{padding:12px;gap:10px}.origem-filtros label{flex-basis:125px}.resumo{gap:8px}.resumo article{padding:13px}.resumo b{font-size:26px}.ranking-filtros .busca{max-width:none;width:100%}.funil,.canais{padding:16px}}
+</style>

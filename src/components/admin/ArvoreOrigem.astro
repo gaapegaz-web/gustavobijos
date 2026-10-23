@@ -1,0 +1,24 @@
+---
+import { agrupar, fonteNome, somar, type Dim, type Linha } from '~/lib/origem';
+import { num } from '~/lib/painel';
+interface Props { rows: Linha[]; nivel?: number }
+const { rows, nivel = 0 } = Astro.props;
+const niveis: Dim[] = ['fonte','campanha','conjunto','anuncio'];
+const nomes = ['Origem','Campanha','Conjunto','Anúncio'];
+const dimensao = niveis[nivel];
+const grupos = agrupar(rows, [dimensao]);
+---
+<div class="arvore">
+  {grupos.map(g => {
+    const filhos = rows.filter(r=>r[dimensao] === g[dimensao]);
+    const n = somar(filhos);
+    const nome = nivel === 0 ? fonteNome(g.fonte) : g[dimensao] || `Sem ${nomes[nivel].toLowerCase()} identificad${nivel === 1 ? 'a' : 'o'}`;
+    return nivel < 3 ? <details open={nivel === 0 && grupos.length === 1}>
+      <summary><span><small>{nomes[nivel]}</small><b>{nome}</b></span><span class="medidas">{num(n.visitas)} visitas <strong>{num(n.leads)} leads</strong></span></summary>
+      <Astro.self rows={filhos} nivel={nivel+1} />
+    </details> : <div class="folha"><span><small>Anúncio</small><b>{nome}</b></span><span class="medidas">{num(n.visitas)} visitas <strong>{num(n.leads)} leads</strong></span></div>;
+  })}
+</div>
+<style>
+.arvore{min-width:0}.arvore .arvore{margin:0 12px 8px 22px;padding-left:12px;border-left:2px solid var(--line)}summary,.folha{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px}summary{cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}summary::before{content:'›';font-size:20px;color:var(--acc-ink)}details[open]>summary::before{transform:rotate(90deg)}summary>span:first-of-type,.folha>span:first-child{flex:1;min-width:0}b{display:block;font-weight:600;overflow-wrap:anywhere}small{display:block;color:var(--mut);font-size:11px}summary:hover{background:var(--card-2)}.medidas{font-size:12px;color:var(--mut);text-align:right;flex:none}.medidas strong{display:block;color:var(--ok);font-weight:600}@media(max-width:600px){summary,.folha{padding:10px 8px;gap:8px}.arvore .arvore{margin-left:10px;padding-left:5px}.medidas{font-size:11px}}
+</style>

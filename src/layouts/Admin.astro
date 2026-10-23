@@ -216,7 +216,7 @@ const icone = (paths: string) => `<svg width="18" height="18" viewBox="0 0 24 24
         </div>
         <div class="pg-h__acoes">
           <slot name="acoes" />
-          {periodo != null && <nav class="seg" aria-label="Período">{PERIODOS.map(([v, l]) => <a href={`?dias=${v}`} class={v === periodo ? 'on' : ''} aria-current={v === periodo ? 'page' : undefined}>{l}</a>)}</nav>}
+          {periodo != null && <nav class="seg" aria-label="Período">{PERIODOS.map(([v, l]) => <a href={`?${new URLSearchParams({ ...Object.fromEntries(Astro.url.searchParams), dias: String(v) })}`} class={v === periodo ? 'on' : ''} aria-current={v === periodo ? 'page' : undefined}>{l}</a>)}</nav>}
         </div>
       </header>
     )}
