@@ -1,11 +1,11 @@
 ---
 /**
- * Lista de todos os leads do site (qualquer página ou formulário), com busca, filtros e o que cada um fez na visita.
+ * Lista de todos os leads do site (qualquer página ou formulário), com busca, filtros e UTMs de origem.
  * Filtros na URL (?q=&pagina=&origem=&criado=&situacao=&ordem=&p=), para dar para salvar ou mandar o link.
  */
 import Admin from '~/layouts/Admin.astro';
 import { db } from '~/lib/db';
-import { seg, num, dt, nomePagina, fone, NOME_DISP } from '~/lib/painel';
+import { num, dt, nomePagina, fone, NOME_DISP } from '~/lib/painel';
 
 export const prerender = false;
 
@@ -41,8 +41,8 @@ const ORDEM = { '': 'l.id DESC', antigos: 'l.id ASC', nome: 'l.nome COLLATE NOCA
 const FROM = `FROM leads l LEFT JOIN sessoes s ON s.id = l.sessao_id ${W}`;
 const total = (d.prepare(`SELECT count(*) n ${FROM}`).get(...params) as any).n as number;
 const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
-const lista = d.prepare(`SELECT l.id, l.nome, l.whatsapp, l.pagina, l.utm_source, l.utm_medium, l.utm_campaign, l.utm_content, l.comprou, l.created_at, l.envios, l.meta_lead,
-  s.tempo_ativo_s, s.scroll_max, s.dispositivo, s.clicou_grupo ${FROM} ORDER BY ${ORDEM} LIMIT ? OFFSET ?`).all(...params, POR_PAGINA, (Math.min(pag, paginas) - 1) * POR_PAGINA) as any[];
+const lista = d.prepare(`SELECT l.id, l.nome, l.whatsapp, l.pagina, l.utm_source, l.utm_medium, l.utm_campaign, l.utm_content, l.utm_term, l.created_at, l.envios, l.meta_lead,
+  s.dispositivo ${FROM} ORDER BY ${ORDEM} LIMIT ? OFFSET ?`).all(...params, POR_PAGINA, (Math.min(pag, paginas) - 1) * POR_PAGINA) as any[];
 
 const geral = d.prepare(`SELECT count(*) n, coalesce(sum(created_at >= datetime('now','-1 day')),0) hoje FROM leads`).get() as any;
 const opPaginas = (d.prepare(`SELECT pagina p, count(*) n FROM leads WHERE pagina IS NOT NULL GROUP BY p ORDER BY n DESC`).all() as any[]);
@@ -76,16 +76,13 @@ const wa = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
     ) : (
       <>
         <div class="lista__topo"><span>{filtrando ? `${num(total)} ${total === 1 ? 'lead encontrado' : 'leads encontrados'}` : `${num(total)} leads`}</span>{filtrando && <a href="/admin/leads">Limpar filtros</a>}</div>
-        <div class="tbl"><table class="lista"><thead><tr><th>Lead</th><th>Página</th><th>Origem</th><th class="opc">Aparelho</th><th class="n opc">Tempo ativo</th><th class="n opc">Rolagem</th><th class="c">Grupo</th><th class="c opc">Comprou</th><th>Quando</th></tr></thead><tbody>
+        <div class="tbl"><table class="lista"><thead><tr><th>Lead</th><th>Página</th><th>Origem</th><th class="opc">Aparelho</th><th>UTM Medium</th><th>UTM Campaign</th><th>UTM Content</th><th>UTM Term</th><th>Quando</th></tr></thead><tbody>
           {lista.map((l) => <tr>
             <td><div class="lead"><span class="lead__av" aria-hidden="true">{(l.nome || '?').trim().charAt(0).toUpperCase()}</span><div><b>{l.nome}</b>{l.envios > 1 && <span class="tag warn" title={l.meta_lead === 0 ? 'cadastrou de novo do mesmo aparelho' : 'cadastrou mais de uma vez'} style="margin-left:6px">{l.envios}×</span>}<a class="lead__wa" href={wa(l.whatsapp)} target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">{fone(l.whatsapp)}</a></div></div></td>
             <td>{l.pagina ? <a class="tag acc" href={link({ pagina: l.pagina, p: 1 })}>{nomePagina(l.pagina)}</a> : <span class="mut">—</span>}</td>
-            <td>{l.utm_source || <span class="mut">(direto)</span>}{(l.utm_medium || l.utm_content) && <span class="sub">{[l.utm_medium, l.utm_content].filter(Boolean).join(' · ')}</span>}</td>
+            <td class="utm">{l.utm_source || <span class="mut">(direto)</span>}</td>
             <td class="dim opc">{NOME_DISP[l.dispositivo] ?? l.dispositivo ?? '—'}</td>
-            <td class="n opc">{seg(l.tempo_ativo_s) || <span class="mut">—</span>}</td>
-            <td class="n opc">{l.scroll_max != null ? `${l.scroll_max}%` : <span class="mut">—</span>}</td>
-            <td class="c">{l.clicou_grupo ? <span class="tag ok">sim</span> : <span class="mut">—</span>}</td>
-            <td class="c opc">{l.comprou ? <span class="tag ok">sim</span> : <span class="mut">—</span>}</td>
+            {[l.utm_medium, l.utm_campaign, l.utm_content, l.utm_term].map((valor) => <td class="utm">{valor || <span class="mut">—</span>}</td>)}
             <td class="dim">{dt(l.created_at)}</td>
           </tr>)}
         </tbody></table></div>
@@ -120,7 +117,7 @@ const wa = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
   .lead b{font-weight:600}
   .lead__wa{display:block;font-size:12.5px;color:var(--mut);font-variant-numeric:tabular-nums}
   .lead__wa:hover{color:var(--ok)}
-  .sub{display:block;font-size:12px;color:var(--mut)}
+  .lista .utm{min-width:130px;max-width:240px;white-space:normal;overflow-wrap:anywhere}
   .tag.acc:hover{text-decoration:none;filter:brightness(.97)}
   @media (max-width:700px){.lista .opc{display:none} .filtros .busca{max-width:none}}
   .paginas{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line);font-size:13px}
