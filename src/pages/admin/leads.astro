@@ -76,7 +76,7 @@ const wa = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
     ) : (
       <>
         <div class="lista__topo"><span>{filtrando ? `${num(total)} ${total === 1 ? 'lead encontrado' : 'leads encontrados'}` : `${num(total)} leads`}</span>{filtrando && <a href="/admin/leads">Limpar filtros</a>}</div>
-        <div class="tbl"><table class="lista"><thead><tr><th>Lead</th><th>Página</th><th>Origem</th><th class="opc">Aparelho</th><th>UTM Medium</th><th>UTM Campaign</th><th>UTM Content</th><th>UTM Term</th><th>Quando</th></tr></thead><tbody>
+        <div class="tbl"><table class="lista"><colgroup><col style="width:19%" /><col style="width:5%" /><col style="width:6%" /><col class="opc" style="width:8%" /><col style="width:10%" /><col style="width:13%" /><col style="width:12%" /><col style="width:12%" /><col style="width:13%" /></colgroup><thead><tr><th>Lead</th><th>Página</th><th>Origem</th><th class="opc">Aparelho</th><th>UTM Medium</th><th>UTM Campaign</th><th>UTM Content</th><th>UTM Term</th><th>Quando</th></tr></thead><tbody>
           {lista.map((l) => <tr>
             <td><div class="lead"><span class="lead__av" aria-hidden="true">{(l.nome || '?').trim().charAt(0).toUpperCase()}</span><div><b>{l.nome}</b>{l.envios > 1 && <span class="tag warn" title={l.meta_lead === 0 ? 'cadastrou de novo do mesmo aparelho' : 'cadastrou mais de uma vez'} style="margin-left:6px">{l.envios}×</span>}<a class="lead__wa" href={wa(l.whatsapp)} target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">{fone(l.whatsapp)}</a></div></div></td>
             <td>{l.pagina ? <a class="tag acc" href={link({ pagina: l.pagina, p: 1 })}>{nomePagina(l.pagina)}</a> : <span class="mut">—</span>}</td>
@@ -111,13 +111,16 @@ const wa = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
   .filtros .busca{max-width:340px}
   .filtros__sel{display:flex;flex-wrap:wrap;gap:8px}
   .lista__topo{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;font-size:13px;color:var(--ink-2);border-bottom:1px solid var(--line)}
+  .lista{table-layout:fixed;min-width:900px}
+  .lista th,.lista td{padding-left:10px;padding-right:10px;white-space:normal;overflow-wrap:anywhere}
   .lista td{padding-top:11px;padding-bottom:11px}
+  .lead>div{min-width:0}
   .lead{display:flex;align-items:center;gap:11px}
   .lead__av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--acc-soft);color:var(--acc-ink);font-weight:600;font-size:13px;flex:none}
   .lead b{font-weight:600}
   .lead__wa{display:block;font-size:12.5px;color:var(--mut);font-variant-numeric:tabular-nums}
   .lead__wa:hover{color:var(--ok)}
-  .lista .utm{min-width:130px;max-width:240px;white-space:normal;overflow-wrap:anywhere}
+  .lista .utm{white-space:normal;overflow-wrap:anywhere}
   .tag.acc:hover{text-decoration:none;filter:brightness(.97)}
   @media (max-width:700px){.lista .opc{display:none} .filtros .busca{max-width:none}}
   .paginas{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line);font-size:13px}
