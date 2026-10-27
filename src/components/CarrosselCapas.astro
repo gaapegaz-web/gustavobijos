@@ -2,6 +2,7 @@
 /**
  * Carrossel infinito com as capas dos cursos: anda sozinho e dá para arrastar. Ocupa a largura toda da tela.
  * `topo`: está na primeira tela (hero da /tecnoapis): as primeiras capas carregam na hora, as outras quando chegam perto.
+ * A cópia do loop fica fora do leitor de tela (aria-hidden), mas repete o alt: o Astro tira o valor de alt="" e o Bing conta como imagem sem alt.
  * Tamanho e margem vêm das variáveis --capas-largura e --capas-margem do elemento pai (sem elas, o tamanho de vitrine).
  */
 import { CAPAS } from '~/config/clube';
@@ -14,7 +15,7 @@ const NA_HORA = 5;
     {[0, 1].map((copia) => (
       <ul class="capas__lista" aria-hidden={copia ? 'true' : undefined}>
         {CAPAS.map(([arquivo, nome], i) => (
-          <li><img src={`/img/cursos/${arquivo}.webp`} srcset={`/img/cursos/${arquivo}.webp 400w, /img/cursos/${arquivo}-600.webp 600w`} sizes={sizes} alt={copia ? '' : nome} width="400" height="560" loading={topo && !copia && i < NA_HORA ? 'eager' : 'lazy'} fetchpriority={topo && !copia && i < 2 ? 'high' : undefined} decoding="async" draggable="false" /></li>
+          <li><img src={`/img/cursos/${arquivo}.webp`} srcset={`/img/cursos/${arquivo}.webp 400w, /img/cursos/${arquivo}-600.webp 600w`} sizes={sizes} alt={nome} width="400" height="560" loading={topo && !copia && i < NA_HORA ? 'eager' : 'lazy'} fetchpriority={topo && !copia && i < 2 ? 'high' : undefined} decoding="async" draggable="false" /></li>
         ))}
       </ul>
     ))}

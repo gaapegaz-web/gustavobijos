@@ -10,7 +10,7 @@ const fotoCelular = foto && acharImagem('gustavo-hero-celular-720');
 const srcsetLarga = srcsetImagem('gustavo-hero-largo', [1280], 1920);
 ---
 <section class:list={['hero', { 'hero--foto': foto }]} data-secao="1-hero">
-  {foto && <div class="hero__foto" aria-hidden="true"><picture>{fotoLarga && <source media="(min-width: 900px)" srcset={srcsetLarga} sizes="60vw" width="1920" height="1280" />}<img src={fotoCelular ? '/img/gustavo-hero-celular-720.webp' : foto} srcset={fotoCelular ? '/img/gustavo-hero-celular-480.webp 480w, /img/gustavo-hero-celular-720.webp 720w' : srcset} sizes="100vw" alt="" width={fotoCelular ? 720 : 1080} height={fotoCelular ? 800 : 1920} fetchpriority="high" /></picture></div>}
+  {foto && <div class="hero__foto" aria-hidden="true"><picture>{fotoLarga && <source media="(min-width: 900px)" srcset={srcsetLarga} sizes="60vw" width="1920" height="1280" />}<img src={fotoCelular ? '/img/gustavo-hero-celular-720.webp' : foto} srcset={fotoCelular ? '/img/gustavo-hero-celular-480.webp 480w, /img/gustavo-hero-celular-720.webp 720w' : srcset} sizes="100vw" alt="Gustavo Bijos, apicultor e criador do Clube Tecnoapis" width={fotoCelular ? 720 : 1080} height={fotoCelular ? 800 : 1920} fetchpriority="high" /></picture></div>}
   <div class="ta-container hero__body">
     <span class="ta-pill">Apicultor há {BIO.anos} anos</span>
     <h1 class="hero__nome">Gustavo <em>Bijos</em></h1>
