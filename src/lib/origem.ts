@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { diasDoPeriodo } from './periodo';
 
 export const pago = (medium: string) => /^(paid_social|paid_search|paid|cpc|ppc|cpm|display|social_paid)$/i.test(medium);
 export const fonteNome = (s: string) => ({fb: 'Facebook', ig: 'Instagram', an: 'Audience Network', msg: 'Messenger', '(direto)': 'Direto / sem origem', '(referencia)': 'Outro site'}[s] || s);
@@ -22,8 +23,7 @@ export function agrupar(rows: Linha[], dims: readonly Dim[]) {
   return [...groups.values()].sort((a,b) => b.leads-a.leads || b.visitas-a.visitas);
 }
 export function dadosOrigem(d: Database.Database, url: URL) {
-  const n = Number(url.searchParams.get('dias'));
-  const dias = [1,7,30,3650].includes(n) ? n : 30;
+  const dias = diasDoPeriodo(url);
   const filtros = Object.fromEntries(['canal','fonte','campanha','conjunto','anuncio','pagina'].map(k => [k, url.searchParams.get(k) || '']));
   const dims = (a: string, pagina: string) => `coalesce(nullif(${a}.utm_source,''),CASE WHEN nullif(${a}.referrer,'') IS NOT NULL THEN '(referencia)' ELSE '(direto)' END) fonte,
     coalesce(${a}.utm_medium,'') midia, coalesce(${a}.utm_campaign,'') campanha, coalesce(${a}.utm_term,'') conjunto,

@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import Database from 'better-sqlite3';
-const code = ts.transpileModule(readFileSync(new URL('../src/lib/origem.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+const js = (f) => ts.transpileModule(readFileSync(new URL('../src/lib/'+f,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
+// origem.ts importa ./periodo: junta os dois num módulo só, sem o import
+const code = js('periodo.ts') + js('origem.ts').replace(/^import .*periodo.*$/m,'');
 const { dadosOrigem, agrupar, pago } = await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
 const d = new Database(':memory:');
 d.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));

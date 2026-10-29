@@ -5,13 +5,13 @@
 import { db } from '~/lib/db';
 import { ENV } from '~/lib/env';
 import { fmtDataHora } from '~/lib/texto';
+import { PERIODOS, diasDoPeriodo } from '~/lib/periodo';
 
-export const PERIODOS: [number, string][] = [[1, 'Hoje'], [7, '7 dias'], [30, '30 dias'], [3650, 'Tudo']];
+export { PERIODOS };
 
 /** Lê ?dias= e devolve o período e as consultas já presas a ele (o 1º parâmetro do SQL é sempre o início do período). */
 export function periodo(url: URL) {
-  const n = Number(url.searchParams.get('dias'));
-  const dias = PERIODOS.some(([v]) => v === n) ? n : 30;
+  const dias = diasDoPeriodo(url);
   const desde = `-${dias} days`;
   const d = db();
   return {
