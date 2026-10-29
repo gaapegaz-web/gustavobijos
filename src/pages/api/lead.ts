@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { insertLead, db } from '~/lib/db';
+import { insertLead, db, salvarCookieLead } from '~/lib/db';
 import { normalizarWhatsapp } from '~/lib/phone';
 import { ipDoRequest, lerFb, lerUtmsDaUrl, lerUtmsDoCookie } from '~/lib/tracking';
 
@@ -48,7 +48,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress, url }) =
   if (existente) {
     db().prepare("UPDATE leads SET envios = envios + 1, ultimo_envio_em = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?").run(existente.id);
     if (sessaoId) db().prepare('UPDATE sessoes SET lead_id = ? WHERE id = ?').run(existente.id, sessaoId);
-    cookies.set('ta_lead', String(existente.id), { path: '/', maxAge: 180 * 86400, sameSite: 'lax', httpOnly: true, secure: import.meta.env.PROD });
+    salvarCookieLead(cookies, existente.id);
     return resposta({ ok: true, redirect: '/obrigado', repetido: true }, 200, quereJson);
   }
 
@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, cookies, clientAddress, url }) =
     if (sessaoId) db().prepare('UPDATE sessoes SET lead_id = ? WHERE id = ?').run(leadId, sessaoId);
   }
 
-  cookies.set('ta_lead', String(leadId), { path: '/', maxAge: 180 * 86400, sameSite: 'lax', httpOnly: true, secure: import.meta.env.PROD });
+  salvarCookieLead(cookies, leadId);
 
   if (mesmoAparelho) {
     db().prepare('UPDATE leads SET meta_lead = 0 WHERE id = ?').run(leadId);

@@ -32,7 +32,7 @@ Montador em 3 passos com prévia ao vivo: (1) para onde leva (páginas de `confi
 - **Anúncio Meta Ads:** não usa link curto. Gera a URL do site + "Parâmetros de URL" para colar no anúncio: `utm_source=meta&utm_medium=cpc&utm_campaign={{campaign.name}}&utm_content={{adset.name}}&utm_term={{ad.name}}`. O Meta troca os `{{...}}` pelos nomes reais da campanha, do conjunto e do anúncio, então os números do painel batem com o Gerenciador sem digitar nada.
 - Na lista, "Modelo" carrega um link existente no montador para criar uma variação.
 
-API: `POST /api/admin/links` (criar) e `DELETE /api/admin/links?slug=...` (excluir), protegidas pela mesma basic auth do `/admin`.
+API: `POST /api/admin/links` (criar) e `DELETE /api/admin/links?slug=...` (excluir), protegidas pelo mesmo login do `/admin` (`/admin/login`).
 
 Configuração em `/srv/tecnoapis/.env`: `META_PIXEL_ID`, `META_CAPI_TOKEN` e, só para testar no Gerenciador de Eventos, `META_TEST_EVENT_CODE` (apagar depois).
 
@@ -104,6 +104,14 @@ Seções (`data-secao` no HTML):
 - /obrigado: `obrigado`.
 
 `leads.sessao_id` e `leads.visitante_id` ligam cada lead à visita em que se cadastrou.
+
+`eventos.sessao_id` e `eventos.pagina` (desde 28/10/2026) guardam a visita e a página de onde cada evento da Meta saiu. Assim os eventos de antes do cadastro (ex.: AbriuFormulario, ainda sem `lead_id`) também aparecem na ficha. Eventos mais antigos entram na visita pelo horário.
+
+## Ficha do lead (/admin/leads/<id>)
+
+Clique em qualquer linha da lista de leads. A ficha junta todas as visitas da pessoa: pelo `visitante_id` (cookie de 400 dias), pela visita do cadastro e, como "visita provável", pelas sessões com mesmo IP e mesmo user agent com outro cookie, desde que esse cookie não seja de outro lead. Mostra o primeiro contato x o cadastro, os anúncios por onde passou, a linha do tempo de cada visita (páginas, seções, cliques, erros no formulário, eventos da Meta e da Hubla) e o tempo em cada seção. Código: `src/lib/ficha.ts`.
+
+O horário de cada ação é aproximado (± poucos segundos): o navegador manda as ações em lotes e o horário é calculado a partir da chegada do lote.
 
 ## Como analisar
 

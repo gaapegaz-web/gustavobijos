@@ -25,8 +25,11 @@ CREATE TABLE IF NOT EXISTS eventos (
   utm_source TEXT, utm_campaign TEXT, utm_content TEXT,
   capi_status TEXT,                  -- ok | erro | pulado
   payload TEXT,
+  sessao_id TEXT,                    -- visita (ta_sid) em que o evento saiu; nulo nos da Hubla
+  pagina TEXT,                       -- caminho da página, ex: /black
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE INDEX IF NOT EXISTS idx_eventos_lead ON eventos(lead_id);
 CREATE INDEX IF NOT EXISTS idx_eventos_tipo ON eventos(tipo);
 CREATE INDEX IF NOT EXISTS idx_eventos_event_id ON eventos(event_id);
 CREATE INDEX IF NOT EXISTS idx_eventos_created ON eventos(created_at);

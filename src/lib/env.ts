@@ -16,6 +16,8 @@ export const ENV = {
   get WHATSAPP_SUPORTE_URL() { return e('WHATSAPP_SUPORTE_URL', ''); },
   get ADMIN_USER() { return e('ADMIN_USER', 'admin'); },
   get ADMIN_PASS() { return e('ADMIN_PASS'); },
+  /** Chave que assina o cookie ta_lead (lib/db.ts). Gerar com: openssl rand -hex 32. Trocar invalida os cookies dos leads. */
+  get COOKIE_SECRET() { return e('COOKIE_SECRET'); },
   /** Redirect temporário da raiz para uma campanha (ex.: /black). Vazio = a home aparece. */
   get REDIRECT_RAIZ() { return e('REDIRECT_RAIZ', ''); },
   /** Chave do IndexNow (avisa o Bing quando um conteúdo muda). Vazio = desligado. */

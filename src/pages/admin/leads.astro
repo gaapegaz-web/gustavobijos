@@ -77,8 +77,8 @@ const wa = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
       <>
         <div class="lista__topo"><span>{filtrando ? `${num(total)} ${total === 1 ? 'lead encontrado' : 'leads encontrados'}` : `${num(total)} leads`}</span>{filtrando && <a href="/admin/leads">Limpar filtros</a>}</div>
         <div class="tbl"><table class="lista"><colgroup><col style="width:19%" /><col style="width:7%" /><col style="width:8%" /><col class="opc" style="width:8%" /><col style="width:9%" /><col style="width:13%" /><col style="width:11%" /><col style="width:12%" /><col style="width:13%" /></colgroup><thead><tr><th>Lead</th><th>Página</th><th>Origem</th><th class="opc">Aparelho</th><th>Mídia</th><th>Campanha</th><th>Anúncio</th><th>Conjunto</th><th>Quando</th></tr></thead><tbody>
-          {lista.map((l) => <tr>
-            <td><div class="lead"><div><b title={l.nome}>{l.nome}</b>{l.envios > 1 && <span class="tag warn" title={l.meta_lead === 0 ? 'cadastrou de novo do mesmo aparelho' : 'cadastrou mais de uma vez'} style="margin-left:6px">{l.envios}×</span>}<a class="lead__wa" href={wa(l.whatsapp)} target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">{fone(l.whatsapp)}</a></div></div></td>
+          {lista.map((l) => <tr data-href={`/admin/leads/${l.id}`}>
+            <td><div class="lead"><div><a class="lead__nome" href={`/admin/leads/${l.id}`} title={`Abrir a ficha de ${l.nome}`}><b>{l.nome}</b></a>{l.envios > 1 && <span class="tag warn" title={l.meta_lead === 0 ? 'cadastrou de novo do mesmo aparelho' : 'cadastrou mais de uma vez'} style="margin-left:6px">{l.envios}×</span>}<a class="lead__wa" href={wa(l.whatsapp)} target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">{fone(l.whatsapp)}</a></div></div></td>
             <td>{l.pagina ? <a class="tag acc" href={link({ pagina: l.pagina, p: 1 })}>{nomePagina(l.pagina)}</a> : <span class="mut">—</span>}</td>
             <td class="utm etiqueta" title={l.utm_source || undefined}>{l.utm_source || <span class="mut">(direto)</span>}</td>
             <td class="dim opc etiqueta" title={NOME_DISP[l.dispositivo] ?? l.dispositivo}>{NOME_DISP[l.dispositivo] ?? l.dispositivo ?? '—'}</td>
@@ -104,6 +104,11 @@ const wa = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
   form?.querySelectorAll('select').forEach((s) => s.addEventListener('change', () => form.requestSubmit()));
   // Não manda campos vazios na URL
   form?.addEventListener('formdata', (e) => { for (const [k, v] of [...e.formData.entries()]) if (v === '') e.formData.delete(k); });
+  // A linha inteira abre a ficha do lead (menos os links de dentro dela e texto selecionado)
+  document.querySelectorAll<HTMLElement>('tr[data-href]').forEach((tr) => tr.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a') || getSelection()?.toString()) return;
+    if (e.ctrlKey || e.metaKey) window.open(tr.dataset.href, '_blank'); else location.href = tr.dataset.href!;
+  }));
 </script>
 
 <style>
@@ -116,6 +121,8 @@ const wa = (n: string) => `https://wa.me/${n.replace(/\D/g, '')}`;
   .lista td{padding-top:8px;padding-bottom:8px}
   .lead>div{min-width:0}
   .lead{display:flex;align-items:center;gap:11px}
+  .lista tr[data-href]{cursor:pointer}
+  .lead__nome{color:var(--ink);display:block;min-width:0} .lead__nome:hover b{text-decoration:underline}
   .lead b{font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
   .lista .tag.acc{white-space:nowrap}
   .utm__valor{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4}

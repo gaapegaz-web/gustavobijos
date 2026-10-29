@@ -1,0 +1,228 @@
+---
+/**
+ * Ficha do lead: de onde veio, todas as visitas (antes e depois do cadastro), o que fez em cada uma e os eventos da Meta e da Hubla.
+ * Os dados vêm de lib/ficha.ts.
+ */
+import Admin from '~/layouts/Admin.astro';
+import { fichaLead, veioDe, navegador, textoAcao, nomeEvento, ORIGEM_EVENTO, statusCapi, duracao, hora, nomeSecao, type Item, type Evento } from '~/lib/ficha';
+import { dt, fone, seg, nomePagina, NOME_DISP } from '~/lib/painel';
+import { fonteNome } from '~/lib/origem';
+import { brl } from '~/lib/texto';
+
+export const prerender = false;
+
+const id = Number(Astro.params.id);
+const f = Number.isInteger(id) && id > 0 ? fichaLead(id) : null;
+if (!f) return Astro.redirect('/admin/leads');
+const { lead: l, visitas, fora, outros, anuncios, resumo: r } = f;
+
+const wa = `https://wa.me/${l.whatsapp.replace(/\D/g, '')}`;
+const fonte = (s: string | null) => (s ? fonteNome(({ facebook: 'fb', instagram: 'ig' } as Record<string, string>)[s.toLowerCase()] ?? s) : '(direto)');
+const primeira = visitas[0];
+const origens = [
+  { titulo: 'Primeiro contato', sub: primeira ? `${dt(primeira.created_at)}, ${primeira.provavel ? 'visita provável' : '1ª visita'}` : 'sem visita registrada', o: primeira },
+  { titulo: 'No cadastro', sub: dt(l.created_at), o: l },
+];
+const camposOrigem = (o: any) => o ? [
+  ['Origem', fonte(o.utm_source)], ['Mídia', o.utm_medium], ['Campanha', o.utm_campaign], ['Conjunto', o.utm_term], ['Anúncio', o.utm_content], ['Veio de', veioDe(o.referrer)],
+] : [];
+const mesmaOrigem = !!primeira && ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].every((k) => (primeira as any)[k] === (l as any)[k]);
+
+/** Linhas da linha do tempo: seções vistas em seguida viram uma linha só. */
+type Linha = { quando: number; texto: string; tom: string; pagina?: string | null; ev?: Evento; titulo?: string };
+function linhas(itens: Item[]): Linha[] {
+  const out: Linha[] = [];
+  for (const it of itens) {
+    if (it.tipo === 'cadastro') { out.push({ quando: it.quando, texto: it.envio > 1 ? `Cadastrou de novo com o mesmo WhatsApp (${it.envio}º envio)` : `Virou lead: cadastro gravado com o WhatsApp ${fone(l.whatsapp)}`, tom: 'ok' }); continue; }
+    if (it.tipo === 'evento') {
+      const e = it.e;
+      out.push({ quando: it.quando, texto: `${nomeEvento(e.tipo)}${e.valor != null ? ` · ${brl(e.valor)}` : ''}`, tom: 'meta', ev: e, titulo: e.event_id ? `event_id ${e.event_id}` : undefined });
+      continue;
+    }
+    const a = it.a;
+    const ant = out[out.length - 1];
+    if (a.tipo === 'secao_vista' && ant?.texto.startsWith('Viu: ') && ant.pagina === a.pagina) { ant.texto += ` → ${nomeSecao(a.alvo ?? '')}`; continue; }
+    out.push({ quando: it.quando, ...textoAcao(a), pagina: a.pagina });
+  }
+  return out;
+}
+const blocos = [
+  ...visitas.map((v, i) => ({ quando: v.inicio, v, i })),
+  ...fora.map((e) => ({ quando: e.quando, e })),
+].sort((a, b) => a.quando - b.quando) as ({ quando: number; v: (typeof visitas)[number]; i: number; e?: undefined } | { quando: number; e: Evento; v?: undefined })[];
+let fimAnterior = 0;
+const intervalo = (inicio: number) => { const g = fimAnterior ? inicio - fimAnterior : 0; return g > 30 * 60_000 ? duracao(g) : ''; };
+const tagCapi = (e: Evento) => statusCapi(e.capi_status);
+---
+<Admin titulo={l.nome} ativo="leads" sub={`${fone(l.whatsapp)}${l.email ? ` · ${l.email}` : ''} · cadastrou em ${nomePagina(l.pagina)} em ${dt(l.created_at)}`}>
+  <Fragment slot="acoes">
+    <a class="btn sec" href="/admin/leads" id="voltar">← Leads</a>
+    <a class="btn ok" href={wa} target="_blank" rel="noopener">Abrir no WhatsApp</a>
+  </Fragment>
+
+  <div class="chips">
+    {r.grupo ? <span class="chip ok"><i></i>Clicou no grupo</span> : <span class="chip warn"><i></i>Não clicou no grupo</span>}
+    {l.comprou ? <span class="chip ok"><i></i>Comprou</span> : r.checkout ? <span class="chip warn"><i></i>Foi ao checkout, não comprou</span> : null}
+    {l.envios > 1 && <span class="chip warn"><i></i>Cadastrou {l.envios}×</span>}
+    {l.meta_lead === 0 ? <span class="chip" title="Outro número no mesmo aparelho em 24 h: não conta como Lead novo"><i></i>Lead não enviado à Meta (mesmo aparelho)</span>
+      : l.lead_enviado_em ? <span class="chip ok"><i></i>Lead enviado à Meta</span> : <span class="chip warn" title="Não abriu a /obrigado"><i></i>Lead ainda não enviado à Meta</span>}
+  </div>
+
+  <div class="kpis">
+    <div><div class="kpi__rot">Visitas</div><div class="kpi__linha"><span class="kpi__val">{r.visitas}</span></div><span class="kpi__det">{r.visitas ? `${r.antes} antes do cadastro · ${r.depois} depois` : 'sem dados de visita'}</span></div>
+    <div><div class="kpi__rot">Até se cadastrar</div><div class="kpi__linha"><span class="kpi__val">{r.nVisitaCadastro > 1 ? duracao(r.ateCadastro) : r.visitas ? duracao(r.ateCadastro) : '—'}</span></div><span class="kpi__det">{r.nVisitaCadastro > 0 ? `na ${r.nVisitaCadastro}ª visita, contando da primeira` : 'visita do cadastro não registrada'}</span></div>
+    <div><div class="kpi__rot">Tempo no site</div><div class="kpi__linha"><span class="kpi__val">{seg(r.tempoAtivo) || '0 s'}</span></div><span class="kpi__det">com a página na tela · rolou até {r.scroll}%</span></div>
+    <div><div class="kpi__rot">Anúncios vistos</div><div class="kpi__linha"><span class="kpi__val">{anuncios.length}</span></div><span class="kpi__det">{r.paginas.length} {r.paginas.length === 1 ? 'página do site' : 'páginas do site'}: {r.paginas.map(nomePagina).join(', ') || '—'}</span></div>
+  </div>
+
+  <section class="grid g2">
+    {origens.map((o) => (
+      <div class="card">
+        <h3>{o.titulo} <small>{o.sub}</small></h3>
+        <dl class="campos">{camposOrigem(o.o).map(([k, v]) => <><dt>{k}</dt><dd>{v || <span class="mut">—</span>}</dd></>)}</dl>
+      </div>
+    ))}
+  </section>
+  {primeira && <p class="nota">{mesmaOrigem ? 'Chegou e se cadastrou pelo mesmo anúncio.' : 'O anúncio do cadastro não é o mesmo do primeiro contato: veja abaixo todos por onde a pessoa passou.'}</p>}
+
+  {anuncios.length > 1 && (
+    <section>
+      <div class="sec-h"><h2>Anúncios e links por onde passou</h2><p>na ordem da primeira visita</p></div>
+      <div class="card p0"><div class="tbl"><table class="anun"><thead><tr><th>Origem</th><th>Campanha</th><th>Conjunto</th><th>Anúncio</th><th class="n">Visitas</th></tr></thead><tbody>
+        {anuncios.map((a) => <tr><td>{fonte(a.fonte)}</td><td>{a.campanha || <span class="mut">—</span>}</td><td>{a.conjunto || <span class="mut">—</span>}</td><td>{a.anuncio || <span class="mut">—</span>}</td><td class="n">{a.visitas}</td></tr>)}
+      </tbody></table></div></div>
+    </section>
+  )}
+
+  <section>
+    <div class="sec-h"><h2>Jornada</h2><p>cada visita ao site e o que a pessoa fez, com os eventos enviados à Meta. Horário de Brasília.</p></div>
+    {blocos.length === 0 ? (
+      <div class="card"><div class="vazio"><div><b>Sem visitas registradas.</b>Este lead chegou antes do analytics próprio ou sem os cookies de visita.</div></div></div>
+    ) : (
+      <ol class="jornada">
+        {blocos.map((b) => {
+          if (!b.v) {
+            const st = tagCapi(b.e);
+            return <li class="fora"><div class="fora__in"><span class="t">{dt(new Date(b.quando).toISOString())}</span><span class="tag meta">{ORIGEM_EVENTO[b.e.origem] ?? b.e.origem}</span><b>{nomeEvento(b.e.tipo)}{b.e.valor != null ? ` · ${brl(b.e.valor)}` : ''}</b>{st && <span class={`tag ${st.tom}`}>{st.texto}</span>}<span class="mut">fora do site</span></div></li>;
+          }
+          const v = b.v, gap = intervalo(v.inicio);
+          fimAnterior = Math.max(fimAnterior, v.fim);
+          const ls = linhas(v.itens);
+          const travou = !v.cadastrou && !!(v.iniciou_form || v.abriu_form) && !v.lead_id;
+          return <>
+            {gap && <li class="gap">voltou {gap} depois</li>}
+            <li class:list={['visita', { cad: v.cadastrou, prov: v.provavel }]}>
+              <details open={v.cadastrou || visitas.length <= 3 || !!travou}>
+                <summary>
+                  <div class="visita__h">
+                    <b>{v.provavel ? 'Visita provável' : `Visita ${b.i + 1}`}</b>
+                    <span>{dt(v.created_at)}</span>
+                    {v.cadastrou && <span class="tag ok">Cadastrou nesta visita</span>}
+                    {travou && <span class="tag warn">{v.iniciou_form ? 'Começou o cadastro e não terminou' : 'Abriu o formulário e não enviou'}</span>}
+                    {v.lead_id === l.id && !v.cadastrou && <span class="tag acc">Mandou o formulário de novo</span>}
+                    {v.provavel && <span class="tag" title="Mesmo IP e mesmo navegador, com outro cookie de visitante">mesmo aparelho e internet</span>}
+                  </div>
+                  <div class="visita__o">
+                    <span><b>{fonte(v.utm_source)}</b>{v.utm_medium && ` / ${v.utm_medium}`}</span>
+                    {v.utm_content && <span title="Anúncio (utm_content)">anúncio {v.utm_content}</span>}
+                    {v.utm_campaign && <span title="Campanha (utm_campaign)">campanha {v.utm_campaign}</span>}
+                    <span>veio de {veioDe(v.referrer)}</span>
+                  </div>
+                  <div class="visita__m mut">{seg(v.tempo_ativo_s) || '0 s'} na tela · rolou {v.scroll_max}% · {v.paginas} {v.paginas === 1 ? 'página' : 'páginas'} · {NOME_DISP[v.dispositivo] ?? v.dispositivo ?? 'aparelho ?'}</div>
+                </summary>
+                <div class="visita__corpo">
+                  {ls.length ? <ul class="tl">{ls.map((x) => {
+                    const st = x.ev && tagCapi(x.ev);
+                    return <li class={`tl__i ${x.tom}`} title={x.titulo}><span class="t">{hora(x.quando)}</span><i></i><span class="tx">
+                      {x.ev && <span class="tag meta">{ORIGEM_EVENTO[x.ev.origem] ?? x.ev.origem}</span>}
+                      {x.texto}
+                      {st && <span class={`tag ${st.tom}`}>{st.texto}</span>}
+                    </span></li>;
+                  })}</ul> : <p class="mut">Sem ações gravadas nesta visita.</p>}
+                  {v.secoes.length > 0 && (() => { const max = Math.max(...v.secoes.map((s) => s.ms)); return (
+                    <div class="secoes"><h4>Tempo em cada seção</h4>
+                      <div class="bars">{v.secoes.map((s) => <div class="bar"><span class="rot" title={`${s.pagina} · ${s.secao}`}>{v.paginasVistas.length > 1 ? `${nomePagina(s.pagina)} · ` : ''}{nomeSecao(s.secao)}</span><div class="tr"><i style={`width:${Math.round((s.ms / max) * 100)}%`}></i></div><span class="n"><b>{seg(s.ms / 1000) || '0 s'}</b></span></div>)}</div>
+                    </div>); })()}
+                </div>
+              </details>
+            </li>
+          </>;
+        })}
+      </ol>
+    )}
+  </section>
+
+  {outros.length > 0 && (
+    <section>
+      <div class="sec-h"><h2>Outros cadastros deste aparelho</h2><p>mesmo navegador, outro WhatsApp</p></div>
+      <div class="card p0"><div class="tbl"><table><tbody>{outros.map((o) => <tr><td><a href={`/admin/leads/${o.id}`}><b>{o.nome}</b></a></td><td class="dim">{fone(o.whatsapp)}</td><td class="dim">{dt(o.created_at)}</td></tr>)}</tbody></table></div></div>
+    </section>
+  )}
+
+  <section>
+    <details class="tabela tec">
+      <summary>Dados técnicos</summary>
+      <div class="card"><dl class="campos">
+        <dt>Lead</dt><dd>#{l.id}</dd>
+        <dt>Navegador</dt><dd>{navegador(l.user_agent)}</dd>
+        <dt>Tela</dt><dd>{visitas.find((v) => v.cadastrou)?.largura ? `${visitas.find((v) => v.cadastrou)!.largura} × ${visitas.find((v) => v.cadastrou)!.altura}` : '—'}</dd>
+        <dt>IP</dt><dd>{l.ip || '—'}</dd>
+        <dt>Clique de anúncio</dt><dd>{l.fbclid ? 'sim (fbclid)' : 'não'}</dd>
+        <dt>fbp</dt><dd><code>{l.fbp || '—'}</code></dd>
+        <dt>fbc</dt><dd><code>{l.fbc || '—'}</code></dd>
+        <dt>Visitante</dt><dd><code>{l.visitante_id || '—'}</code></dd>
+        <dt>User agent</dt><dd><code>{l.user_agent || '—'}</code></dd>
+      </dl></div>
+    </details>
+  </section>
+</Admin>
+
+<script>
+  // Volta para a lista com os filtros como estavam
+  document.getElementById('voltar')?.addEventListener('click', (e) => {
+    if (document.referrer.includes('/admin/leads') && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+</script>
+
+<style>
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 16px}
+  .campos{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 16px;margin:0;font-size:13.5px}
+  .campos dt{color:var(--mut)} .campos dd{margin:0;overflow-wrap:anywhere}
+  .campos code{font-size:12px}
+  .anun{min-width:640px} .anun td{white-space:normal;overflow-wrap:anywhere}
+  .tag.meta{background:#e6eefb;color:#2b5fad}
+
+  .jornada{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+  .gap{align-self:center;font-size:12.5px;color:var(--mut);padding:2px 12px;border:1px dashed var(--line-2);border-radius:999px}
+  .visita details{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sombra)}
+  .visita.cad details{border-color:#9fd3b2;box-shadow:0 0 0 3px var(--ok-soft)}
+  .visita.prov details{border-style:dashed}
+  .visita summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;flex-direction:column;gap:5px}
+  .visita summary::-webkit-details-marker{display:none}
+  .visita__h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px}
+  .visita__h b{font-weight:650}
+  .visita__h::before{content:'';width:0;height:0;border:4px solid transparent;border-left:6px solid var(--mut);transition:transform .15s}
+  .visita details[open] .visita__h::before{transform:rotate(90deg)}
+  .visita__o{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--ink-2);overflow-wrap:anywhere}
+  .visita__m{font-size:12.5px}
+  .visita__corpo{border-top:1px solid var(--line);padding:12px 18px 16px}
+
+  .tl{list-style:none;margin:0;padding:0}
+  .tl__i{display:grid;grid-template-columns:62px 14px minmax(0,1fr);gap:8px;align-items:baseline;font-size:13px;padding:3px 0}
+  .tl__i .t{color:var(--mut);font-variant-numeric:tabular-nums;font-size:12px}
+  .tl__i i{width:8px;height:8px;border-radius:50%;background:var(--line-2);justify-self:center;align-self:center}
+  .tl__i .tx{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;color:var(--ink-2)}
+  .tl__i.acc i{background:var(--acc)} .tl__i.acc .tx{color:var(--ink)}
+  .tl__i.ok i{background:var(--ok)} .tl__i.ok .tx{color:var(--ok);font-weight:600}
+  .tl__i.warn i{background:var(--warn)} .tl__i.warn .tx{color:var(--warn);font-weight:500}
+  .tl__i.meta i{background:#2b5fad} .tl__i.meta .tx{color:var(--ink);font-weight:500}
+
+  .secoes{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+  .secoes h4{margin:0 0 8px;font-size:13px;font-weight:600}
+  .secoes .bar{grid-template-columns:minmax(120px,220px) 1fr auto} .secoes .bar .n{min-width:70px}
+
+  .fora__in{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:12px 18px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);font-size:13.5px}
+  .fora__in .t{color:var(--mut);font-size:12.5px}
+  .tec summary{font-size:14px} .tec .card{margin-top:10px}
+  @media (max-width:640px){.kpis .kpi__val{font-size:24px} .visita summary,.visita__corpo{padding-left:14px;padding-right:14px} .tl__i{grid-template-columns:56px 10px minmax(0,1fr);gap:6px} .secoes .bar{grid-template-columns:1fr}}
+</style>

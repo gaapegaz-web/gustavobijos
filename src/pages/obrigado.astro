@@ -4,7 +4,7 @@ import Icons from '~/components/Icons.astro';
 import { ENV } from '~/lib/env';
 import { CAMPANHA } from '~/config/black';
 import { fmtDataHora, fmtDiaSemana } from '~/lib/texto';
-import { db, insertEvento, type Lead } from '~/lib/db';
+import { db, insertEvento, leadDoCookie, type Lead } from '~/lib/db';
 import { enviarCapi, novoEventId, separarNome } from '~/lib/capi';
 import { createHash } from 'node:crypto';
 import { ufDoTelefone } from '~/lib/phone';
@@ -20,8 +20,7 @@ const quando = `${fmtDiaSemana(live)}, ${fmtDataHora(live)}`;
  * lead dispara; um F5 ou "voltar" depois não manda Lead de novo.
  * meta_lead = 0 (ex.: cadastro repetido no mesmo aparelho) nunca dispara.
  */
-const leadId = Number(Astro.cookies.get('ta_lead')?.value || 0) || null;
-const lead = leadId ? (db().prepare('SELECT * FROM leads WHERE id = ?').get(leadId) as Lead | undefined) : undefined;
+const lead = leadDoCookie(Astro.cookies) as (Lead & { meta_lead: number }) | undefined;
 
 let leadEventId: string | undefined;
 if (lead && lead.meta_lead === 1) {
@@ -38,7 +37,7 @@ if (lead && lead.meta_lead === 1) {
       user: { email: lead.email, phone: lead.whatsapp, firstName, lastName, fbp: lead.fbp, fbc: lead.fbc, ip: lead.ip, userAgent: lead.user_agent, externalId: lead.id },
       custom: { content_name: 'Black Tecnoapis 2026', lead_source: lead.utm_source ?? 'direto' },
     });
-    insertEvento({ lead_id: lead.id, tipo: 'Lead', event_id: leadEventId, origem: 'server', utm_source: lead.utm_source, utm_campaign: lead.utm_campaign, utm_content: lead.utm_content, capi_status: capi.status, payload: capi.ok ? null : capi.body });
+    insertEvento({ lead_id: lead.id, sessao_id: Astro.cookies.get('ta_sid')?.value?.slice(0, 64) || null, pagina: '/obrigado', tipo: 'Lead', event_id: leadEventId, origem: 'server', utm_source: lead.utm_source, utm_campaign: lead.utm_campaign, utm_content: lead.utm_content, capi_status: capi.status, payload: capi.ok ? null : capi.body });
   }
 }
 
