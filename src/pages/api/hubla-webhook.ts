@@ -61,6 +61,10 @@ export const POST: APIRoute = async ({ request, url }) => {
         custom: n.valor != null ? { currency: 'BRL', value: n.valor } : undefined,
       });
       capiStatus = r.status;
+    } else if (n.tipo === 'Reembolso' && lead) {
+      // Continua comprador só se sobrar compra sem reembolso (+1: este reembolso ainda não foi gravado em eventos)
+      db().prepare(`UPDATE leads SET comprou = (SELECT count(*) FROM eventos WHERE lead_id = @id AND tipo = 'Purchase')
+        > (SELECT count(*) FROM eventos WHERE lead_id = @id AND tipo = 'Reembolso') + 1 WHERE id = @id`).run({ id: lead.id });
     }
 
     insertEvento({ lead_id: lead?.id ?? null, tipo: n.tipo, valor: n.valor, event_id: eventId, origem: 'hubla', utm_source: lead?.utm_source ?? n.utm_source, utm_campaign: lead?.utm_campaign ?? n.utm_campaign, utm_content: lead?.utm_content, capi_status: capiStatus, payload: { nome: n.nome, email: n.email, telefone: e164, produto: n.produto, transacaoId: n.transacaoId } });
