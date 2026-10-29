@@ -3,7 +3,7 @@ import { db } from '~/lib/db';
 
 export const prerender = false;
 
-/** CRUD simples de links curtos (/r/<slug>), só para o /admin. A basic auth é do middleware (protege /admin e /api/admin). */
+/** CRUD simples de links curtos (/r/<slug>), só para o /admin. O login é conferido no middleware (protege /admin e /api/admin). */
 
 const SLUG_OK = /^[a-z0-9][a-z0-9-]{1,39}$/;
 

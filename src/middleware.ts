@@ -1,5 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
-import { ENV } from '~/lib/env';
+import { COOKIE_ADMIN, sessaoValida } from '~/lib/sessao-admin';
 import { COOKIE_UTM, fbcDeFbclid, ipDoRequest, lerUtmsDaUrl, lerUtmsDoCookie, salvarUtms } from '~/lib/tracking';
 
 // Rate limit simples em memória por IP (reinicia com o processo; suficiente para formulário)
@@ -22,12 +22,11 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
     return new Response(null, { status: 301, headers: { location: url.pathname.replace(/\/+$/, '') + url.search } });
   }
 
-  // Proteção do /admin e /api/admin: basic auth
-  if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/api/admin')) {
-    const auth = request.headers.get('authorization') || '';
-    const [user, pass] = Buffer.from(auth.replace(/^Basic\s+/i, ''), 'base64').toString().split(':');
-    if (!ENV.ADMIN_PASS || user !== ENV.ADMIN_USER || pass !== ENV.ADMIN_PASS) {
-      return new Response('Acesso restrito', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Tecnoapis Admin"' } });
+  // Proteção do /admin e /api/admin: cookie de sessão criado em /admin/login (lib/sessao-admin.ts)
+  if ((url.pathname.startsWith('/admin') && url.pathname !== '/admin/login') || url.pathname.startsWith('/api/admin')) {
+    if (!sessaoValida(cookies.get(COOKIE_ADMIN)?.value)) {
+      if (url.pathname.startsWith('/api')) return new Response(JSON.stringify({ ok: false, erro: 'Sessão expirada. Entre de novo no /admin.' }), { status: 401, headers: { 'content-type': 'application/json' } });
+      return new Response(null, { status: 303, headers: { location: `/admin/login?${new URLSearchParams({ volta: url.pathname + url.search })}` } });
     }
   }
 

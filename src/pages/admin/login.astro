@@ -1,0 +1,78 @@
+---
+/**
+ * Entrada do /admin. Senha certa cria o cookie de sessão (30 dias) e volta para a página pedida (?volta=).
+ * ?sair=1 apaga a sessão. Usuário e senha: ADMIN_USER e ADMIN_PASS no .env.
+ */
+import { COOKIE_ADMIN, SESSAO_DIAS, bloqueado, novaSessao, registrarFalha, senhaCerta, sessaoValida } from '~/lib/sessao-admin';
+import { ipDoRequest } from '~/lib/tracking';
+
+export const prerender = false;
+
+const { request, url, cookies } = Astro;
+// Só volta para dentro do /admin (nunca para outro site)
+const volta = (() => { const v = url.searchParams.get('volta') || ''; return /^\/admin(?:[/?]|$)/.test(v) && !v.startsWith('/admin/login') ? v : '/admin'; })();
+
+let erro = '';
+let usuario = '';
+const saiu = url.searchParams.has('sair');
+if (saiu) cookies.delete(COOKIE_ADMIN, { path: '/' });
+else if (request.method === 'GET' && sessaoValida(cookies.get(COOKIE_ADMIN)?.value)) return Astro.redirect(volta);
+
+if (request.method === 'POST') {
+  const ip = ipDoRequest(request, Astro.clientAddress) || 'x';
+  const f = await request.formData();
+  usuario = String(f.get('usuario') || '').trim().slice(0, 100);
+  // Bloqueado barra até a senha certa: senão o robô continua testando e descobre pela resposta
+  if (bloqueado(ip)) erro = 'Muitas tentativas erradas. Aguarde 15 minutos e tente de novo.';
+  else if (!senhaCerta(usuario, String(f.get('senha') || ''))) { registrarFalha(ip); erro = 'Usuário ou senha incorretos.'; }
+  else {
+    cookies.set(COOKIE_ADMIN, novaSessao(), { path: '/', httpOnly: true, sameSite: 'lax', secure: import.meta.env.PROD, maxAge: SESSAO_DIAS * 86400 });
+    return Astro.redirect(volta, 303);
+  }
+  Astro.response.status = 401;
+}
+---
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Entrar · Admin Gustavo Bijos</title>
+<link rel="icon" href="/favicon.ico" />
+<style>
+  @font-face{font-family:'Inter';font-style:normal;font-weight:400 800;font-display:swap;src:url('/fonts/inter-v20-latin.woff2') format('woff2')}
+  :root{--bg:#f8f6f2;--card:#fff;--line:#e8e3da;--line-2:#d8d1c4;--ink:#1d1b17;--ink-2:#4b463e;--mut:#857e72;--acc:#f2a900;--acc-ink:#8a5c00;--err:#c4382b;--err-soft:#fcebe8;--ok-soft:#e2f4e8}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  main{width:100%;max-width:380px}
+  .marca{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:22px;font-weight:700;font-size:16px}
+  .marca small{display:block;font-weight:500;font-size:12.5px;color:var(--mut)}
+  form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 24px;box-shadow:0 1px 2px rgba(29,27,23,.04)}
+  h1{margin:0 0 18px;font-size:20px;letter-spacing:-.01em}
+  label{display:block;font-size:13.5px;font-weight:600;color:var(--ink-2);margin:0 0 6px}
+  input{display:block;width:100%;min-height:46px;padding:0 14px;margin-bottom:16px;border:1px solid var(--line-2);border-radius:10px;background:#fff;font:inherit;font-size:16px;color:var(--ink)}
+  input:focus{outline:2px solid var(--acc);outline-offset:1px;border-color:var(--acc)}
+  button{width:100%;min-height:46px;margin-top:4px;border:0;border-radius:10px;background:var(--acc);color:var(--ink);font:700 15px/1 Inter,system-ui,sans-serif;cursor:pointer}
+  button:hover{filter:brightness(1.05)}
+  button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .aviso{padding:11px 14px;border-radius:10px;font-size:14px;margin-bottom:16px}
+  .aviso.err{background:var(--err-soft);color:#7f1d1d}
+  .aviso.ok{background:var(--ok-soft);color:#14532d}
+  .pe{margin-top:18px;text-align:center;font-size:13px;color:var(--mut)} .pe a{color:var(--acc-ink)}
+</style>
+</head>
+<body>
+<main>
+  <div class="marca">
+    <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 21.1 6.75v10.5L12 22.5l-9.1-5.25V6.75z" fill="#f2a900"/><path d="M12 7.2 16.2 9.6v4.8L12 16.8l-4.2-2.4V9.6z" fill="#1d1b17" opacity=".85"/></svg>
+    <span>Gustavo Bijos<small>Painel do site</small></span>
+  </div>
+  <form method="post" action={`/admin/login?${new URLSearchParams({ volta })}`}>
+    <h1>Entrar no painel</h1>
+    {erro && <div class="aviso err" role="alert">{erro}</div>}
+    {saiu && !erro && <div class="aviso ok" role="status">Você saiu do painel.</div>}
+    <label for="usuario">Usuário</label>
+    <input id="usuario" name="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required value={usuario} autofocus={!usuario} />
+    <label for="senha">Senha</label>
+    <input id="senha" name="senha" type="password" autocomplete="current-password" required autofocus={!!usuario} />
+    <button type="submit">Entrar</button>
+  </form>
+  <p class="pe"><a href="/">← Voltar para o site</a></p>
+</main>
+</body></html>

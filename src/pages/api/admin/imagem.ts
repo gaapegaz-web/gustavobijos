@@ -4,7 +4,7 @@ import { salvarCapa, salvarImagemTexto } from '~/lib/upload';
 export const prerender = false;
 
 /**
- * Envio de imagem do editor de conteúdos (basic auth do middleware protege /api/admin).
+ * Envio de imagem do editor de conteúdos (o login do /admin, conferido no middleware, protege /api/admin).
  * multipart: arquivo, tipo ('capa' | 'texto'), slug (só para o nome do arquivo).
  */
 export const POST: APIRoute = async ({ request }) => {

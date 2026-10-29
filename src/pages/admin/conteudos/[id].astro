@@ -25,7 +25,7 @@ let v: Campos = atual ?? { titulo: '', slug: '', resumo: '', tema: '', nivel: ''
 let erro = '';
 
 if (request.method === 'POST') {
-  // Basic auth fica guardada no navegador: só aceita formulário vindo do próprio site
+  // Defesa extra além do cookie SameSite=Lax: só aceita formulário vindo do próprio site
   const origem = request.headers.get('origin');
   if (origem && new URL(origem).host !== request.headers.get('host')) return new Response('Origem não permitida', { status: 403 });
 
