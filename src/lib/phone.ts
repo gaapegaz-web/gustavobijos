@@ -25,11 +25,6 @@ export function normalizarWhatsapp(raw: string): { ok: true; e164: string } | { 
   return { ok: true, e164: '+55' + digits };
 }
 
-export function formatarWhatsapp(e164: string) {
-  const d = e164.replace(/\D/g, '').replace(/^55/, '');
-  return d.length === 11 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : e164;
-}
-
 /** UF por DDD (Anatel). Usado como `st` no match da Meta: dado informado pela pessoa, mais confiável que geolocalização por IP. */
 const UF_POR_DDD: Record<number, string> = {
   11: 'sp', 12: 'sp', 13: 'sp', 14: 'sp', 15: 'sp', 16: 'sp', 17: 'sp', 18: 'sp', 19: 'sp',
